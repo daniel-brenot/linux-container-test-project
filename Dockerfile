@@ -105,7 +105,8 @@ RUN apk add --no-cache \
 
 COPY --from=build ${LTPROOT} ${LTPROOT}
 COPY --from=build ${PJDFSTEST_ROOT} ${PJDFSTEST_ROOT}
-COPY skipfile ${LTPROOT}/docker-unprivileged.skip
+COPY skipfiles/musl/ltp-unprivileged.skip ${LTPROOT}/docker-unprivileged.skip
+COPY skipfiles/musl/open-posix.skip ${LTPROOT}/docker-posix.skip
 COPY container-test.sh /usr/local/bin/container-test
 
 RUN chmod 755 /usr/local/bin/container-test \
@@ -114,6 +115,7 @@ RUN chmod 755 /usr/local/bin/container-test \
 ENV LTPROOT=${LTPROOT}
 ENV PJDFSTEST_ROOT=${PJDFSTEST_ROOT}
 ENV OPEN_POSIX_ROOT=${LTPROOT}/testcases/open_posix_testsuite
+ENV CONTAINER_TEST_LIBC=musl
 ENV PATH=${PJDFSTEST_ROOT}:${LTPROOT}/testcases/bin:${LTPROOT}/bin:${LTPROOT}:/usr/local/bin:${PATH}
 
 WORKDIR ${LTPROOT}
