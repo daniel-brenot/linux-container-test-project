@@ -12,7 +12,8 @@ This project uses three testing projects:
 
 ## Usage
 
-Two images are provided so you can exercise either musl or glibc userspace:
+Two images are provided so you can exercise either musl or glibc userspace.
+Published tags are multi-arch (`linux/amd64` and `linux/arm64`), so the same tag works on both.
 
 | Dockerfile | Libc | Local tag | Published tag |
 |------------|------|-----------|---------------|
@@ -22,11 +23,18 @@ Two images are provided so you can exercise either musl or glibc userspace:
 ### Build
 
 ```bash
-# musl / Alpine
+# musl / Alpine (current machine arch)
 docker build -f Dockerfile -t linux-container-test:latest-musl .
 
-# glibc / Ubuntu
+# glibc / Ubuntu (current machine arch)
 docker build -f Dockerfile.glibc -t linux-container-test:latest-glibc .
+```
+
+Published images from CI are multi-arch (`linux/amd64` + `linux/arm64`). To build and push a multi-arch image yourself:
+
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -f Dockerfile -t <dockerhub-user>/linux-container-test:latest-musl --push .
 ```
 
 ### Run
@@ -82,10 +90,12 @@ docker run --rm --privileged linux-container-test:latest-glibc --full --ltp
 
 ### Publishing
 
-On pushes to `main`/`master` (and via `workflow_dispatch`), GitHub Actions builds and pushes both images to Docker Hub:
+On pushes to `main`/`master` (and via `workflow_dispatch`), GitHub Actions builds each image on native `amd64` and `arm64` runners, then publishes multi-arch manifests to Docker Hub:
 
-- `<dockerhub-user>/linux-container-test:latest-musl`
-- `<dockerhub-user>/linux-container-test:latest-glibc`
+- `<dockerhub-user>/linux-container-test:latest-musl` (`linux/amd64`, `linux/arm64`)
+- `<dockerhub-user>/linux-container-test:latest-glibc` (`linux/amd64`, `linux/arm64`)
+
+On an ARM host, `docker pull` / `docker run` of those tags uses the arm64 variant automatically.
 
 Add these repository secrets before the workflow can publish:
 

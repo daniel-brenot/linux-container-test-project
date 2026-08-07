@@ -1,8 +1,10 @@
 # Linux Container Test Project — musl (Alpine) image
 # Combines LTP, Open POSIX Test Suite, and pjdfstest behind a single CLI.
 #
-# Build:
+# Build (current arch):
 #   docker build -f Dockerfile -t linux-container-test:latest-musl .
+# Multi-arch (amd64 + arm64) is published by CI; locally:
+#   docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile -t linux-container-test:latest-musl --push .
 #
 # Run:
 #   docker run --rm linux-container-test:latest-musl

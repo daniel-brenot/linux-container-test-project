@@ -1,8 +1,10 @@
 # Linux Container Test Project — glibc (Ubuntu) image
 # Combines LTP, Open POSIX Test Suite, and pjdfstest behind a single CLI.
 #
-# Build:
+# Build (current arch):
 #   docker build -f Dockerfile.glibc -t linux-container-test:latest-glibc .
+# Multi-arch (amd64 + arm64) is published by CI; locally:
+#   docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile.glibc -t linux-container-test:latest-glibc --push .
 #
 # Run:
 #   docker run --rm linux-container-test:latest-glibc
