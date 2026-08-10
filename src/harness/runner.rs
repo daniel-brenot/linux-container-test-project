@@ -2,8 +2,10 @@
 
 use crate::harness::cli::{print_help, Args, Mode, Suite};
 use crate::harness::{AssertFail, TestResult};
-use crate::suites;
+use crate::print;
 use crate::println;
+use crate::suites;
+use crate::syscall::{self, clock, Timespec};
 use linkme::distributed_slice;
 
 /// All tests registered via `#[lctp_test(...)]`.
@@ -82,24 +84,34 @@ pub unsafe fn run(argc: usize, argv: *const usize) -> i32 {
 
 fn run_suite(args: &Args, suite: Suite, total: &mut Counters) -> Counters {
     let mut local = Counters::default();
+    // Bootstrap exercises clock/write primitives; skip per-test timing there.
+    let time_tests = suite != Suite::Bootstrap;
     println!("==> {}", suite_name(suite));
 
     suites::for_each_in_suite(suite, |t| {
         if t.full_only && args.mode != Mode::Full {
-            print_result("SKIP", t.name, Some("full-only"));
+            print_result(args.color, Status::Skip, t.name, Some("full-only"), None);
             local.skipped += 1;
             total.skipped += 1;
             return;
         }
 
-        match (t.func)() {
+        let start = if time_tests { monotonic_now() } else { None };
+        let result = (t.func)();
+        let elapsed_ns = if time_tests {
+            elapsed_ns(start, monotonic_now())
+        } else {
+            None
+        };
+
+        match result {
             Ok(()) => {
-                print_result("PASS", t.name, None);
+                print_result(args.color, Status::Pass, t.name, None, elapsed_ns);
                 local.passed += 1;
                 total.passed += 1;
             }
             Err(AssertFail { message }) => {
-                print_result("FAIL", t.name, Some(message));
+                print_result(args.color, Status::Fail, t.name, Some(message), elapsed_ns);
                 local.failed += 1;
                 total.failed += 1;
             }
@@ -127,10 +139,81 @@ fn list_tests(args: &Args) {
     });
 }
 
-fn print_result(tag: &str, name: &str, detail: Option<&str>) {
-    match detail {
-        Some(d) => println!("[{tag}] {name} — {d}"),
-        None => println!("[{tag}] {name}"),
+#[derive(Clone, Copy)]
+enum Status {
+    Pass,
+    Fail,
+    Skip,
+}
+
+impl Status {
+    fn tag(self) -> &'static str {
+        match self {
+            Status::Pass => "PASS",
+            Status::Fail => "FAIL",
+            Status::Skip => "SKIP",
+        }
+    }
+
+    fn ansi(self) -> &'static str {
+        match self {
+            Status::Pass => "\x1b[32m",
+            Status::Fail => "\x1b[31m",
+            Status::Skip => "\x1b[33m",
+        }
+    }
+}
+
+fn print_result(
+    color: bool,
+    status: Status,
+    name: &str,
+    detail: Option<&str>,
+    elapsed_ns: Option<u64>,
+) {
+    let tag = status.tag();
+    if color {
+        print!("[{}{tag}\x1b[0m] {name}", status.ansi());
+    } else {
+        print!("[{tag}] {name}");
+    }
+    if let Some(d) = detail {
+        print!(" — {d}");
+    }
+    if let Some(ns) = elapsed_ns {
+        print_duration(ns);
+    }
+    println!();
+}
+
+/// Print ` (Nunit)` using the smallest unit that stays a readable integer.
+fn print_duration(ns: u64) {
+    if ns < 1_000 {
+        print!(" ({ns}ns)");
+    } else if ns < 1_000_000 {
+        print!(" ({}us)", ns / 1_000);
+    } else if ns < 1_000_000_000 {
+        print!(" ({}ms)", ns / 1_000_000);
+    } else {
+        let secs = ns / 1_000_000_000;
+        let tenths = (ns % 1_000_000_000) / 100_000_000;
+        print!(" ({secs}.{tenths}s)");
+    }
+}
+
+fn monotonic_now() -> Option<Timespec> {
+    syscall::clock_gettime(clock::CLOCK_MONOTONIC).ok()
+}
+
+fn elapsed_ns(start: Option<Timespec>, end: Option<Timespec>) -> Option<u64> {
+    let (s, e) = (start?, end?);
+    let start_ns = (s.tv_sec as i128) * 1_000_000_000 + (s.tv_nsec as i128);
+    let end_ns = (e.tv_sec as i128) * 1_000_000_000 + (e.tv_nsec as i128);
+    let delta = end_ns - start_ns;
+    if delta < 0 {
+        Some(0)
+    } else {
+        Some(delta as u64)
     }
 }
 

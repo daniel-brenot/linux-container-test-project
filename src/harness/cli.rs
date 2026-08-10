@@ -19,6 +19,8 @@ pub struct Args {
     pub mode: Mode,
     pub help: bool,
     pub list: bool,
+    /// When false, omit ANSI colors from pass/fail/skip tags.
+    pub color: bool,
     /// If none of the suite flags were set, run all suites.
     pub all_suites: bool,
     pub bootstrap: bool,
@@ -54,6 +56,7 @@ pub unsafe fn parse_args(argc: usize, argv: *const usize) -> Args {
         mode: Mode::Quick,
         help: false,
         list: false,
+        color: true,
         all_suites: true,
         bootstrap: false,
         syscall: false,
@@ -78,6 +81,8 @@ pub unsafe fn parse_args(argc: usize, argv: *const usize) -> Args {
             args.mode = Mode::Full;
         } else if arg_eq(arg, "--list") {
             args.list = true;
+        } else if arg_eq(arg, "--no-color") {
+            args.color = false;
         } else if arg_eq(arg, "--bootstrap") {
             args.bootstrap = true;
             suite_selected = true;
@@ -127,5 +132,6 @@ pub fn print_help(prog: &str) {
     crate::println!();
     crate::println!("Other:");
     crate::println!("  --list            List tests that would run, then exit");
+    crate::println!("  --no-color        Disable ANSI colors on pass/fail/skip");
     crate::println!("  -h, --help        Show this help");
 }

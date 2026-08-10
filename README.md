@@ -47,7 +47,7 @@ docker run --rm linux-container-test:latest --help
 |------|-------------|
 | `-q`, `--quick` | Smoke pass (default); skips `full_only` cases |
 | `-f`, `--full` | Include longer / fuller cases |
-
+| `--no-color` | Disable ANSI colors on `[PASS]` / `[FAIL]` / `[SKIP]` |
 ## Why musl-only / no glibc image
 
 Tests use raw syscalls, not libc wrappers, so glibc vs musl userspace differences
