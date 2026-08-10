@@ -937,11 +937,23 @@ pub const KCMP_FILE: i32 = 0;
 pub const IPC_PRIVATE: i32 = 0;
 pub const IPC_CREAT: i32 = 0o1000;
 pub const IPC_EXCL: i32 = 0o2000;
+pub const IPC_NOWAIT: i32 = 0o4000;
 pub const IPC_RMID: i32 = 0;
 pub const SHM_RDONLY: i32 = 0o10000;
+/// `semop` flags.
+pub const SEM_UNDO: i16 = 0o10000;
 /// `semctl` commands.
 pub const GETVAL: i32 = 12;
+pub const GETALL: i32 = 13;
+pub const GETNCNT: i32 = 14;
+pub const GETZCNT: i32 = 15;
 pub const SETVAL: i32 = 16;
+pub const SETALL: i32 = 17;
+/// `mlockall` flags.
+pub const MCL_CURRENT: i32 = 1;
+pub const MCL_FUTURE: i32 = 2;
+/// `clock_nanosleep` / POSIX timer absolute flag.
+pub const TIMER_ABSTIME: i32 = 1;
 /// eventfd2 flags.
 pub const EFD_SEMAPHORE: i32 = 1;
 pub const EFD_CLOEXEC: i32 = 0o2000000;

@@ -243,6 +243,15 @@ pub mod nr {
     pub const SHMDT: usize = 197;
     pub const MQ_OPEN: usize = 180;
     pub const MQ_UNLINK: usize = 181;
+    pub const MQ_TIMEDSEND: usize = 182;
+    pub const MQ_TIMEDRECEIVE: usize = 183;
+    pub const MQ_NOTIFY: usize = 184;
+    /// Combined getattr/setattr on aarch64.
+    pub const MQ_GETSETATTR: usize = 185;
+    pub const MLOCKALL: usize = 230;
+    pub const MUNLOCKALL: usize = 231;
+    pub const IO_SETUP: usize = 0;
+    pub const IO_DESTROY: usize = 1;
     pub const LANDLOCK_CREATE_RULESET: usize = 444;
     pub const LANDLOCK_ADD_RULE: usize = 445;
     pub const LANDLOCK_RESTRICT_SELF: usize = 446;
@@ -267,4 +276,6 @@ pub mod nr {
     pub const FSCONFIG: usize = 431;
     pub const MLOCK: usize = 228;
     pub const MUNLOCK: usize = 229;
+    pub const MOUNT: usize = 40;
+    pub const PTRACE: usize = 117;
 }

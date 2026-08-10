@@ -823,3 +823,399 @@ fn thread_parent_write_visible_to_child() -> TestResult {
     check_eq!(arg.dst.load(Ordering::SeqCst), 101, "parent write visible");
     Ok(())
 }
+
+#[crate::lctp_test(suite = posix, full)]
+fn thread_mutex_three() -> TestResult {
+    #[repr(C)]
+    struct Arg {
+        lock: AtomicU32,
+        counter: AtomicU32,
+    }
+    let mut arg = Arg {
+        lock: AtomicU32::new(0),
+        counter: AtomicU32::new(0),
+    };
+    let mut handles = [None, None, None];
+    for h in handles.iter_mut() {
+        match soft_spawn(thr_mutex_lock_inc, &mut arg as *mut Arg as *mut u8)? {
+            Some(t) => *h = Some(t),
+            None => {
+                for done in handles.iter_mut().filter_map(|x| x.take()) {
+                    soft_join(done)?;
+                }
+                return Ok(());
+            }
+        }
+    }
+    for h in handles.iter_mut().filter_map(|x| x.take()) {
+        soft_join(h)?;
+    }
+    check_eq!(arg.counter.load(Ordering::SeqCst), 192, "3*64");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix, full)]
+fn thread_barrier_like_two() -> TestResult {
+    #[repr(C)]
+    struct Arg {
+        count: AtomicU32,
+        gen: AtomicU32,
+    }
+    unsafe extern "C" fn arrive(arg: *mut u8) -> i32 {
+        let a = &*(arg as *const Arg);
+        let g = a.gen.load(Ordering::Acquire);
+        if a.count.fetch_add(1, Ordering::AcqRel) + 1 >= 2 {
+            a.count.store(0, Ordering::Release);
+            a.gen.fetch_add(1, Ordering::Release);
+            let _ = syscall::futex_wake(&a.gen, !0);
+        } else {
+            let timeout = Timespec {
+                tv_sec: 2,
+                tv_nsec: 0,
+            };
+            while a.gen.load(Ordering::Acquire) == g {
+                let _ = syscall::futex_wait(&a.gen, g, Some(&timeout));
+            }
+        }
+        0
+    }
+    let mut arg = Arg {
+        count: AtomicU32::new(0),
+        gen: AtomicU32::new(0),
+    };
+    let Some(t1) = soft_spawn(arrive, &mut arg as *mut Arg as *mut u8)? else {
+        return Ok(());
+    };
+    let Some(t2) = soft_spawn(arrive, &mut arg as *mut Arg as *mut u8)? else {
+        soft_join(t1)?;
+        return Ok(());
+    };
+    soft_join(t1)?;
+    soft_join(t2)?;
+    check!(arg.gen.load(Ordering::SeqCst) >= 1, "passed");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix, full)]
+fn thread_once_like_two() -> TestResult {
+    #[repr(C)]
+    struct Arg {
+        gate: AtomicU32,
+        runs: AtomicU32,
+    }
+    unsafe extern "C" fn once(arg: *mut u8) -> i32 {
+        let a = &*(arg as *const Arg);
+        loop {
+            match a.gate.compare_exchange(0, 1, Ordering::AcqRel, Ordering::Acquire) {
+                Ok(_) => {
+                    a.runs.fetch_add(1, Ordering::SeqCst);
+                    a.gate.store(2, Ordering::Release);
+                    let _ = syscall::futex_wake(&a.gate, !0);
+                    break;
+                }
+                Err(2) => break,
+                Err(_) => {
+                    let _ = syscall::futex_wait(
+                        &a.gate,
+                        1,
+                        Some(&Timespec {
+                            tv_sec: 0,
+                            tv_nsec: 2_000_000,
+                        }),
+                    );
+                }
+            }
+        }
+        0
+    }
+    let mut arg = Arg {
+        gate: AtomicU32::new(0),
+        runs: AtomicU32::new(0),
+    };
+    let Some(t1) = soft_spawn(once, &mut arg as *mut Arg as *mut u8)? else {
+        return Ok(());
+    };
+    let Some(t2) = soft_spawn(once, &mut arg as *mut Arg as *mut u8)? else {
+        soft_join(t1)?;
+        return Ok(());
+    };
+    soft_join(t1)?;
+    soft_join(t2)?;
+    check_eq!(arg.runs.load(Ordering::SeqCst), 1, "once");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix, full)]
+fn thread_stack_reuse_six() -> TestResult {
+    for _ in 0..6 {
+        let cell = AtomicU32::new(0);
+        let Some(t) = soft_spawn(thr_inc, &cell as *const AtomicU32 as *mut u8)? else {
+            return Ok(());
+        };
+        soft_join(t)?;
+        check_eq!(cell.load(Ordering::SeqCst), 1, "reuse");
+    }
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix, full)]
+fn thread_detach_like_sleep() -> TestResult {
+    unsafe extern "C" fn sleepy(arg: *mut u8) -> i32 {
+        let _ = syscall::nanosleep(&Timespec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000,
+        });
+        (*(arg as *mut AtomicU32)).store(1, Ordering::SeqCst);
+        0
+    }
+    let cell = AtomicU32::new(0);
+    let Some(t) = soft_spawn(sleepy, &cell as *const AtomicU32 as *mut u8)? else {
+        return Ok(());
+    };
+    for _ in 0..30 {
+        let _ = syscall::sched_yield();
+    }
+    soft_join(t)?;
+    check_eq!(cell.load(Ordering::SeqCst), 1, "done");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix, full)]
+fn thread_u64_counter_two() -> TestResult {
+    use core::sync::atomic::AtomicU64;
+    #[repr(C)]
+    struct Arg {
+        counter: AtomicU64,
+        n: u32,
+    }
+    unsafe extern "C" fn add(arg: *mut u8) -> i32 {
+        let a = &*(arg as *const Arg);
+        for _ in 0..a.n {
+            a.counter.fetch_add(1, Ordering::Relaxed);
+        }
+        0
+    }
+    let mut arg = Arg {
+        counter: AtomicU64::new(0),
+        n: 1000,
+    };
+    let Some(t1) = soft_spawn(add, &mut arg as *mut Arg as *mut u8)? else {
+        return Ok(());
+    };
+    let Some(t2) = soft_spawn(add, &mut arg as *mut Arg as *mut u8)? else {
+        soft_join(t1)?;
+        return Ok(());
+    };
+    soft_join(t1)?;
+    soft_join(t2)?;
+    check_eq!(arg.counter.load(Ordering::SeqCst), 2000, "u64");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn thread_spawn_join_eight() -> TestResult {
+    for _ in 0..8 {
+        let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
+            return Ok(());
+        };
+        soft_join(t)?;
+    }
+    check_eq!(syscall::gettid(), syscall::getpid(), "restored");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix, full)]
+fn thread_cond_broadcast_two() -> TestResult {
+    #[repr(C)]
+    struct Arg {
+        ready: AtomicU32,
+        done: AtomicU32,
+    }
+    unsafe extern "C" fn wait_inc(arg: *mut u8) -> i32 {
+        let a = &*(arg as *const Arg);
+        let timeout = Timespec {
+            tv_sec: 0,
+            tv_nsec: 50_000_000,
+        };
+        while a.ready.load(Ordering::Acquire) == 0 {
+            let _ = syscall::futex_wait(&a.ready, 0, Some(&timeout));
+        }
+        a.done.fetch_add(1, Ordering::Release);
+        0
+    }
+    let mut arg = Arg {
+        ready: AtomicU32::new(0),
+        done: AtomicU32::new(0),
+    };
+    let Some(t1) = soft_spawn(wait_inc, &mut arg as *mut Arg as *mut u8)? else {
+        return Ok(());
+    };
+    let Some(t2) = soft_spawn(wait_inc, &mut arg as *mut Arg as *mut u8)? else {
+        soft_join(t1)?;
+        return Ok(());
+    };
+    for _ in 0..32 {
+        let _ = syscall::sched_yield();
+    }
+    arg.ready.store(1, Ordering::Release);
+    for _ in 0..64 {
+        let _ = syscall::futex_wake(&arg.ready, !0);
+        if arg.done.load(Ordering::Acquire) >= 2 {
+            break;
+        }
+        let _ = syscall::sched_yield();
+        let _ = syscall::nanosleep(&Timespec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000,
+        });
+    }
+    soft_join(t1)?;
+    soft_join(t2)?;
+    check_eq!(arg.done.load(Ordering::SeqCst), 2, "both");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn thread_gettid_after_many_joins() -> TestResult {
+    for _ in 0..5 {
+        let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
+            return Ok(());
+        };
+        soft_join(t)?;
+    }
+    check_eq!(syscall::gettid(), syscall::getpid(), "single");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix, full)]
+fn thread_trylock_like() -> TestResult {
+    #[repr(C)]
+    struct Arg {
+        lock: AtomicU32,
+        got: AtomicU32,
+    }
+    unsafe extern "C" fn try_inc(arg: *mut u8) -> i32 {
+        let a = &*(arg as *const Arg);
+        for _ in 0..64 {
+            if a.lock
+                .compare_exchange(0, 1, Ordering::Acquire, Ordering::Relaxed)
+                .is_ok()
+            {
+                a.got.fetch_add(1, Ordering::SeqCst);
+                a.lock.store(0, Ordering::Release);
+                let _ = syscall::futex_wake(&a.lock, 1);
+            } else {
+                let _ = syscall::sched_yield();
+            }
+        }
+        0
+    }
+    let mut arg = Arg {
+        lock: AtomicU32::new(0),
+        got: AtomicU32::new(0),
+    };
+    let Some(t1) = soft_spawn(try_inc, &mut arg as *mut Arg as *mut u8)? else {
+        return Ok(());
+    };
+    let Some(t2) = soft_spawn(try_inc, &mut arg as *mut Arg as *mut u8)? else {
+        soft_join(t1)?;
+        return Ok(());
+    };
+    soft_join(t1)?;
+    soft_join(t2)?;
+    check!(arg.got.load(Ordering::SeqCst) > 0, "got");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix, full)]
+fn thread_rwlock_shared_like() -> TestResult {
+    #[repr(C)]
+    struct Arg {
+        state: AtomicU32,
+        sum: AtomicU32,
+    }
+    unsafe extern "C" fn rd(arg: *mut u8) -> i32 {
+        let a = &*(arg as *const Arg);
+        for _ in 0..16 {
+            loop {
+                let s = a.state.load(Ordering::Acquire);
+                if s & 0x8000_0000 != 0 {
+                    let _ = syscall::futex_wait(
+                        &a.state,
+                        s,
+                        Some(&Timespec {
+                            tv_sec: 0,
+                            tv_nsec: 1_000_000,
+                        }),
+                    );
+                    continue;
+                }
+                if a.state
+                    .compare_exchange(s, s + 1, Ordering::Acquire, Ordering::Relaxed)
+                    .is_ok()
+                {
+                    break;
+                }
+            }
+            a.sum.fetch_add(1, Ordering::Relaxed);
+            let prev = a.state.fetch_sub(1, Ordering::Release);
+            if prev == 1 {
+                let _ = syscall::futex_wake(&a.state, !0);
+            }
+        }
+        0
+    }
+    let mut arg = Arg {
+        state: AtomicU32::new(0),
+        sum: AtomicU32::new(0),
+    };
+    let Some(t1) = soft_spawn(rd, &mut arg as *mut Arg as *mut u8)? else {
+        return Ok(());
+    };
+    let Some(t2) = soft_spawn(rd, &mut arg as *mut Arg as *mut u8)? else {
+        soft_join(t1)?;
+        return Ok(());
+    };
+    soft_join(t1)?;
+    soft_join(t2)?;
+    check_eq!(arg.sum.load(Ordering::SeqCst), 32, "sum");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn thread_three_seq_nops() -> TestResult {
+    for _ in 0..3 {
+        let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
+            return Ok(());
+        };
+        soft_join(t)?;
+    }
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix, full)]
+fn thread_five_parallel_incs() -> TestResult {
+    // Cap at 4 concurrent (stack pressure); do 5 via 4+1.
+    let cell = AtomicU32::new(0);
+    let mut handles = [None, None, None, None];
+    for h in handles.iter_mut() {
+        match soft_spawn(thr_inc, &cell as *const AtomicU32 as *mut u8)? {
+            Some(t) => *h = Some(t),
+            None => {
+                for done in handles.iter_mut().filter_map(|x| x.take()) {
+                    soft_join(done)?;
+                }
+                return Ok(());
+            }
+        }
+    }
+    for h in handles.iter_mut().filter_map(|x| x.take()) {
+        soft_join(h)?;
+    }
+    let Some(t) = soft_spawn(thr_inc, &cell as *const AtomicU32 as *mut u8)? else {
+        return Ok(());
+    };
+    soft_join(t)?;
+    check_eq!(cell.load(Ordering::SeqCst), 5, "five");
+    Ok(())
+}

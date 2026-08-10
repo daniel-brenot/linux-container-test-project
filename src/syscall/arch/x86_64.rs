@@ -269,6 +269,14 @@ pub mod nr {
     pub const SHMDT: usize = 67;
     pub const MQ_OPEN: usize = 240;
     pub const MQ_UNLINK: usize = 241;
+    pub const MQ_TIMEDSEND: usize = 242;
+    pub const MQ_TIMEDRECEIVE: usize = 243;
+    pub const MQ_NOTIFY: usize = 244;
+    pub const MQ_GETSETATTR: usize = 245;
+    pub const MLOCKALL: usize = 151;
+    pub const MUNLOCKALL: usize = 152;
+    pub const IO_SETUP: usize = 206;
+    pub const IO_DESTROY: usize = 207;
     pub const LANDLOCK_CREATE_RULESET: usize = 444;
     pub const LANDLOCK_ADD_RULE: usize = 445;
     pub const LANDLOCK_RESTRICT_SELF: usize = 446;
@@ -293,4 +301,7 @@ pub mod nr {
     pub const FSCONFIG: usize = 431;
     pub const MLOCK: usize = 149;
     pub const MUNLOCK: usize = 150;
+    pub const ALARM: usize = 37;
+    pub const MOUNT: usize = 165;
+    pub const PTRACE: usize = 101;
 }

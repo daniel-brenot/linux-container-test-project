@@ -2086,6 +2086,123 @@ pub fn mq_unlink(name: &[u8]) -> Result<()> {
     unsafe { sys1(nr::MQ_UNLINK, p as usize).map(|_| ()) }
 }
 
+pub fn mq_timedsend(
+    mqdes: i32,
+    msg: &[u8],
+    prio: u32,
+    abs_timeout: Option<&Timespec>,
+) -> Result<()> {
+    let abs = abs_timeout
+        .map(|t| t as *const Timespec as usize)
+        .unwrap_or(0);
+    unsafe {
+        sys5(
+            nr::MQ_TIMEDSEND,
+            mqdes as usize,
+            msg.as_ptr() as usize,
+            msg.len(),
+            prio as usize,
+            abs,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn mq_timedreceive(
+    mqdes: i32,
+    msg: &mut [u8],
+    prio: Option<&mut u32>,
+    abs_timeout: Option<&Timespec>,
+) -> Result<usize> {
+    let prio_p = prio
+        .map(|p| p as *mut u32 as usize)
+        .unwrap_or(0);
+    let abs = abs_timeout
+        .map(|t| t as *const Timespec as usize)
+        .unwrap_or(0);
+    unsafe {
+        sys5(
+            nr::MQ_TIMEDRECEIVE,
+            mqdes as usize,
+            msg.as_mut_ptr() as usize,
+            msg.len(),
+            prio_p,
+            abs,
+        )
+    }
+}
+
+pub fn mq_send(mqdes: i32, msg: &[u8], prio: u32) -> Result<()> {
+    mq_timedsend(mqdes, msg, prio, None)
+}
+
+pub fn mq_receive(mqdes: i32, msg: &mut [u8], prio: Option<&mut u32>) -> Result<usize> {
+    mq_timedreceive(mqdes, msg, prio, None)
+}
+
+pub fn mq_getattr(mqdes: i32, attr: &mut super::MqAttr) -> Result<()> {
+    unsafe {
+        sys3(
+            nr::MQ_GETSETATTR,
+            mqdes as usize,
+            0,
+            attr as *mut super::MqAttr as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn mq_setattr(
+    mqdes: i32,
+    newattr: &super::MqAttr,
+    oldattr: Option<&mut super::MqAttr>,
+) -> Result<()> {
+    let old = oldattr
+        .map(|a| a as *mut super::MqAttr as usize)
+        .unwrap_or(0);
+    unsafe {
+        sys3(
+            nr::MQ_GETSETATTR,
+            mqdes as usize,
+            newattr as *const super::MqAttr as usize,
+            old,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn mlockall(flags: i32) -> Result<()> {
+    unsafe { sys1(nr::MLOCKALL, flags as usize).map(|_| ()) }
+}
+
+pub fn munlockall() -> Result<()> {
+    unsafe { sys0(nr::MUNLOCKALL).map(|_| ()) }
+}
+
+/// Legacy AIO context setup — soft-probe only (`ENOSYS` common).
+pub fn io_setup(nr_events: u32, ctx_idp: &mut u64) -> Result<()> {
+    unsafe {
+        sys2(
+            nr::IO_SETUP,
+            nr_events as usize,
+            ctx_idp as *mut u64 as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn io_destroy(ctx_id: u64) -> Result<()> {
+    unsafe { sys1(nr::IO_DESTROY, ctx_id as usize).map(|_| ()) }
+}
+
+/// `killpg(pgrp, sig)` via `kill(-pgrp, sig)`.
+pub fn killpg(pgrp: i32, sig: i32) -> Result<()> {
+    if pgrp <= 0 {
+        return Err(Errno::EINVAL);
+    }
+    kill(-pgrp, sig)
+}
+
 pub fn landlock_create_ruleset(
     attr: Option<&super::LandlockRulesetAttr>,
     size: usize,
@@ -2423,5 +2540,55 @@ pub fn prctl(option: i32, arg2: usize, arg3: usize, arg4: usize, arg5: usize) ->
             arg5,
         )
         .map(|v| v as i32)
+    }
+}
+
+/// Soft-surface `alarm(2)` (ENOSYS on aarch64 / some containers).
+pub fn alarm(seconds: u32) -> Result<u32> {
+    #[cfg(target_arch = "x86_64")]
+    {
+        unsafe { sys1(nr::ALARM, seconds as usize).map(|v| v as u32) }
+    }
+    #[cfg(target_arch = "aarch64")]
+    {
+        let _ = seconds;
+        Err(Errno::ENOSYS)
+    }
+}
+
+/// Soft-surface `mount(2)` — expect EPERM/ENOSYS unprivileged.
+pub fn mount(
+    source: &[u8],
+    target: &[u8],
+    fstype: &[u8],
+    flags: usize,
+    data: usize,
+) -> Result<()> {
+    let s = c_str_ptr(source)?;
+    let t = c_str_ptr(target)?;
+    let f = c_str_ptr(fstype)?;
+    unsafe {
+        sys5(
+            nr::MOUNT,
+            s as usize,
+            t as usize,
+            f as usize,
+            flags,
+            data,
+        )
+        .map(|_| ())
+    }
+}
+
+/// Soft-surface `ptrace(2)` — expect EPERM unprivileged for attach.
+pub fn ptrace(request: i32, pid: i32, addr: usize, data: usize) -> Result<usize> {
+    unsafe {
+        sys4(
+            nr::PTRACE,
+            request as usize,
+            pid as usize,
+            addr,
+            data,
+        )
     }
 }

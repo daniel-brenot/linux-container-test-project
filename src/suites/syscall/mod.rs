@@ -20,6 +20,7 @@ mod landlock_test;
 mod ltp_edges;
 mod ltp_edges_depth2;
 mod ltp_edges_depth3;
+mod ltp_edges_depth4;
 mod memfd;
 mod memory;
 mod memory_depth;

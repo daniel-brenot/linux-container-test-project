@@ -11,6 +11,7 @@ mod mkfifo;
 mod open;
 mod pjdfstest_depth2;
 mod pjdfstest_depth3;
+mod pjdfstest_depth4;
 mod rename;
 mod rmdir;
 mod stat;
