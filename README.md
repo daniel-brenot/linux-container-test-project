@@ -10,11 +10,10 @@ without Python, Perl, or a separate glibc build.
 | Suite | Flag | Role |
 |-------|------|------|
 | **bootstrap** | `--bootstrap` | Prerequisites for everything else. Always runs first; remaining suites are refused if it fails. |
-| **syscall** | `--syscall` | Linux syscall behaviour (LTP-inspired, unprivileged only): files, process, memory, time, IPC, poll/epoll, signals, misc |
-| **posix** | `--posix` | POSIX path/open/errno/IO/signal semantics |
-| **fs** | `--fs` | Filesystem semantics (pjdfstest-inspired): chmod, link, mkdir, mkfifo, open, rename, rmdir, symlink, truncate, unlink, utimensat, chown-EPERM |
-
-Only tests that work in a **non-privileged** Docker container are included (~225 cases in `--full`).
+| **syscall** | `--syscall` | Linux syscall behaviour (LTP-inspired, unprivileged only): files, process, memory, time, IPC, net, signals, inotify, pidfd, … |
+| **posix** | `--posix` | POSIX path/open/errno/IO/signal/process semantics |
+| **fs** | `--fs` | Filesystem semantics (pjdfstest-inspired): chmod, link, mkdir, mkfifo, open, rename, rmdir, symlink, truncate, unlink, utimensat, flock, statfs, sync, chown-EPERM |
+Only tests that work in a **non-privileged** Docker container are included (~635 cases in `--full`).
 
 ## Build
 

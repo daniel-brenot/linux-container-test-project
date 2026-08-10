@@ -30,6 +30,8 @@ pub mod oflag {
     pub const O_NOFOLLOW: i32 = 0o400000;
     pub const O_CLOEXEC: i32 = 0o2000000;
     pub const O_PATH: i32 = 0o10000000;
+    /// Linux `O_TMPFILE` (`__O_TMPFILE | O_DIRECTORY`).
+    pub const O_TMPFILE: i32 = 0o20000000 | O_DIRECTORY;
 }
 
 /// `mmap` / `mprotect` protection bits.
@@ -71,7 +73,26 @@ pub mod fcntl_cmd {
     pub const F_SETFD: i32 = 2;
     pub const F_GETFL: i32 = 3;
     pub const F_SETFL: i32 = 4;
+    pub const F_GETLK: i32 = 5;
+    pub const F_SETLK: i32 = 6;
+    pub const F_SETLKW: i32 = 7;
     pub const F_DUPFD_CLOEXEC: i32 = 1030;
+}
+
+/// `fcntl` advisory lock types (`struct flock.l_type`).
+pub const F_RDLCK: i16 = 0;
+pub const F_WRLCK: i16 = 1;
+pub const F_UNLCK: i16 = 2;
+
+/// Kernel `struct flock` (64-bit).
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct Flock {
+    pub l_type: i16,
+    pub l_whence: i16,
+    pub l_start: i64,
+    pub l_len: i64,
+    pub l_pid: i32,
 }
 
 pub const FD_CLOEXEC: i32 = 1;
@@ -81,6 +102,10 @@ pub const AT_REMOVEDIR: i32 = 0x200;
 
 /// `fchmodat` / `faccessat` flag: do not follow symlinks.
 pub const AT_SYMLINK_NOFOLLOW: i32 = 0x100;
+/// `linkat` flag: follow symlinks on `oldpath`.
+pub const AT_SYMLINK_FOLLOW: i32 = 0x400;
+/// `*at` flag: empty path refers to `dirfd` itself.
+pub const AT_EMPTY_PATH: i32 = 0x1000;
 
 /// Standard fds.
 pub const STDIN_FILENO: i32 = 0;
@@ -839,3 +864,38 @@ pub struct CapUserData {
 pub const CLONE_FILES: u64 = 0x0000_0400;
 /// `unshare` flag: new user namespace (often EPERM when unprivileged).
 pub const CLONE_NEWUSER: u64 = 0x1000_0000;
+
+/// `kcmp` comparison types.
+pub const KCMP_FILE: i32 = 0;
+
+/// System V IPC key / shm flags.
+pub const IPC_PRIVATE: i32 = 0;
+pub const IPC_CREAT: i32 = 0o1000;
+pub const IPC_EXCL: i32 = 0o2000;
+pub const IPC_RMID: i32 = 0;
+pub const SHM_RDONLY: i32 = 0o10000;
+
+/// Kernel `struct mq_attr`.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct MqAttr {
+    pub mq_flags: i64,
+    pub mq_maxmsg: i64,
+    pub mq_msgsize: i64,
+    pub mq_curmsgs: i64,
+}
+
+/// Landlock: query ABI version via `landlock_create_ruleset`.
+pub const LANDLOCK_CREATE_RULESET_VERSION: u32 = 1 << 0;
+/// Minimal FS access right for ruleset attr probes.
+pub const LANDLOCK_ACCESS_FS_EXECUTE: u64 = 1 << 0;
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct LandlockRulesetAttr {
+    pub handled_access_fs: u64,
+}
+
+/// userfaultfd flags.
+pub const UFFD_CLOEXEC: i32 = 0o2000000;
+pub const UFFD_NONBLOCK: i32 = 0o4000;

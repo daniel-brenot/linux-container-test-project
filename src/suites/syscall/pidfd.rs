@@ -98,3 +98,45 @@ fn pidfd_send_signal_zero_probe() -> TestResult {
     check_ok!(syscall::close(pfd), "close");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn pidfd_getfd_from_child_soft() -> TestResult {
+    use crate::syscall::{Errno, AF_UNIX, SOCK_STREAM};
+
+    let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "socketpair");
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        let _ = syscall::close(a);
+        // Park until parent finishes pidfd_getfd.
+        let req = syscall::Timespec {
+            tv_sec: 30,
+            tv_nsec: 0,
+        };
+        let _ = syscall::nanosleep(&req);
+        let _ = syscall::close(b);
+        syscall::exit(0);
+    }
+    let _ = syscall::close(b);
+    let pfd = check_ok!(syscall::pidfd_open(pid, 0), "pidfd_open");
+    match syscall::pidfd_getfd(pfd, b, 0) {
+        Ok(fd) => {
+            check!(fd >= 0, "got fd");
+            check_ok!(syscall::close(fd), "close got");
+        }
+        Err(Errno::EPERM) | Err(Errno::ENOSYS) | Err(Errno::EBADF) | Err(Errno::EINVAL) => {}
+        Err(_) => {
+            let _ = syscall::close(pfd);
+            let _ = syscall::close(a);
+            let _ = syscall::kill(pid, SIGKILL);
+            let mut st = 0;
+            let _ = syscall::wait4(pid, &mut st, 0);
+            return Err(crate::harness::AssertFail::msg("pidfd_getfd"));
+        }
+    }
+    check_ok!(syscall::kill(pid, SIGKILL), "kill");
+    let mut status = 0;
+    check_ok!(syscall::wait4(pid, &mut status, 0), "wait");
+    check_ok!(syscall::close(pfd), "close pfd");
+    check_ok!(syscall::close(a), "close a");
+    Ok(())
+}

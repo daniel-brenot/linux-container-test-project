@@ -194,4 +194,19 @@ pub mod nr {
     pub const CAPGET: usize = 125;
     pub const UNSHARE: usize = 272;
     pub const READAHEAD: usize = 187;
+    pub const PROCESS_VM_READV: usize = 310;
+    pub const PROCESS_VM_WRITEV: usize = 311;
+    pub const KCMP: usize = 312;
+    pub const SHMGET: usize = 29;
+    pub const SHMAT: usize = 30;
+    pub const SHMCTL: usize = 31;
+    pub const SHMDT: usize = 67;
+    pub const MQ_OPEN: usize = 240;
+    pub const MQ_UNLINK: usize = 241;
+    pub const LANDLOCK_CREATE_RULESET: usize = 444;
+    pub const LANDLOCK_ADD_RULE: usize = 445;
+    pub const LANDLOCK_RESTRICT_SELF: usize = 446;
+    pub const USERFAULTFD: usize = 323;
+    pub const PIDFD_GETFD: usize = 438;
+    pub const CLOCK_SETTIME: usize = 227;
 }

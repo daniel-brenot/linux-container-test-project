@@ -157,3 +157,45 @@ fn sched_setaffinity_roundtrip() -> TestResult {
     check_ok!(syscall::sched_setaffinity(0, &mask), "set twice");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn setpriority_same_nice_soft() -> TestResult {
+    use crate::syscall::Errno;
+    let nice = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "get");
+    match syscall::setpriority(PRIO_PROCESS, 0, nice) {
+        Ok(()) => Ok(()),
+        Err(Errno::EPERM) | Err(Errno::EACCES) => Ok(()),
+        Err(_) => Err(crate::harness::AssertFail::msg("setpriority same")),
+    }
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn setpriority_lower_nice_soft() -> TestResult {
+    use crate::syscall::Errno;
+    // Raising priority (lower nice number) often fails unprivileged.
+    match syscall::setpriority(PRIO_PROCESS, 0, -5) {
+        Ok(()) => {
+            // Restore a milder nice if we succeeded.
+            let _ = syscall::setpriority(PRIO_PROCESS, 0, 0);
+            Ok(())
+        }
+        Err(Errno::EPERM) | Err(Errno::EACCES) => Ok(()),
+        Err(_) => Err(crate::harness::AssertFail::msg("setpriority lower")),
+    }
+}
+
+#[crate::lctp_test(suite = syscall, full)]
+fn setpriority_raise_nice_soft() -> TestResult {
+    use crate::syscall::Errno;
+    // Increasing nice (lower priority) is usually allowed.
+    let cur = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "get");
+    let target = if cur < 19 { cur + 1 } else { cur };
+    match syscall::setpriority(PRIO_PROCESS, 0, target) {
+        Ok(()) => {
+            let _ = syscall::setpriority(PRIO_PROCESS, 0, cur);
+            Ok(())
+        }
+        Err(Errno::EPERM) | Err(Errno::EACCES) => Ok(()),
+        Err(_) => Err(crate::harness::AssertFail::msg("setpriority raise")),
+    }
+}

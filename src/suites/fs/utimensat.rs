@@ -101,3 +101,44 @@ fn utimensat_symlink_nofollow() -> TestResult {
     check_eq!(lst.st_mtime, t, "link mtime");
     Ok(())
 }
+
+#[crate::lctp_test(suite = fs)]
+fn futimens_now_via_fd() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    let fd = check_ok!(
+        syscall::open(&path, crate::syscall::oflag::O_RDWR, 0),
+        "open"
+    );
+    let times = [
+        Timespec {
+            tv_sec: 0,
+            tv_nsec: UTIME_NOW,
+        },
+        Timespec {
+            tv_sec: 0,
+            tv_nsec: UTIME_NOW,
+        },
+    ];
+    check_ok!(syscall::futimens(fd, &times), "futimens");
+    check_ok!(syscall::close(fd), "close");
+    let st = check_ok!(syscall::stat(&path), "stat");
+    check!(st.st_mtime > 0, "mtime");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn futimens_explicit() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    let fd = check_ok!(
+        syscall::open(&path, crate::syscall::oflag::O_RDWR, 0),
+        "open"
+    );
+    let t = 1_650_000_000i64;
+    check_ok!(syscall::futimens(fd, &ts_pair(t)), "futimens");
+    check_ok!(syscall::close(fd), "close");
+    let st = check_ok!(syscall::stat(&path), "stat");
+    check_eq!(st.st_mtime, t, "mtime");
+    Ok(())
+}

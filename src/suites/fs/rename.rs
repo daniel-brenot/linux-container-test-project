@@ -306,3 +306,29 @@ fn renameat2_exchange_dirs() -> TestResult {
     check_ok!(syscall::rmdir(&d2), "rmdir d2");
     Ok(())
 }
+
+#[crate::lctp_test(suite = fs)]
+fn renameat2_whiteout_soft() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let src = create_empty(&mut tmp, b"wo_src")?;
+    let dst = copy_child(&mut tmp, b"wo_dst")?;
+    match syscall::renameat2(
+        syscall::AT_FDCWD,
+        &src,
+        syscall::AT_FDCWD,
+        &dst,
+        syscall::RENAME_WHITEOUT,
+    ) {
+        Ok(()) => {
+            check_ok!(syscall::stat(&dst), "dst");
+        }
+        Err(Errno::EINVAL)
+        | Err(Errno::EOPNOTSUPP)
+        | Err(Errno::ENOTSUP)
+        | Err(Errno::EPERM)
+        | Err(Errno::EACCES)
+        | Err(Errno::ENOSYS) => {}
+        Err(_) => return Err(crate::harness::AssertFail::msg("whiteout errno")),
+    }
+    Ok(())
+}

@@ -1904,3 +1904,210 @@ pub fn readahead(fd: i32, offset: i64, count: usize) -> Result<()> {
         .map(|_| ())
     }
 }
+
+pub fn process_vm_readv(
+    pid: i32,
+    local_iov: &mut [super::IoVec],
+    remote_iov: &[super::IoVec],
+    flags: u64,
+) -> Result<usize> {
+    unsafe {
+        sys6(
+            nr::PROCESS_VM_READV,
+            pid as usize,
+            local_iov.as_mut_ptr() as usize,
+            local_iov.len(),
+            remote_iov.as_ptr() as usize,
+            remote_iov.len(),
+            flags as usize,
+        )
+    }
+}
+
+pub fn process_vm_writev(
+    pid: i32,
+    local_iov: &[super::IoVec],
+    remote_iov: &[super::IoVec],
+    flags: u64,
+) -> Result<usize> {
+    unsafe {
+        sys6(
+            nr::PROCESS_VM_WRITEV,
+            pid as usize,
+            local_iov.as_ptr() as usize,
+            local_iov.len(),
+            remote_iov.as_ptr() as usize,
+            remote_iov.len(),
+            flags as usize,
+        )
+    }
+}
+
+pub fn kcmp(pid1: i32, pid2: i32, typ: i32, idx1: u64, idx2: u64) -> Result<i32> {
+    unsafe {
+        sys5(
+            nr::KCMP,
+            pid1 as usize,
+            pid2 as usize,
+            typ as usize,
+            idx1 as usize,
+            idx2 as usize,
+        )
+        .map(|v| v as i32)
+    }
+}
+
+pub fn shmget(key: i32, size: usize, shmflg: i32) -> Result<i32> {
+    unsafe {
+        sys3(
+            nr::SHMGET,
+            key as usize,
+            size,
+            shmflg as usize,
+        )
+        .map(|v| v as i32)
+    }
+}
+
+pub fn shmat(shmid: i32, shmaddr: usize, shmflg: i32) -> Result<usize> {
+    unsafe {
+        sys3(
+            nr::SHMAT,
+            shmid as usize,
+            shmaddr,
+            shmflg as usize,
+        )
+    }
+}
+
+pub fn shmdt(shmaddr: usize) -> Result<()> {
+    unsafe { sys1(nr::SHMDT, shmaddr).map(|_| ()) }
+}
+
+pub fn shmctl(shmid: i32, cmd: i32, buf: usize) -> Result<i32> {
+    unsafe {
+        sys3(nr::SHMCTL, shmid as usize, cmd as usize, buf).map(|v| v as i32)
+    }
+}
+
+pub fn mq_open(
+    name: &[u8],
+    oflag: i32,
+    mode: u32,
+    attr: Option<&super::MqAttr>,
+) -> Result<i32> {
+    let p = c_str_ptr(name)?;
+    let a = attr
+        .map(|x| x as *const super::MqAttr as usize)
+        .unwrap_or(0);
+    unsafe {
+        sys4(
+            nr::MQ_OPEN,
+            p as usize,
+            oflag as usize,
+            mode as usize,
+            a,
+        )
+        .map(|v| v as i32)
+    }
+}
+
+pub fn mq_unlink(name: &[u8]) -> Result<()> {
+    let p = c_str_ptr(name)?;
+    unsafe { sys1(nr::MQ_UNLINK, p as usize).map(|_| ()) }
+}
+
+pub fn landlock_create_ruleset(
+    attr: Option<&super::LandlockRulesetAttr>,
+    size: usize,
+    flags: u32,
+) -> Result<i32> {
+    let a = attr
+        .map(|x| x as *const super::LandlockRulesetAttr as usize)
+        .unwrap_or(0);
+    unsafe {
+        sys3(
+            nr::LANDLOCK_CREATE_RULESET,
+            a,
+            size,
+            flags as usize,
+        )
+        .map(|v| v as i32)
+    }
+}
+
+pub fn landlock_restrict_self(ruleset_fd: i32, flags: u32) -> Result<()> {
+    unsafe {
+        sys2(
+            nr::LANDLOCK_RESTRICT_SELF,
+            ruleset_fd as usize,
+            flags as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn userfaultfd(flags: i32) -> Result<i32> {
+    unsafe { sys1(nr::USERFAULTFD, flags as usize).map(|v| v as i32) }
+}
+
+pub fn pidfd_getfd(pidfd: i32, targetfd: i32, flags: u32) -> Result<i32> {
+    unsafe {
+        sys3(
+            nr::PIDFD_GETFD,
+            pidfd as usize,
+            targetfd as usize,
+            flags as usize,
+        )
+        .map(|v| v as i32)
+    }
+}
+
+pub fn clock_settime(clock_id: i32, tp: &Timespec) -> Result<()> {
+    unsafe {
+        sys2(
+            nr::CLOCK_SETTIME,
+            clock_id as usize,
+            tp as *const Timespec as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn setpriority(which: i32, who: i32, prio: i32) -> Result<()> {
+    unsafe {
+        sys3(
+            nr::SETPRIORITY,
+            which as usize,
+            who as usize,
+            prio as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+/// `futimens(fd, times)` — `utimensat` with null path.
+pub fn futimens(fd: i32, times: &[Timespec; 2]) -> Result<()> {
+    unsafe {
+        sys4(
+            nr::UTIMENSAT,
+            fd as usize,
+            0,
+            times.as_ptr() as usize,
+            0,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn fcntl_flock(fd: i32, cmd: i32, lock: &mut super::Flock) -> Result<()> {
+    unsafe {
+        sys3(
+            nr::FCNTL,
+            fd as usize,
+            cmd as usize,
+            lock as *mut super::Flock as usize,
+        )
+        .map(|_| ())
+    }
+}

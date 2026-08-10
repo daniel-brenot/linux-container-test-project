@@ -125,3 +125,35 @@ fn fs_flock_wronly_fd() -> TestResult {
     check_ok!(syscall::close(fd), "close");
     Ok(())
 }
+
+#[crate::lctp_test(suite = fs)]
+fn fcntl_setlk_advisory() -> TestResult {
+    use crate::syscall::{fcntl_cmd, Flock, F_RDLCK, F_UNLCK, F_WRLCK};
+
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"lk")?;
+    let fd = check_ok!(syscall::open(&path, oflag::O_RDWR, 0), "open");
+    let mut lk = Flock {
+        l_type: F_WRLCK,
+        l_whence: 0,
+        l_start: 0,
+        l_len: 0,
+        l_pid: 0,
+    };
+    check_ok!(
+        syscall::fcntl_flock(fd, fcntl_cmd::F_SETLK, &mut lk),
+        "SETLK write"
+    );
+    lk.l_type = F_RDLCK;
+    check_ok!(
+        syscall::fcntl_flock(fd, fcntl_cmd::F_SETLK, &mut lk),
+        "SETLK read"
+    );
+    lk.l_type = F_UNLCK;
+    check_ok!(
+        syscall::fcntl_flock(fd, fcntl_cmd::F_SETLK, &mut lk),
+        "SETLK unlock"
+    );
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}

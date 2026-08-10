@@ -105,3 +105,35 @@ fn mkdir_is_directory() -> TestResult {
     check_ok!(syscall::rmdir(&dir), "rmdir");
     Ok(())
 }
+
+#[crate::lctp_test(suite = fs)]
+fn mkdirat_relative_dirfd() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let parent = create_dir(&mut tmp, b"p", 0o755)?;
+    let dirfd = check_ok!(
+        syscall::open(
+            &parent,
+            crate::syscall::oflag::O_RDONLY | crate::syscall::oflag::O_DIRECTORY,
+            0
+        ),
+        "opendir"
+    );
+    check_ok!(syscall::mkdirat(dirfd, b"child\0", 0o755), "mkdirat");
+    let mut child = [0u8; 160];
+    let plen = parent.iter().position(|&c| c == 0).unwrap();
+    child[..plen].copy_from_slice(&parent[..plen]);
+    child[plen..plen + 6].copy_from_slice(b"/child");
+    child[plen + 6] = 0;
+    let st = check_ok!(
+        syscall::stat(crate::suites::common::truncate_cstr(&child)),
+        "stat child"
+    );
+    check!(st.is_dir(), "is dir");
+    check_ok!(
+        syscall::rmdir(crate::suites::common::truncate_cstr(&child)),
+        "rmdir"
+    );
+    check_ok!(syscall::close(dirfd), "close");
+    check_ok!(syscall::rmdir(&parent), "rmdir parent");
+    Ok(())
+}

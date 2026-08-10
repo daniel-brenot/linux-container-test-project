@@ -107,3 +107,55 @@ fn link_multiple_hardlinks() -> TestResult {
     check_eq!(st.st_nlink, 3, "nlink 3");
     Ok(())
 }
+
+#[crate::lctp_test(suite = fs)]
+fn linkat_empty_path() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"a")?;
+    let dst = copy_child(&mut tmp, b"via_fd")?;
+    let fd = check_ok!(
+        syscall::open(&a, crate::syscall::oflag::O_RDONLY, 0),
+        "open"
+    );
+    match syscall::linkat(
+        fd,
+        b"\0",
+        syscall::AT_FDCWD,
+        &dst,
+        syscall::AT_EMPTY_PATH,
+    ) {
+        Ok(()) => {
+            let sa = check_ok!(syscall::stat(&a), "stat a");
+            let sb = check_ok!(syscall::stat(&dst), "stat dst");
+            check_eq!(sa.st_ino, sb.st_ino, "same inode");
+        }
+        // Older kernels require CAP_DAC_READ_SEARCH for AT_EMPTY_PATH.
+        Err(Errno::EPERM) | Err(Errno::EACCES) | Err(Errno::EINVAL) | Err(Errno::ENOENT) => {}
+        Err(_) => return Err(crate::harness::AssertFail::msg("linkat EMPTY_PATH")),
+    }
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn linkat_symlink_follow() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let target = create_empty(&mut tmp, b"target")?;
+    let link = copy_child(&mut tmp, b"slink")?;
+    let dst = copy_child(&mut tmp, b"hard")?;
+    check_ok!(syscall::symlink(b"target\0", &link), "symlink");
+    check_ok!(
+        syscall::linkat(
+            syscall::AT_FDCWD,
+            &link,
+            syscall::AT_FDCWD,
+            &dst,
+            syscall::AT_SYMLINK_FOLLOW
+        ),
+        "linkat FOLLOW"
+    );
+    let st_t = check_ok!(syscall::stat(&target), "stat target");
+    let st_d = check_ok!(syscall::stat(&dst), "stat hard");
+    check_eq!(st_t.st_ino, st_d.st_ino, "followed to target");
+    Ok(())
+}

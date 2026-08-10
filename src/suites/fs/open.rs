@@ -184,3 +184,26 @@ fn open_opath_symlink_nofollow() -> TestResult {
     check_ok!(syscall::close(fd), "close");
     Ok(())
 }
+
+#[crate::lctp_test(suite = fs)]
+fn open_tmpfile_soft() -> TestResult {
+    let tmp = check_ok!(TempDir::create(), "tempdir");
+    match syscall::open(
+        tmp.path(),
+        oflag::O_TMPFILE | oflag::O_RDWR,
+        0o600,
+    ) {
+        Ok(fd) => {
+            check_ok!(syscall::write(fd, b"tmp"), "write");
+            check_ok!(syscall::close(fd), "close");
+        }
+        Err(Errno::EOPNOTSUPP)
+        | Err(Errno::ENOTSUP)
+        | Err(Errno::EISDIR)
+        | Err(Errno::ENOENT)
+        | Err(Errno::EPERM)
+        | Err(Errno::EINVAL) => {}
+        Err(_) => return Err(crate::harness::AssertFail::msg("O_TMPFILE errno")),
+    }
+    Ok(())
+}

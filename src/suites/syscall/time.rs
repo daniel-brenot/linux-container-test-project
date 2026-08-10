@@ -83,3 +83,15 @@ fn monotonic_non_decreasing() -> TestResult {
     );
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn clock_settime_realtime_eperm() -> TestResult {
+    use crate::syscall::Errno;
+    let now = check_ok!(syscall::clock_gettime(clock::CLOCK_REALTIME), "gettime");
+    match syscall::clock_settime(clock::CLOCK_REALTIME, &now) {
+        Err(Errno::EPERM) | Err(Errno::EACCES) => Ok(()),
+        Ok(()) => Ok(()), // privileged container — allowed
+        Err(Errno::EINVAL) => Ok(()),
+        Err(_) => Err(crate::harness::AssertFail::msg("clock_settime errno")),
+    }
+}
