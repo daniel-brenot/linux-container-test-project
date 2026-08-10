@@ -75,3 +75,23 @@ pub fn cstr_prefix(buf: &[u8]) -> &[u8] {
     let end = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
     &buf[..end]
 }
+
+pub fn chmod_path(path: &[u8], mode: u32) -> Result<(), AssertFail> {
+    check_ok!(syscall::chmod(path, mode), "chmod_path");
+    Ok(())
+}
+
+/// Sleep for `secs` whole seconds via `nanosleep(2)`.
+pub fn nanosleep_secs(secs: i64) -> Result<(), AssertFail> {
+    let req = syscall::Timespec {
+        tv_sec: secs,
+        tv_nsec: 0,
+    };
+    check_ok!(syscall::nanosleep(&req), "nanosleep");
+    Ok(())
+}
+
+/// True if `(a_sec, a_nsec)` is strictly later than `(b_sec, b_nsec)`.
+pub fn timespec_later(a_sec: i64, a_nsec: i64, b_sec: i64, b_nsec: i64) -> bool {
+    a_sec > b_sec || (a_sec == b_sec && a_nsec > b_nsec)
+}

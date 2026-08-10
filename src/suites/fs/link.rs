@@ -1,11 +1,12 @@
 //! hard link filesystem tests.
 
+use crate::check;
 use crate::check_eq;
 use crate::check_err;
 use crate::check_ok;
 use crate::harness::{TempDir, TestResult};
-use crate::suites::common::{copy_child, create_dir, create_empty};
-use crate::syscall::{self, Errno};
+use crate::suites::common::{copy_child, create_dir, create_empty, join_path, write_file};
+use crate::syscall::{self, oflag, Errno, S_IFIFO};
 
 #[crate::lctp_test(suite = fs)]
 fn link_same_inode() -> TestResult {
@@ -75,7 +76,7 @@ fn link_share_content() -> TestResult {
     let a = copy_child(&mut tmp, b"a")?;
     let b = copy_child(&mut tmp, b"b")?;
     check_ok!(syscall::link(&a, &b), "link");
-    let fd = check_ok!(syscall::open(&b, crate::syscall::oflag::O_RDONLY, 0), "open b");
+    let fd = check_ok!(syscall::open(&b, oflag::O_RDONLY, 0), "open b");
     let mut buf = [0u8; 2];
     check_ok!(syscall::read(fd, &mut buf), "read");
     check_eq!(&buf, b"XY", "shared");
@@ -113,23 +114,13 @@ fn linkat_empty_path() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
     let dst = copy_child(&mut tmp, b"via_fd")?;
-    let fd = check_ok!(
-        syscall::open(&a, crate::syscall::oflag::O_RDONLY, 0),
-        "open"
-    );
-    match syscall::linkat(
-        fd,
-        b"\0",
-        syscall::AT_FDCWD,
-        &dst,
-        syscall::AT_EMPTY_PATH,
-    ) {
+    let fd = check_ok!(syscall::open(&a, oflag::O_RDONLY, 0), "open");
+    match syscall::linkat(fd, b"\0", syscall::AT_FDCWD, &dst, syscall::AT_EMPTY_PATH) {
         Ok(()) => {
             let sa = check_ok!(syscall::stat(&a), "stat a");
             let sb = check_ok!(syscall::stat(&dst), "stat dst");
             check_eq!(sa.st_ino, sb.st_ino, "same inode");
         }
-        // Older kernels require CAP_DAC_READ_SEARCH for AT_EMPTY_PATH.
         Err(Errno::EPERM) | Err(Errno::EACCES) | Err(Errno::EINVAL) | Err(Errno::ENOENT) => {}
         Err(_) => return Err(crate::harness::AssertFail::msg("linkat EMPTY_PATH")),
     }
@@ -193,5 +184,141 @@ fn link_nlink_after_unlink() -> TestResult {
     check_ok!(syscall::unlink(&b), "unlink b");
     let st = check_ok!(syscall::stat(&a), "stat");
     check_eq!(st.st_nlink, 1, "nlink back to 1");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn link_fifo() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = copy_child(&mut tmp, b"fifo")?;
+    check_ok!(
+        syscall::mknodat(syscall::AT_FDCWD, &path, S_IFIFO | 0o644, 0),
+        "mkfifo"
+    );
+    let dst = copy_child(&mut tmp, b"fifo2")?;
+    check_ok!(syscall::link(&path, &dst), "link fifo");
+    let st = check_ok!(syscall::stat(&dst), "stat");
+    check!(st.is_fifo(), "fifo");
+    check_eq!(st.st_nlink, 2, "nlink");
+    check_ok!(syscall::unlink(&dst), "unlink dst");
+    check_ok!(syscall::unlink(&path), "unlink");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn link_into_subdir() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"a")?;
+    let dir = create_dir(&mut tmp, b"d", 0o755)?;
+    let mut nested = [0u8; 160];
+    let dst = join_path(&dir, b"b\0", &mut nested)?;
+    check_ok!(syscall::link(&a, dst), "link");
+    check_eq!(check_ok!(syscall::stat(&a), "stat").st_nlink, 2, "nlink");
+    check_ok!(syscall::unlink(dst), "unlink");
+    check_ok!(syscall::rmdir(&dir), "rmdir");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn link_enotdir_dst() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"a")?;
+    let file = create_empty(&mut tmp, b"f")?;
+    let mut nested = [0u8; 160];
+    let dst = join_path(&file, b"x\0", &mut nested)?;
+    check_err!(syscall::link(&a, dst), Errno::ENOTDIR, "enotdir");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn link_parent_no_write() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"a")?;
+    let dir = create_dir(&mut tmp, b"d", 0o755)?;
+    check_ok!(syscall::chmod(&dir, 0o555), "chmod");
+    let mut nested = [0u8; 160];
+    let dst = join_path(&dir, b"b\0", &mut nested)?;
+    check_err!(syscall::link(&a, dst), Errno::EACCES, "eacces");
+    check_ok!(syscall::chmod(&dir, 0o755), "restore");
+    check_ok!(syscall::rmdir(&dir), "rmdir");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn link_share_size() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"a")?;
+    write_file(&a, b"hello")?;
+    let b = copy_child(&mut tmp, b"b")?;
+    check_ok!(syscall::link(&a, &b), "link");
+    check_eq!(check_ok!(syscall::stat(&b), "stat").st_size, 5, "size");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn link_write_via_second() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"a")?;
+    let b = copy_child(&mut tmp, b"b")?;
+    check_ok!(syscall::link(&a, &b), "link");
+    write_file(&b, b"ZZ")?;
+    let mut buf = [0u8; 2];
+    check_eq!(crate::suites::common::read_file(&a, &mut buf)?, 2, "len");
+    check_eq!(&buf, b"ZZ", "shared write");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn link_eexist_dir() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"a")?;
+    let dir = create_dir(&mut tmp, b"d", 0o755)?;
+    check_err!(syscall::link(&a, &dir), Errno::EEXIST, "eexist");
+    check_ok!(syscall::rmdir(&dir), "rmdir");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn link_to_symlink_nofollow_creates_link_to_target() -> TestResult {
+    // link(2) follows symlinks by default on Linux for oldpath.
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let target = create_empty(&mut tmp, b"t")?;
+    let sl = copy_child(&mut tmp, b"sl")?;
+    let hl = copy_child(&mut tmp, b"hl")?;
+    check_ok!(syscall::symlink(b"t\0", &sl), "symlink");
+    check_ok!(syscall::link(&sl, &hl), "link");
+    let st = check_ok!(syscall::stat(&hl), "stat");
+    check!(st.is_reg(), "reg");
+    check_eq!(st.st_ino, check_ok!(syscall::stat(&target), "t").st_ino, "ino");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn link_missing_dst_parent() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"a")?;
+    let mut dest = [0u8; 160];
+    let base = tmp.path();
+    let blen = base.iter().position(|&c| c == 0).unwrap();
+    dest[..blen].copy_from_slice(&base[..blen]);
+    dest[blen..blen + 10].copy_from_slice(b"/nope/link");
+    dest[blen + 10] = 0;
+    check_err!(
+        syscall::link(&a, crate::suites::common::truncate_cstr(&dest)),
+        Errno::ENOENT,
+        "enoent"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn link_four_names() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"a")?;
+    for name in [b"b\0".as_slice(), b"c\0", b"d\0"] {
+        let p = copy_child(&mut tmp, name)?;
+        check_ok!(syscall::link(&a, &p), "link");
+    }
+    check_eq!(check_ok!(syscall::stat(&a), "stat").st_nlink, 4, "nlink");
     Ok(())
 }

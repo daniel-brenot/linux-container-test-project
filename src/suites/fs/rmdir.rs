@@ -3,8 +3,8 @@
 use crate::check_err;
 use crate::check_ok;
 use crate::harness::{TempDir, TestResult};
-use crate::suites::common::{copy_child, create_dir, truncate_cstr};
-use crate::syscall::{self, oflag, Errno};
+use crate::suites::common::{copy_child, create_dir, create_empty, join_path, truncate_cstr};
+use crate::syscall::{self, oflag, Errno, S_IFIFO};
 
 #[crate::lctp_test(suite = fs)]
 fn rmdir_empty_ok() -> TestResult {
@@ -20,17 +20,14 @@ fn rmdir_notempty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
     let mut nested = [0u8; 160];
-    let dlen = dir.iter().position(|&c| c == 0).unwrap();
-    nested[..dlen].copy_from_slice(&dir[..dlen]);
-    nested[dlen..dlen + 5].copy_from_slice(b"/file");
-    nested[dlen + 5] = 0;
+    let child = join_path(&dir, b"file\0", &mut nested)?;
     let fd = check_ok!(
-        syscall::open(truncate_cstr(&nested), oflag::O_CREAT | oflag::O_RDWR | oflag::O_EXCL, 0o644),
+        syscall::open(child, oflag::O_CREAT | oflag::O_RDWR | oflag::O_EXCL, 0o644),
         "create"
     );
     check_ok!(syscall::close(fd), "close");
     check_err!(syscall::rmdir(&dir), Errno::ENOTEMPTY, "notempty");
-    check_ok!(syscall::unlink(truncate_cstr(&nested)), "unlink");
+    check_ok!(syscall::unlink(child), "unlink");
     check_ok!(syscall::rmdir(&dir), "rmdir");
     Ok(())
 }
@@ -50,11 +47,8 @@ fn rmdir_dot_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
     let mut dot = [0u8; 160];
-    let dlen = dir.iter().position(|&c| c == 0).unwrap();
-    dot[..dlen].copy_from_slice(&dir[..dlen]);
-    dot[dlen..dlen + 2].copy_from_slice(b"/.");
-    dot[dlen + 2] = 0;
-    check_err!(syscall::rmdir(truncate_cstr(&dot)), Errno::EINVAL, "rmdir .");
+    let path = join_path(&dir, b".\0", &mut dot)?;
+    check_err!(syscall::rmdir(path), Errno::EINVAL, "rmdir .");
     check_ok!(syscall::rmdir(&dir), "rmdir");
     Ok(())
 }
@@ -64,12 +58,8 @@ fn rmdir_dotdot_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
     let mut dotdot = [0u8; 160];
-    let dlen = dir.iter().position(|&c| c == 0).unwrap();
-    dotdot[..dlen].copy_from_slice(&dir[..dlen]);
-    dotdot[dlen..dlen + 3].copy_from_slice(b"/..");
-    dotdot[dlen + 3] = 0;
-    // Linux typically returns ENOTEMPTY for rmdir("dir/..").
-    match syscall::rmdir(truncate_cstr(&dotdot)) {
+    let path = join_path(&dir, b"..\0", &mut dotdot)?;
+    match syscall::rmdir(path) {
         Err(Errno::ENOTEMPTY) | Err(Errno::EINVAL) | Err(Errno::ENOTDIR) => {}
         Ok(()) => {
             return Err(crate::harness::AssertFail::msg(
@@ -101,12 +91,9 @@ fn rmdir_nested_empty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let outer = create_dir(&mut tmp, b"outer", 0o755)?;
     let mut inner = [0u8; 160];
-    let olen = outer.iter().position(|&c| c == 0).unwrap();
-    inner[..olen].copy_from_slice(&outer[..olen]);
-    inner[olen..olen + 6].copy_from_slice(b"/inner");
-    inner[olen + 6] = 0;
-    check_ok!(syscall::mkdir(truncate_cstr(&inner), 0o755), "mkdir inner");
-    check_ok!(syscall::rmdir(truncate_cstr(&inner)), "rmdir inner");
+    let path = join_path(&outer, b"inner\0", &mut inner)?;
+    check_ok!(syscall::mkdir(path, 0o755), "mkdir inner");
+    check_ok!(syscall::rmdir(path), "rmdir inner");
     check_ok!(syscall::rmdir(&outer), "rmdir outer");
     Ok(())
 }
@@ -116,16 +103,159 @@ fn rmdir_after_unlink_contents() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
     let mut f = [0u8; 160];
-    let dlen = dir.iter().position(|&c| c == 0).unwrap();
-    f[..dlen].copy_from_slice(&dir[..dlen]);
-    f[dlen..dlen + 5].copy_from_slice(b"/file");
-    f[dlen + 5] = 0;
+    let child = join_path(&dir, b"file\0", &mut f)?;
     let fd = check_ok!(
-        syscall::open(truncate_cstr(&f), oflag::O_CREAT | oflag::O_RDWR, 0o644),
+        syscall::open(child, oflag::O_CREAT | oflag::O_RDWR, 0o644),
         "create"
     );
     check_ok!(syscall::close(fd), "close");
-    check_ok!(syscall::unlink(truncate_cstr(&f)), "unlink");
+    check_ok!(syscall::unlink(child), "unlink");
     check_ok!(syscall::rmdir(&dir), "rmdir");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn rmdir_notempty_subdir() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let outer = create_dir(&mut tmp, b"o", 0o755)?;
+    let mut inner = [0u8; 160];
+    let path = join_path(&outer, b"i\0", &mut inner)?;
+    check_ok!(syscall::mkdir(path, 0o755), "mkdir");
+    check_err!(syscall::rmdir(&outer), Errno::ENOTEMPTY, "notempty");
+    check_ok!(syscall::rmdir(path), "rmdir inner");
+    check_ok!(syscall::rmdir(&outer), "rmdir outer");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn rmdir_symlink_enotdir() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let dir = create_dir(&mut tmp, b"d", 0o755)?;
+    let link = copy_child(&mut tmp, b"l")?;
+    check_ok!(syscall::symlink(b"d\0", &link), "symlink");
+    check_err!(syscall::rmdir(&link), Errno::ENOTDIR, "symlink");
+    check_ok!(syscall::unlink(&link), "unlink");
+    check_ok!(syscall::rmdir(&dir), "rmdir");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn rmdir_fifo_enotdir() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = copy_child(&mut tmp, b"fifo")?;
+    check_ok!(
+        syscall::mknodat(syscall::AT_FDCWD, &path, S_IFIFO | 0o644, 0),
+        "mkfifo"
+    );
+    check_err!(syscall::rmdir(&path), Errno::ENOTDIR, "fifo");
+    check_ok!(syscall::unlink(&path), "unlink");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn rmdir_twice_enoent() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let dir = create_dir(&mut tmp, b"d", 0o755)?;
+    check_ok!(syscall::rmdir(&dir), "first");
+    check_err!(syscall::rmdir(&dir), Errno::ENOENT, "second");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn rmdir_parent_no_write() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let outer = create_dir(&mut tmp, b"o", 0o755)?;
+    let mut inner = [0u8; 160];
+    let path = join_path(&outer, b"i\0", &mut inner)?;
+    check_ok!(syscall::mkdir(path, 0o755), "mkdir");
+    check_ok!(syscall::chmod(&outer, 0o555), "chmod");
+    check_err!(syscall::rmdir(path), Errno::EACCES, "eacces");
+    check_ok!(syscall::chmod(&outer, 0o755), "restore");
+    check_ok!(syscall::rmdir(path), "rmdir");
+    check_ok!(syscall::rmdir(&outer), "rmdir outer");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn rmdir_unlinkat_removedir() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let outer = create_dir(&mut tmp, b"o", 0o755)?;
+    let dirfd = check_ok!(
+        syscall::open(&outer, oflag::O_RDONLY | oflag::O_DIRECTORY, 0),
+        "opendir"
+    );
+    check_ok!(syscall::mkdirat(dirfd, b"c\0", 0o755), "mkdirat");
+    check_ok!(
+        syscall::unlinkat(dirfd, b"c\0", crate::syscall::AT_REMOVEDIR),
+        "unlinkat REMOVEDIR"
+    );
+    check_ok!(syscall::close(dirfd), "close");
+    check_ok!(syscall::rmdir(&outer), "rmdir");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn rmdir_mode_000_still_ok_if_writable_parent() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let dir = create_dir(&mut tmp, b"d", 0o755)?;
+    check_ok!(syscall::chmod(&dir, 0o000), "chmod");
+    check_ok!(syscall::rmdir(&dir), "rmdir");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn rmdir_enotdir_component() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let file = create_empty(&mut tmp, b"f")?;
+    let mut nested = [0u8; 160];
+    let path = join_path(&file, b"x\0", &mut nested)?;
+    check_err!(syscall::rmdir(path), Errno::ENOTDIR, "enotdir");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn rmdir_notempty_with_symlink() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let dir = create_dir(&mut tmp, b"d", 0o755)?;
+    let mut link = [0u8; 160];
+    let path = join_path(&dir, b"l\0", &mut link)?;
+    check_ok!(syscall::symlink(b"nowhere\0", path), "symlink");
+    check_err!(syscall::rmdir(&dir), Errno::ENOTEMPTY, "notempty");
+    check_ok!(syscall::unlink(path), "unlink");
+    check_ok!(syscall::rmdir(&dir), "rmdir");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn rmdir_chain_three() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_dir(&mut tmp, b"a", 0o755)?;
+    let mut b = [0u8; 160];
+    let bp = join_path(&a, b"b\0", &mut b)?;
+    check_ok!(syscall::mkdir(bp, 0o755), "mkdir b");
+    let mut c = [0u8; 160];
+    let cp = join_path(bp, b"c\0", &mut c)?;
+    check_ok!(syscall::mkdir(cp, 0o755), "mkdir c");
+    check_ok!(syscall::rmdir(cp), "rmdir c");
+    check_ok!(syscall::rmdir(bp), "rmdir b");
+    check_ok!(syscall::rmdir(&a), "rmdir a");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn rmdir_missing_parent_component() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let mut path = [0u8; 160];
+    let base = tmp.path();
+    let blen = base.iter().position(|&c| c == 0).unwrap();
+    let suffix = b"/nope/dir";
+    path[..blen].copy_from_slice(&base[..blen]);
+    path[blen..blen + suffix.len()].copy_from_slice(suffix);
+    path[blen + suffix.len()] = 0;
+    check_err!(
+        syscall::rmdir(truncate_cstr(&path)),
+        Errno::ENOENT,
+        "enoent"
+    );
     Ok(())
 }

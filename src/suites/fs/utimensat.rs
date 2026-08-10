@@ -2,10 +2,13 @@
 
 use crate::check;
 use crate::check_eq;
+use crate::check_err;
 use crate::check_ok;
 use crate::harness::{TempDir, TestResult};
-use crate::suites::common::{copy_child, create_empty};
-use crate::syscall::{self, Timespec, UTIME_NOW, UTIME_OMIT};
+use crate::suites::common::{
+    copy_child, create_dir, create_empty, nanosleep_secs, timespec_later, write_file,
+};
+use crate::syscall::{self, oflag, Errno, Timespec, UTIME_NOW, UTIME_OMIT};
 
 fn ts_pair(sec: i64) -> [Timespec; 2] {
     [
@@ -106,10 +109,7 @@ fn utimensat_symlink_nofollow() -> TestResult {
 fn futimens_now_via_fd() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
-    let fd = check_ok!(
-        syscall::open(&path, crate::syscall::oflag::O_RDWR, 0),
-        "open"
-    );
+    let fd = check_ok!(syscall::open(&path, oflag::O_RDWR, 0), "open");
     let times = [
         Timespec {
             tv_sec: 0,
@@ -131,14 +131,231 @@ fn futimens_now_via_fd() -> TestResult {
 fn futimens_explicit() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
-    let fd = check_ok!(
-        syscall::open(&path, crate::syscall::oflag::O_RDWR, 0),
-        "open"
-    );
+    let fd = check_ok!(syscall::open(&path, oflag::O_RDWR, 0), "open");
     let t = 1_650_000_000i64;
     check_ok!(syscall::futimens(fd, &ts_pair(t)), "futimens");
     check_ok!(syscall::close(fd), "close");
     let st = check_ok!(syscall::stat(&path), "stat");
     check_eq!(st.st_mtime, t, "mtime");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn utimensat_atime_mtime_different() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    let times = [
+        Timespec {
+            tv_sec: 1_500_000_000,
+            tv_nsec: 0,
+        },
+        Timespec {
+            tv_sec: 1_510_000_000,
+            tv_nsec: 0,
+        },
+    ];
+    check_ok!(
+        syscall::utimensat(syscall::AT_FDCWD, &path, &times, 0),
+        "utimensat"
+    );
+    let st = check_ok!(syscall::stat(&path), "stat");
+    check_eq!(st.st_atime, 1_500_000_000, "atime");
+    check_eq!(st.st_mtime, 1_510_000_000, "mtime");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn utimensat_omit_atime_set_mtime() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    let before = check_ok!(syscall::stat(&path), "before");
+    let times = [
+        Timespec {
+            tv_sec: 0,
+            tv_nsec: UTIME_OMIT,
+        },
+        Timespec {
+            tv_sec: 1_520_000_000,
+            tv_nsec: 0,
+        },
+    ];
+    check_ok!(
+        syscall::utimensat(syscall::AT_FDCWD, &path, &times, 0),
+        "utimensat"
+    );
+    let after = check_ok!(syscall::stat(&path), "after");
+    check_eq!(after.st_atime, before.st_atime, "atime omit");
+    check_eq!(after.st_mtime, 1_520_000_000, "mtime set");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn utimensat_set_atime_omit_mtime() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    let before = check_ok!(syscall::stat(&path), "before");
+    let times = [
+        Timespec {
+            tv_sec: 1_530_000_000,
+            tv_nsec: 0,
+        },
+        Timespec {
+            tv_sec: 0,
+            tv_nsec: UTIME_OMIT,
+        },
+    ];
+    check_ok!(
+        syscall::utimensat(syscall::AT_FDCWD, &path, &times, 0),
+        "utimensat"
+    );
+    let after = check_ok!(syscall::stat(&path), "after");
+    check_eq!(after.st_atime, 1_530_000_000, "atime set");
+    check_eq!(after.st_mtime, before.st_mtime, "mtime omit");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn utimensat_enoent() -> TestResult {
+    let times = ts_pair(1_000_000);
+    check_err!(
+        syscall::utimensat(syscall::AT_FDCWD, b"/tmp/lctp-utime-missing\0", &times, 0),
+        Errno::ENOENT,
+        "enoent"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn utimensat_dir() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let dir = create_dir(&mut tmp, b"d", 0o755)?;
+    let t = 1_540_000_000i64;
+    check_ok!(
+        syscall::utimensat(syscall::AT_FDCWD, &dir, &ts_pair(t), 0),
+        "utimensat dir"
+    );
+    check_eq!(check_ok!(syscall::stat(&dir), "stat").st_mtime, t, "mtime");
+    check_ok!(syscall::rmdir(&dir), "rmdir");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn utimensat_follow_symlink() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let file = create_empty(&mut tmp, b"f")?;
+    let link = copy_child(&mut tmp, b"l")?;
+    check_ok!(syscall::symlink(b"f\0", &link), "symlink");
+    let t = 1_550_000_000i64;
+    check_ok!(
+        syscall::utimensat(syscall::AT_FDCWD, &link, &ts_pair(t), 0),
+        "follow"
+    );
+    check_eq!(check_ok!(syscall::stat(&file), "stat").st_mtime, t, "mtime");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn utimensat_updates_ctime() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    let before = check_ok!(syscall::stat(&path), "before");
+    nanosleep_secs(1)?;
+    check_ok!(
+        syscall::utimensat(syscall::AT_FDCWD, &path, &ts_pair(1_560_000_000), 0),
+        "utimensat"
+    );
+    let after = check_ok!(syscall::stat(&path), "after");
+    check!(
+        timespec_later(
+            after.st_ctime,
+            after.st_ctime_nsec,
+            before.st_ctime,
+            before.st_ctime_nsec
+        ),
+        "ctime"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn futimens_bad_fd() -> TestResult {
+    let times = [
+        Timespec {
+            tv_sec: 0,
+            tv_nsec: UTIME_NOW,
+        },
+        Timespec {
+            tv_sec: 0,
+            tv_nsec: UTIME_NOW,
+        },
+    ];
+    check_err!(syscall::futimens(-1, &times), Errno::EBADF, "ebadf");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn utimensat_nsec_nonzero() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    let times = [
+        Timespec {
+            tv_sec: 1_570_000_000,
+            tv_nsec: 123456789,
+        },
+        Timespec {
+            tv_sec: 1_570_000_000,
+            tv_nsec: 987654321,
+        },
+    ];
+    check_ok!(
+        syscall::utimensat(syscall::AT_FDCWD, &path, &times, 0),
+        "utimensat"
+    );
+    let st = check_ok!(syscall::stat(&path), "stat");
+    check_eq!(st.st_atime, 1_570_000_000, "atime sec");
+    check_eq!(st.st_atime_nsec, 123456789, "atime nsec");
+    check_eq!(st.st_mtime_nsec, 987654321, "mtime nsec");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn utimensat_both_now_after_sleep() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    check_ok!(
+        syscall::utimensat(syscall::AT_FDCWD, &path, &ts_pair(1_000_000), 0),
+        "old"
+    );
+    nanosleep_secs(1)?;
+    let times = [
+        Timespec {
+            tv_sec: 0,
+            tv_nsec: UTIME_NOW,
+        },
+        Timespec {
+            tv_sec: 0,
+            tv_nsec: UTIME_NOW,
+        },
+    ];
+    check_ok!(
+        syscall::utimensat(syscall::AT_FDCWD, &path, &times, 0),
+        "now"
+    );
+    let st = check_ok!(syscall::stat(&path), "stat");
+    check!(st.st_mtime > 1_000_000, "mtime advanced");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn utimensat_on_written_file() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    write_file(&path, b"x")?;
+    let t = 1_580_000_000i64;
+    check_ok!(
+        syscall::utimensat(syscall::AT_FDCWD, &path, &ts_pair(t), 0),
+        "utimensat"
+    );
+    check_eq!(check_ok!(syscall::stat(&path), "stat").st_mtime, t, "mtime");
     Ok(())
 }

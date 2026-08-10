@@ -50,9 +50,13 @@ impl Errno {
     pub const EADDRINUSE: Self = Self(98);
     pub const ECONNREFUSED: Self = Self(111);
     pub const ETIMEDOUT: Self = Self(110);
+    pub const ECONNRESET: Self = Self(104);
+    pub const ENOTCONN: Self = Self(107);
     pub const EWOULDBLOCK: Self = Self(11);
     pub const ENOTSUP: Self = Self(95);
     pub const EBUSY: Self = Self(16);
+    pub const ENOPROTOOPT: Self = Self(92);
+    pub const EINPROGRESS: Self = Self(115);
 
     pub fn as_isize(self) -> isize {
         -(self.0 as isize)

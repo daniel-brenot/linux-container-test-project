@@ -56,6 +56,8 @@ pub mod wait {
     pub const WNOHANG: i32 = 1;
     pub const WUNTRACED: i32 = 2;
     pub const WEXITED: i32 = 4;
+    pub const WCONTINUED: i32 = 8;
+    pub const WNOWAIT: i32 = 0x0100_0000;
 }
 
 /// `clock_gettime` clock ids.
@@ -65,6 +67,9 @@ pub mod clock {
     pub const CLOCK_PROCESS_CPUTIME_ID: i32 = 2;
     pub const CLOCK_THREAD_CPUTIME_ID: i32 = 3;
     pub const CLOCK_MONOTONIC_RAW: i32 = 4;
+    pub const CLOCK_REALTIME_COARSE: i32 = 5;
+    pub const CLOCK_MONOTONIC_COARSE: i32 = 6;
+    pub const CLOCK_BOOTTIME: i32 = 7;
 }
 
 /// `fcntl` commands.
@@ -202,6 +207,7 @@ pub const SIGQUIT: i32 = 3;
 pub const SIGKILL: i32 = 9;
 pub const SIGUSR1: i32 = 10;
 pub const SIGUSR2: i32 = 12;
+pub const SIGPIPE: i32 = 13;
 pub const SIGALRM: i32 = 14;
 pub const SIGTERM: i32 = 15;
 pub const SIGCHLD: i32 = 17;
@@ -230,7 +236,10 @@ pub const UTIME_NOW: i64 = (1 << 30) - 1;
 pub const UTIME_OMIT: i64 = (1 << 30) - 2;
 
 /// prlimit resource ids.
+pub const RLIMIT_CPU: i32 = 0;
+pub const RLIMIT_STACK: i32 = 3;
 pub const RLIMIT_NOFILE: i32 = 7;
+pub const RLIMIT_AS: i32 = 9;
 
 pub mod madvise {
     pub const MADV_NORMAL: i32 = 0;
@@ -238,6 +247,9 @@ pub mod madvise {
     pub const MADV_SEQUENTIAL: i32 = 2;
     pub const MADV_WILLNEED: i32 = 3;
     pub const MADV_DONTNEED: i32 = 4;
+    pub const MADV_FREE: i32 = 8;
+    pub const MADV_HUGEPAGE: i32 = 14;
+    pub const MADV_NOHUGEPAGE: i32 = 15;
 }
 
 pub mod poll {
@@ -343,6 +355,19 @@ pub const SOL_SOCKET: i32 = 1;
 pub const SO_TYPE: i32 = 3;
 pub const SO_REUSEADDR: i32 = 2;
 pub const SO_RCVBUF: i32 = 8;
+pub const SO_KEEPALIVE: i32 = 9;
+pub const SO_LINGER: i32 = 13;
+pub const SO_SNDBUF: i32 = 7;
+/// `send` / `recv` flags.
+pub const MSG_DONTWAIT: i32 = 0x40;
+pub const MSG_PEEK: i32 = 0x02;
+/// `getrandom` flags.
+pub const GRND_NONBLOCK: u32 = 0x0001;
+pub const GRND_RANDOM: u32 = 0x0002;
+/// `fallocate` modes.
+pub const FALLOC_FL_KEEP_SIZE: i32 = 0x01;
+pub const FALLOC_FL_PUNCH_HOLE: i32 = 0x02;
+pub const FALLOC_FL_ZERO_RANGE: i32 = 0x10;
 
 /// prctl options.
 pub const PR_GET_DUMPABLE: i32 = 3;

@@ -124,6 +124,8 @@ pub fn lseek(fd: i32, offset: i64, whence: i32) -> Result<i64> {
 pub const SEEK_SET: i32 = 0;
 pub const SEEK_CUR: i32 = 1;
 pub const SEEK_END: i32 = 2;
+pub const SEEK_DATA: i32 = 3;
+pub const SEEK_HOLE: i32 = 4;
 
 pub fn fstatat(dirfd: i32, path: &[u8], flags: i32) -> Result<Stat> {
     let p = c_str_ptr(path)?;
