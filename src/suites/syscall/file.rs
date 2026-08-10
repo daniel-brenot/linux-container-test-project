@@ -165,6 +165,44 @@ fn dup_dup3_cloexec() -> TestResult {
 }
 
 #[crate::lctp_test(suite = syscall)]
+fn dup2_same_and_new() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
+    check_ok!(syscall::write(fd, b"dup2"), "write");
+    // dup2 onto a fresh high fd.
+    let target = 70;
+    let d = check_ok!(syscall::dup2(fd, target), "dup2");
+    check_eq!(d, target, "target fd");
+    check_ok!(syscall::lseek(d, 0, syscall::SEEK_SET), "lseek");
+    let mut buf = [0u8; 4];
+    check_eq!(check_ok!(syscall::read(d, &mut buf), "read"), 4, "len");
+    check_eq!(&buf, b"dup2", "data");
+    // dup2 onto itself is a no-op success.
+    check_eq!(check_ok!(syscall::dup2(d, d), "dup2 self"), d, "self");
+    check_ok!(syscall::close(fd), "close fd");
+    check_ok!(syscall::close(d), "close d");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn dup2_overwrites_target() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = check_ok!(tmp.create_file(b"a", 0o644), "a");
+    let b = check_ok!(tmp.create_file(b"b", 0o644), "b");
+    check_ok!(syscall::write(a, b"AAAA"), "write a");
+    check_ok!(syscall::write(b, b"BBBB"), "write b");
+    let d = check_ok!(syscall::dup2(a, b), "dup2 overwrite");
+    check_eq!(d, b, "returns newfd");
+    check_ok!(syscall::lseek(d, 0, syscall::SEEK_SET), "lseek");
+    let mut buf = [0u8; 4];
+    check_eq!(check_ok!(syscall::read(d, &mut buf), "read"), 4, "len");
+    check_eq!(&buf, b"AAAA", "now a");
+    check_ok!(syscall::close(a), "close a");
+    check_ok!(syscall::close(d), "close d");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
 fn fcntl_getfl_setfl() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");

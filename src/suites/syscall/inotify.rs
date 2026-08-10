@@ -5,7 +5,7 @@ use crate::check_eq;
 use crate::check_ok;
 use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, write_file};
-use crate::syscall::{self, oflag, InotifyEvent, IN_CLOEXEC, IN_CREATE, IN_MODIFY};
+use crate::syscall::{self, oflag, InotifyEvent, IN_CLOEXEC, IN_CREATE, IN_DELETE, IN_MODIFY};
 
 fn read_events(fd: i32, buf: &mut [u8]) -> Result<usize, crate::harness::AssertFail> {
     Ok(check_ok!(syscall::read(fd, buf), "inotify read"))
@@ -124,6 +124,66 @@ fn inotify_rm_watch_ok() -> TestResult {
         syscall::inotify_add_watch(fd, tmp.path(), IN_CREATE),
         "add"
     );
+    check_ok!(syscall::inotify_rm_watch(fd, wd), "rm");
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn inotify_watch_delete() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = copy_child(&mut tmp, b"delme")?;
+    write_file(&path, b"x")?;
+    let fd = check_ok!(syscall::inotify_init1(IN_CLOEXEC), "init1");
+    let wd = check_ok!(
+        syscall::inotify_add_watch(fd, tmp.path(), IN_DELETE),
+        "add_watch"
+    );
+    check_ok!(syscall::unlink(&path), "unlink");
+    let mut buf = [0u8; 512];
+    let n = read_events(fd, &mut buf)?;
+    check!(n >= core::mem::size_of::<InotifyEvent>(), "event");
+    let ev = event_at(&buf, 0);
+    check_eq!(ev.wd, wd, "wd");
+    check!(ev.mask & IN_DELETE != 0, "IN_DELETE");
+    check_ok!(syscall::inotify_rm_watch(fd, wd), "rm");
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall, full)]
+fn inotify_create_then_delete() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let fd = check_ok!(syscall::inotify_init1(IN_CLOEXEC), "init1");
+    let wd = check_ok!(
+        syscall::inotify_add_watch(fd, tmp.path(), IN_CREATE | IN_DELETE),
+        "add"
+    );
+    let path = copy_child(&mut tmp, b"cd")?;
+    let created = check_ok!(
+        syscall::open(&path, oflag::O_CREAT | oflag::O_WRONLY, 0o644),
+        "create"
+    );
+    check_ok!(syscall::close(created), "close");
+    check_ok!(syscall::unlink(&path), "unlink");
+    let mut buf = [0u8; 1024];
+    let n = read_events(fd, &mut buf)?;
+    let mut saw_create = false;
+    let mut saw_delete = false;
+    let mut off = 0usize;
+    let hdr = core::mem::size_of::<InotifyEvent>();
+    while off + hdr <= n {
+        let ev = event_at(&buf, off);
+        if ev.mask & IN_CREATE != 0 {
+            saw_create = true;
+        }
+        if ev.mask & IN_DELETE != 0 {
+            saw_delete = true;
+        }
+        off += hdr + ev.len as usize;
+    }
+    check!(saw_create, "create");
+    check!(saw_delete, "delete");
     check_ok!(syscall::inotify_rm_watch(fd, wd), "rm");
     check_ok!(syscall::close(fd), "close");
     Ok(())

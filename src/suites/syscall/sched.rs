@@ -126,3 +126,34 @@ fn sched_getaffinity_twice_stable() -> TestResult {
     check_eq!(m1, m2, "stable mask");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn sched_setaffinity_same_mask() -> TestResult {
+    let mut mask = [0u8; 128];
+    check_ok!(syscall::sched_getaffinity(0, &mut mask), "get");
+    check_ok!(syscall::sched_setaffinity(0, &mask), "set same");
+    let mut again = [0u8; 128];
+    check_ok!(syscall::sched_getaffinity(0, &mut again), "get again");
+    check!(affinity_has_cpu(&again), "still nonempty");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn sched_setaffinity_pid_self() -> TestResult {
+    let mut mask = [0u8; 128];
+    check_ok!(syscall::sched_getaffinity(syscall::getpid(), &mut mask), "get");
+    check_ok!(
+        syscall::sched_setaffinity(syscall::getpid(), &mask),
+        "set pid"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall, full)]
+fn sched_setaffinity_roundtrip() -> TestResult {
+    let mut mask = [0u8; 128];
+    check_ok!(syscall::sched_getaffinity(0, &mut mask), "get");
+    check_ok!(syscall::sched_setaffinity(0, &mask), "set");
+    check_ok!(syscall::sched_setaffinity(0, &mask), "set twice");
+    Ok(())
+}

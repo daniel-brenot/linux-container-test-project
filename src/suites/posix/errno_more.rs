@@ -291,3 +291,97 @@ fn errno_enoent_renameat2() -> TestResult {
     );
     Ok(())
 }
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_sendto() -> TestResult {
+    check_err!(
+        syscall::sendto(-1, b"x", 0, None),
+        Errno::EBADF,
+        "sendto"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_recvfrom() -> TestResult {
+    let mut buf = [0u8; 4];
+    check_err!(
+        syscall::recvfrom(-1, &mut buf, 0, None, None),
+        Errno::EBADF,
+        "recvfrom"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_sendmsg() -> TestResult {
+    let msg = syscall::MsgHdr::default();
+    check_err!(syscall::sendmsg(-1, &msg, 0), Errno::EBADF, "sendmsg");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_recvmsg() -> TestResult {
+    let mut msg = syscall::MsgHdr::default();
+    check_err!(syscall::recvmsg(-1, &mut msg, 0), Errno::EBADF, "recvmsg");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_vmsplice() -> TestResult {
+    check_err!(syscall::vmsplice(-1, &[], 0), Errno::EBADF, "vmsplice");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_einval_setitimer_bad_which() -> TestResult {
+    let its = syscall::Itimerval::default();
+    check_err!(
+        syscall::setitimer(99, &its, None),
+        Errno::EINVAL,
+        "setitimer"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_einval_getitimer_bad_which() -> TestResult {
+    let mut its = syscall::Itimerval::default();
+    check_err!(
+        syscall::getitimer(99, &mut its),
+        Errno::EINVAL,
+        "getitimer"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_dup2() -> TestResult {
+    check_err!(syscall::dup2(-1, 10), Errno::EBADF, "dup2");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_einval_sigaltstack_small() -> TestResult {
+    // ss_size below MINSIGSTKSZ should fail with ENOMEM (or EINVAL on some kernels).
+    let ss = syscall::Stack {
+        ss_sp: core::ptr::null_mut(),
+        ss_flags: 0,
+        ss_size: 32,
+    };
+    match syscall::sigaltstack(Some(&ss), None) {
+        Err(Errno::ENOMEM) | Err(Errno::EINVAL) | Err(Errno::EFAULT) => Ok(()),
+        Ok(()) => Err(crate::harness::AssertFail::msg("expected failure")),
+        Err(_) => Err(crate::harness::AssertFail::msg("unexpected errno")),
+    }
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_einval_pselect6_bad_nfds() -> TestResult {
+    check_err!(
+        syscall::pselect6(-1, None, None, None, None, None),
+        Errno::EINVAL,
+        "pselect6 nfds"
+    );
+    Ok(())
+}

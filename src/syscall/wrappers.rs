@@ -164,6 +164,18 @@ pub fn dup(fd: i32) -> Result<i32> {
     unsafe { sys1(nr::DUP, fd as usize).map(|v| v as i32) }
 }
 
+pub fn dup2(oldfd: i32, newfd: i32) -> Result<i32> {
+    #[cfg(target_arch = "x86_64")]
+    unsafe {
+        sys2(nr::DUP2, oldfd as usize, newfd as usize).map(|v| v as i32)
+    }
+    #[cfg(target_arch = "aarch64")]
+    {
+        // aarch64 has no dup2; dup3 with flags=0 is equivalent.
+        dup3(oldfd, newfd, 0)
+    }
+}
+
 pub fn dup3(oldfd: i32, newfd: i32, flags: i32) -> Result<i32> {
     unsafe {
         sys3(
@@ -711,6 +723,78 @@ pub fn recv(fd: i32, buf: &mut [u8], flags: i32) -> Result<usize> {
     }
 }
 
+pub fn sendto(
+    fd: i32,
+    buf: &[u8],
+    flags: i32,
+    addr: Option<&super::SockAddrIn>,
+) -> Result<usize> {
+    let (addr_ptr, addr_len) = match addr {
+        Some(a) => (
+            a as *const super::SockAddrIn as usize,
+            core::mem::size_of::<super::SockAddrIn>(),
+        ),
+        None => (0, 0),
+    };
+    unsafe {
+        sys6(
+            nr::SENDTO,
+            fd as usize,
+            buf.as_ptr() as usize,
+            buf.len(),
+            flags as usize,
+            addr_ptr,
+            addr_len,
+        )
+    }
+}
+
+pub fn recvfrom(
+    fd: i32,
+    buf: &mut [u8],
+    flags: i32,
+    addr: Option<&mut super::SockAddrIn>,
+    addrlen: Option<&mut u32>,
+) -> Result<usize> {
+    let addr_ptr = addr
+        .map(|a| a as *mut super::SockAddrIn as usize)
+        .unwrap_or(0);
+    let len_ptr = addrlen.map(|l| l as *mut u32 as usize).unwrap_or(0);
+    unsafe {
+        sys6(
+            nr::RECVFROM,
+            fd as usize,
+            buf.as_mut_ptr() as usize,
+            buf.len(),
+            flags as usize,
+            addr_ptr,
+            len_ptr,
+        )
+    }
+}
+
+pub fn sendmsg(fd: i32, msg: &super::MsgHdr, flags: i32) -> Result<usize> {
+    unsafe {
+        sys3(
+            nr::SENDMSG,
+            fd as usize,
+            msg as *const super::MsgHdr as usize,
+            flags as usize,
+        )
+    }
+}
+
+pub fn recvmsg(fd: i32, msg: &mut super::MsgHdr, flags: i32) -> Result<usize> {
+    unsafe {
+        sys3(
+            nr::RECVMSG,
+            fd as usize,
+            msg as *mut super::MsgHdr as usize,
+            flags as usize,
+        )
+    }
+}
+
 pub fn shutdown(fd: i32, how: i32) -> Result<()> {
     unsafe { sys2(nr::SHUTDOWN, fd as usize, how as usize).map(|_| ()) }
 }
@@ -1105,6 +1189,18 @@ pub fn sched_getaffinity(pid: i32, mask: &mut [u8]) -> Result<()> {
             pid as usize,
             mask.len(),
             mask.as_mut_ptr() as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn sched_setaffinity(pid: i32, mask: &[u8]) -> Result<()> {
+    unsafe {
+        sys3(
+            nr::SCHED_SETAFFINITY,
+            pid as usize,
+            mask.len(),
+            mask.as_ptr() as usize,
         )
         .map(|_| ())
     }
@@ -1600,4 +1696,105 @@ pub fn pidfd_send_signal(
         )
         .map(|_| ())
     }
+}
+
+pub fn setitimer(
+    which: i32,
+    new_value: &super::Itimerval,
+    old_value: Option<&mut super::Itimerval>,
+) -> Result<()> {
+    let old_ptr = old_value
+        .map(|o| o as *mut super::Itimerval as usize)
+        .unwrap_or(0);
+    unsafe {
+        sys3(
+            nr::SETITIMER,
+            which as usize,
+            new_value as *const super::Itimerval as usize,
+            old_ptr,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn getitimer(which: i32, curr: &mut super::Itimerval) -> Result<()> {
+    unsafe {
+        sys2(
+            nr::GETITIMER,
+            which as usize,
+            curr as *mut super::Itimerval as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn vmsplice(fd: i32, iov: &[super::IoVec], flags: u32) -> Result<usize> {
+    unsafe {
+        sys4(
+            nr::VMSPLICE,
+            fd as usize,
+            iov.as_ptr() as usize,
+            iov.len(),
+            flags as usize,
+        )
+    }
+}
+
+/// Sixth argument to `pselect6`: pointer to `{ sigset, sigsetsize }`.
+#[repr(C)]
+struct Pselect6SigsetArg {
+    ss: *const super::Sigset,
+    ss_len: usize,
+}
+
+pub fn pselect6(
+    nfds: i32,
+    readfds: Option<&mut super::FdSet>,
+    writefds: Option<&mut super::FdSet>,
+    exceptfds: Option<&mut super::FdSet>,
+    timeout: Option<&Timespec>,
+    sigmask: Option<&super::Sigset>,
+) -> Result<usize> {
+    let r = readfds
+        .map(|f| f as *mut super::FdSet as usize)
+        .unwrap_or(0);
+    let w = writefds
+        .map(|f| f as *mut super::FdSet as usize)
+        .unwrap_or(0);
+    let e = exceptfds
+        .map(|f| f as *mut super::FdSet as usize)
+        .unwrap_or(0);
+    let ts = timeout
+        .map(|t| t as *const Timespec as usize)
+        .unwrap_or(0);
+    // Keep the optional sigset and arg struct alive across the syscall.
+    let mask_storage = sigmask.copied();
+    let arg = mask_storage.as_ref().map(|m| Pselect6SigsetArg {
+        ss: m as *const super::Sigset,
+        ss_len: core::mem::size_of::<super::Sigset>(),
+    });
+    let arg_ptr = arg
+        .as_ref()
+        .map(|a| a as *const Pselect6SigsetArg as usize)
+        .unwrap_or(0);
+    unsafe { sys6(nr::PSELECT6, nfds as usize, r, w, e, ts, arg_ptr) }
+}
+
+pub fn getcpu(cpu: Option<&mut u32>, node: Option<&mut u32>) -> Result<()> {
+    let c = cpu.map(|p| p as *mut u32 as usize).unwrap_or(0);
+    let n = node.map(|p| p as *mut u32 as usize).unwrap_or(0);
+    unsafe { sys3(nr::GETCPU, c, n, 0).map(|_| ()) }
+}
+
+pub fn sigaltstack(
+    new: Option<&super::Stack>,
+    old: Option<&mut super::Stack>,
+) -> Result<()> {
+    let n = new
+        .map(|s| s as *const super::Stack as usize)
+        .unwrap_or(0);
+    let o = old
+        .map(|s| s as *mut super::Stack as usize)
+        .unwrap_or(0);
+    unsafe { sys2(nr::SIGALTSTACK, n, o).map(|_| ()) }
 }

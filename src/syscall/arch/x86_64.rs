@@ -182,4 +182,7 @@ pub mod nr {
     pub const RENAMEAT2: usize = 316;
     pub const PIDFD_OPEN: usize = 434;
     pub const PIDFD_SEND_SIGNAL: usize = 424;
+    pub const GETITIMER: usize = 36;
+    pub const SETITIMER: usize = 38;
+    pub const VMSPLICE: usize = 278;
 }

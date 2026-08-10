@@ -146,3 +146,53 @@ fn tcp_reuseaddr_rebind() -> TestResult {
     check_ok!(syscall::close(fd2), "close2");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn tcp_shutdown_after_connect_rd() -> TestResult {
+    let (srv, bound) = listen_ephemeral()?;
+    let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
+    check_ok!(syscall::connect(cli, &bound), "connect");
+    let acc = check_ok!(syscall::accept4(srv, None, None, SOCK_CLOEXEC), "accept4");
+    check_ok!(syscall::shutdown(cli, syscall::SHUT_RD), "shutdown rd");
+    // Peer can still send; local read side is shut down.
+    check_ok!(syscall::send(acc, b"x", 0), "peer send");
+    check_ok!(syscall::close(acc), "close acc");
+    check_ok!(syscall::close(cli), "close cli");
+    check_ok!(syscall::close(srv), "close srv");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall, full)]
+fn tcp_accept4_nonblock_flag() -> TestResult {
+    let (srv, bound) = listen_ephemeral()?;
+    let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
+    check_ok!(syscall::connect(cli, &bound), "connect");
+    let acc = check_ok!(
+        syscall::accept4(srv, None, None, SOCK_CLOEXEC | syscall::SOCK_NONBLOCK),
+        "accept4"
+    );
+    let flags = check_ok!(syscall::fcntl(acc, syscall::fcntl_cmd::F_GETFL, 0), "F_GETFL");
+    check!(flags as i32 & syscall::oflag::O_NONBLOCK != 0, "NONBLOCK");
+    let fdflags = check_ok!(syscall::fcntl(acc, syscall::fcntl_cmd::F_GETFD, 0), "F_GETFD");
+    check!(fdflags & syscall::FD_CLOEXEC as usize != 0, "CLOEXEC");
+    check_ok!(syscall::close(acc), "close acc");
+    check_ok!(syscall::close(cli), "close cli");
+    check_ok!(syscall::close(srv), "close srv");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn tcp_shutdown_rdwr() -> TestResult {
+    let (srv, bound) = listen_ephemeral()?;
+    let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
+    check_ok!(syscall::connect(cli, &bound), "connect");
+    let acc = check_ok!(syscall::accept4(srv, None, None, SOCK_CLOEXEC), "accept4");
+    check_ok!(syscall::shutdown(cli, syscall::SHUT_RDWR), "shutdown rdwr");
+    let mut buf = [0u8; 4];
+    let n = check_ok!(syscall::recv(acc, &mut buf, 0), "recv eof");
+    check_eq!(n, 0, "EOF");
+    check_ok!(syscall::close(acc), "close acc");
+    check_ok!(syscall::close(cli), "close cli");
+    check_ok!(syscall::close(srv), "close srv");
+    Ok(())
+}

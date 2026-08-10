@@ -176,6 +176,7 @@ pub const SIGQUIT: i32 = 3;
 pub const SIGKILL: i32 = 9;
 pub const SIGUSR1: i32 = 10;
 pub const SIGUSR2: i32 = 12;
+pub const SIGALRM: i32 = 14;
 pub const SIGTERM: i32 = 15;
 pub const SIGCHLD: i32 = 17;
 
@@ -570,3 +571,141 @@ pub struct InotifyEvent {
 
 /// pidfd_open flags.
 pub const PIDFD_NONBLOCK: u32 = 0o4000;
+
+/// Ancillary data: pass open file descriptors.
+pub const SCM_RIGHTS: i32 = 1;
+
+/// `setitimer` / `getitimer` which.
+pub const ITIMER_REAL: i32 = 0;
+
+/// `sigaltstack` flags.
+pub const SS_ONSTACK: i32 = 1;
+pub const SS_DISABLE: i32 = 2;
+
+/// `fd_set` capacity used with `pselect6`.
+pub const FD_SETSIZE: usize = 1024;
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct Itimerval {
+    pub it_interval: Timeval,
+    pub it_value: Timeval,
+}
+
+/// Kernel `struct msghdr` (64-bit).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct MsgHdr {
+    pub msg_name: *mut u8,
+    pub msg_namelen: i32,
+    pub msg_iov: *mut IoVec,
+    pub msg_iovlen: usize,
+    pub msg_control: *mut u8,
+    pub msg_controllen: usize,
+    pub msg_flags: u32,
+}
+
+impl Default for MsgHdr {
+    fn default() -> Self {
+        // Safety: all-zero is a valid bit pattern for this POD struct.
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+/// Kernel `struct cmsghdr`.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct CmsgHdr {
+    pub cmsg_len: usize,
+    pub cmsg_level: i32,
+    pub cmsg_type: i32,
+}
+
+/// Kernel `stack_t` for `sigaltstack`.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Stack {
+    pub ss_sp: *mut u8,
+    pub ss_flags: i32,
+    pub ss_size: usize,
+}
+
+impl Default for Stack {
+    fn default() -> Self {
+        Self {
+            ss_sp: core::ptr::null_mut(),
+            ss_flags: 0,
+            ss_size: 0,
+        }
+    }
+}
+
+/// Linux `fd_set` bitmap for `pselect6` (FD_SETSIZE bits).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct FdSet {
+    pub bits: [u64; FD_SETSIZE / 64],
+}
+
+impl Default for FdSet {
+    fn default() -> Self {
+        Self {
+            bits: [0u64; FD_SETSIZE / 64],
+        }
+    }
+}
+
+impl FdSet {
+    pub fn zero() -> Self {
+        Self::default()
+    }
+
+    pub fn set(&mut self, fd: i32) {
+        if fd < 0 {
+            return;
+        }
+        let fd = fd as usize;
+        if fd >= FD_SETSIZE {
+            return;
+        }
+        self.bits[fd / 64] |= 1u64 << (fd % 64);
+    }
+
+    pub fn clear(&mut self, fd: i32) {
+        if fd < 0 {
+            return;
+        }
+        let fd = fd as usize;
+        if fd >= FD_SETSIZE {
+            return;
+        }
+        self.bits[fd / 64] &= !(1u64 << (fd % 64));
+    }
+
+    pub fn is_set(&self, fd: i32) -> bool {
+        if fd < 0 {
+            return false;
+        }
+        let fd = fd as usize;
+        if fd >= FD_SETSIZE {
+            return false;
+        }
+        (self.bits[fd / 64] & (1u64 << (fd % 64))) != 0
+    }
+}
+
+/// CMSG_ALIGN — align control message lengths to `sizeof(usize)`.
+pub fn cmsg_align(len: usize) -> usize {
+    let a = core::mem::size_of::<usize>();
+    (len + a - 1) & !(a - 1)
+}
+
+/// CMSG_LEN — data length plus aligned header.
+pub fn cmsg_len(data_len: usize) -> usize {
+    cmsg_align(core::mem::size_of::<CmsgHdr>()) + data_len
+}
+
+/// CMSG_SPACE — space needed in the control buffer for `data_len` bytes.
+pub fn cmsg_space(data_len: usize) -> usize {
+    cmsg_align(core::mem::size_of::<CmsgHdr>()) + cmsg_align(data_len)
+}

@@ -238,3 +238,71 @@ fn renameat2_preserves_content() -> TestResult {
     check_eq!(&buf[..7], b"payload", "data");
     Ok(())
 }
+
+#[crate::lctp_test(suite = fs)]
+fn renameat2_exchange() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"ex_a")?;
+    let b = create_empty(&mut tmp, b"ex_b")?;
+    write_file(&a, b"AAA")?;
+    write_file(&b, b"BBB")?;
+    check_ok!(
+        syscall::renameat2(
+            syscall::AT_FDCWD,
+            &a,
+            syscall::AT_FDCWD,
+            &b,
+            syscall::RENAME_EXCHANGE
+        ),
+        "EXCHANGE"
+    );
+    let mut buf = [0u8; 4];
+    check_eq!(crate::suites::common::read_file(&a, &mut buf)?, 3, "a len");
+    check_eq!(&buf[..3], b"BBB", "a now B");
+    check_eq!(crate::suites::common::read_file(&b, &mut buf)?, 3, "b len");
+    check_eq!(&buf[..3], b"AAA", "b now A");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn renameat2_exchange_dirs() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let d1 = create_dir(&mut tmp, b"d1", 0o755)?;
+    let d2 = create_dir(&mut tmp, b"d2", 0o755)?;
+    // Place a marker file in d1.
+    let mut marker = [0u8; 160];
+    let d1len = d1.iter().position(|&c| c == 0).unwrap();
+    marker[..d1len].copy_from_slice(&d1[..d1len]);
+    marker[d1len..d1len + 2].copy_from_slice(b"/m");
+    marker[d1len + 2] = 0;
+    let fd = check_ok!(
+        syscall::open(
+            truncate_cstr(&marker),
+            oflag::O_CREAT | oflag::O_WRONLY,
+            0o644
+        ),
+        "marker"
+    );
+    check_ok!(syscall::close(fd), "close");
+    check_ok!(
+        syscall::renameat2(
+            syscall::AT_FDCWD,
+            &d1,
+            syscall::AT_FDCWD,
+            &d2,
+            syscall::RENAME_EXCHANGE
+        ),
+        "exchange dirs"
+    );
+    // Marker should now live under the path still named d2 (exchanged).
+    let mut marker2 = [0u8; 160];
+    let d2len = d2.iter().position(|&c| c == 0).unwrap();
+    marker2[..d2len].copy_from_slice(&d2[..d2len]);
+    marker2[d2len..d2len + 2].copy_from_slice(b"/m");
+    marker2[d2len + 2] = 0;
+    check_ok!(syscall::stat(truncate_cstr(&marker2)), "marker under d2");
+    check_ok!(syscall::unlink(truncate_cstr(&marker2)), "unlink");
+    check_ok!(syscall::rmdir(&d1), "rmdir d1");
+    check_ok!(syscall::rmdir(&d2), "rmdir d2");
+    Ok(())
+}
