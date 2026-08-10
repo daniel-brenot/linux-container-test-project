@@ -10,6 +10,7 @@ mod mkdir;
 mod mkfifo;
 mod open;
 mod pjdfstest_depth2;
+mod pjdfstest_depth3;
 mod rename;
 mod rmdir;
 mod stat;

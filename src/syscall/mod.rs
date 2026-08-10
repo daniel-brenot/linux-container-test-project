@@ -906,10 +906,29 @@ pub struct CapUserData {
     pub inheritable: u32,
 }
 
+/// `clone` / `unshare` flags (subset used by freestanding thread helper).
+pub const CLONE_VM: u64 = 0x0000_0100;
+pub const CLONE_FS: u64 = 0x0000_0200;
 /// `unshare` / `clone` flag: share file descriptor table until unshared.
 pub const CLONE_FILES: u64 = 0x0000_0400;
+pub const CLONE_SIGHAND: u64 = 0x0000_0800;
+pub const CLONE_THREAD: u64 = 0x0001_0000;
+pub const CLONE_SYSVSEM: u64 = 0x0004_0000;
+pub const CLONE_PARENT_SETTID: u64 = 0x0010_0000;
+pub const CLONE_CHILD_CLEARTID: u64 = 0x0020_0000;
+pub const CLONE_CHILD_SETTID: u64 = 0x0100_0000;
 /// `unshare` flag: new user namespace (often EPERM when unprivileged).
 pub const CLONE_NEWUSER: u64 = 0x1000_0000;
+
+/// Flags for a freestanding POSIX-like thread (`CLONE_THREAD` group).
+pub const CLONE_THREAD_FLAGS: u64 = CLONE_VM
+    | CLONE_FS
+    | CLONE_FILES
+    | CLONE_SIGHAND
+    | CLONE_THREAD
+    | CLONE_SYSVSEM
+    | CLONE_PARENT_SETTID
+    | CLONE_CHILD_CLEARTID;
 
 /// `kcmp` comparison types.
 pub const KCMP_FILE: i32 = 0;

@@ -19,6 +19,7 @@ mod kcmp_test;
 mod landlock_test;
 mod ltp_edges;
 mod ltp_edges_depth2;
+mod ltp_edges_depth3;
 mod memfd;
 mod memory;
 mod memory_depth;

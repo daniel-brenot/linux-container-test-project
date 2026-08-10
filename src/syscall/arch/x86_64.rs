@@ -30,6 +30,72 @@ pub unsafe fn syscall(
     ret
 }
 
+/// Raw `clone` + trampoline for a freestanding thread.
+///
+/// Parent returns the child tid. The child calls `entry(arg)`, then `SYS_exit`
+/// (never returns here). `stack` is the high address of the mapped stack; 16
+/// bytes below it are used for the trampoline frame.
+///
+/// # Safety
+/// `stack` must be writable and 16-byte aligned; `entry`/`arg`/`tid` pointers
+/// must remain valid for the life of the child.
+#[inline(never)]
+pub unsafe fn clone_thread(
+    flags: usize,
+    stack: *mut u8,
+    parent_tid: *mut i32,
+    child_tid: *mut i32,
+    entry: unsafe extern "C" fn(*mut u8) -> i32,
+    arg: *mut u8,
+) -> isize {
+    let mut ret: isize;
+    // Fixed regs avoid clashes with syscall arg/return registers.
+    asm!(
+        // Build child stack frame: [entry][arg], SP 16-byte aligned.
+        "mov rsi, r12",
+        "and rsi, -16",
+        "sub rsi, 16",
+        "mov [rsi], r13",
+        "mov [rsi + 8], r14",
+        // sys_clone(flags, stack, parent_tid, child_tid, tls=0)
+        "mov eax, 56",
+        "mov rdi, r15",
+        // rsi = stack
+        "mov rdx, r8",
+        "mov r10, r9",
+        "xor r8, r8",
+        "syscall",
+        "test rax, rax",
+        "jnz 2f",
+        // child
+        "xor ebp, ebp",
+        "pop rax",
+        "pop rdi",
+        "call rax",
+        "mov edi, eax",
+        "mov eax, 60",
+        "syscall",
+        "ud2",
+        "2:",
+        lateout("rax") ret,
+        lateout("rcx") _,
+        lateout("r11") _,
+        out("rdi") _,
+        out("rsi") _,
+        out("rdx") _,
+        lateout("r8") _,
+        out("r10") _,
+        in("r12") stack as usize,
+        in("r13") entry as usize,
+        in("r14") arg as usize,
+        in("r15") flags,
+        in("r8") parent_tid as usize,
+        in("r9") child_tid as usize,
+        options(nostack)
+    );
+    ret
+}
+
 /// Syscall numbers for x86_64.
 pub mod nr {
     pub const READ: usize = 0;

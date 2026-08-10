@@ -476,6 +476,41 @@ pub fn fork() -> Result<i32> {
     }
 }
 
+/// Exit only the calling thread (`SYS_exit`). Prefer this in thread bodies;
+/// [`exit`] uses `exit_group` and would kill the whole process.
+pub fn thread_exit(code: i32) -> ! {
+    unsafe {
+        let _ = syscall(nr::EXIT, code as usize, 0, 0, 0, 0, 0);
+        core::hint::unreachable_unchecked()
+    }
+}
+
+/// Thin wrapper around arch `clone` trampoline for freestanding threads.
+///
+/// `stack_top` is the high address of a mapped stack. The child runs `entry(arg)`
+/// then `SYS_exit`. See [`super::CLONE_THREAD_FLAGS`].
+///
+/// # Safety
+/// Stack and tid pointers must remain valid until the child has exited.
+pub unsafe fn clone_thread(
+    flags: u64,
+    stack_top: *mut u8,
+    parent_tid: *mut i32,
+    child_tid: *mut i32,
+    entry: unsafe extern "C" fn(*mut u8) -> i32,
+    arg: *mut u8,
+) -> Result<i32> {
+    from_ret(super::arch::clone_thread(
+        flags as usize,
+        stack_top,
+        parent_tid,
+        child_tid,
+        entry,
+        arg,
+    ))
+    .map(|v| v as i32)
+}
+
 pub fn wait4(pid: i32, status: &mut i32, options: i32) -> Result<i32> {
     unsafe {
         sys4(
@@ -1111,14 +1146,42 @@ pub fn futex_wait(
     val: u32,
     timeout: Option<&super::Timespec>,
 ) -> Result<()> {
-    let op = super::FUTEX_WAIT | super::FUTEX_PRIVATE_FLAG;
+    futex_wait_addr(
+        uaddr as *const core::sync::atomic::AtomicU32 as *const u32,
+        val,
+        timeout,
+        true,
+    )
+}
+
+pub fn futex_wake(uaddr: &core::sync::atomic::AtomicU32, count: u32) -> Result<usize> {
+    futex_wake_addr(
+        uaddr as *const core::sync::atomic::AtomicU32 as *const u32,
+        count,
+        true,
+    )
+}
+
+/// Futex wait on an arbitrary aligned `u32` address.
+///
+/// `private == false` matches the kernel's `CLONE_CHILD_CLEARTID` wake (shared).
+pub fn futex_wait_addr(
+    uaddr: *const u32,
+    val: u32,
+    timeout: Option<&super::Timespec>,
+    private: bool,
+) -> Result<()> {
+    let mut op = super::FUTEX_WAIT;
+    if private {
+        op |= super::FUTEX_PRIVATE_FLAG;
+    }
     let to = timeout
         .map(|t| t as *const super::Timespec as usize)
         .unwrap_or(0);
     unsafe {
         sys6(
             nr::FUTEX,
-            uaddr as *const _ as usize,
+            uaddr as usize,
             op as usize,
             val as usize,
             to,
@@ -1129,12 +1192,16 @@ pub fn futex_wait(
     }
 }
 
-pub fn futex_wake(uaddr: &core::sync::atomic::AtomicU32, count: u32) -> Result<usize> {
-    let op = super::FUTEX_WAKE | super::FUTEX_PRIVATE_FLAG;
+/// Futex wake on an arbitrary aligned `u32` address.
+pub fn futex_wake_addr(uaddr: *const u32, count: u32, private: bool) -> Result<usize> {
+    let mut op = super::FUTEX_WAKE;
+    if private {
+        op |= super::FUTEX_PRIVATE_FLAG;
+    }
     unsafe {
         sys6(
             nr::FUTEX,
-            uaddr as *const _ as usize,
+            uaddr as usize,
             op as usize,
             count as usize,
             0,

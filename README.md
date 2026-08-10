@@ -11,9 +11,9 @@ without Python, Perl, or a separate glibc build.
 |-------|------|------|
 | **bootstrap** | `--bootstrap` | Prerequisites for everything else. Always runs first; remaining suites are refused if it fails. |
 | **syscall** | `--syscall` | Linux syscall behaviour (LTP-inspired, unprivileged only): files, process, memory, time, IPC, net, signals, inotify, pidfd, … |
-| **posix** | `--posix` | POSIX path/open/errno/IO/signal/process semantics |
+| **posix** | `--posix` | POSIX path/open/errno/IO/signal/process semantics, plus freestanding `clone` thread tests (no libpthread) |
 | **fs** | `--fs` | Filesystem semantics (pjdfstest-inspired): chmod, link, mkdir, mkfifo, open, rename, rmdir, symlink, truncate, unlink, utimensat, flock, statfs, sync, chown-EPERM |
-Only tests that work in a **non-privileged** Docker container are included (~2444 cases in `--full`).
+Only tests that work in a **non-privileged** Docker container are included (~3005 cases in `--full`).
 
 ## Build
 

@@ -28,6 +28,62 @@ pub unsafe fn syscall(
     ret
 }
 
+/// Raw `clone` + trampoline for a freestanding thread (aarch64 ABI).
+///
+/// Parent returns the child tid. The child calls `entry(arg)`, then `SYS_exit`.
+/// Kernel arg order: flags, stack, parent_tid, tls, child_tid.
+///
+/// # Safety
+/// Same constraints as the x86_64 variant.
+#[inline(never)]
+pub unsafe fn clone_thread(
+    flags: usize,
+    stack: *mut u8,
+    parent_tid: *mut i32,
+    child_tid: *mut i32,
+    entry: unsafe extern "C" fn(*mut u8) -> i32,
+    arg: *mut u8,
+) -> isize {
+    let mut ret: isize;
+    // x9–x12 hold inputs so they do not collide with svc arg regs x0–x4/x8.
+    asm!(
+        // Child stack: push (entry, arg), 16-byte aligned.
+        "mov x1, x9",
+        "and x1, x1, #0xfffffffffffffff0",
+        "stp x10, x11, [x1, #-16]!",
+        // sys_clone(flags, stack, ptid, tls=0, ctid)
+        "mov x8, #220",
+        "mov x0, x12",
+        // x1 = stack
+        "mov x2, x13",
+        "mov x3, xzr",
+        "mov x4, x14",
+        "svc #0",
+        "cbnz x0, 2f",
+        // child
+        "ldp x1, x0, [sp], #16",
+        "blr x1",
+        "mov x8, #93",
+        "svc #0",
+        "brk #0",
+        "2:",
+        lateout("x0") ret,
+        out("x1") _,
+        out("x2") _,
+        out("x3") _,
+        out("x4") _,
+        out("x8") _,
+        in("x9") stack as usize,
+        in("x10") entry as usize,
+        in("x11") arg as usize,
+        in("x12") flags,
+        in("x13") parent_tid as usize,
+        in("x14") child_tid as usize,
+        options(nostack)
+    );
+    ret
+}
+
 /// Syscall numbers for aarch64.
 pub mod nr {
     pub const READ: usize = 63;
@@ -89,6 +145,8 @@ pub mod nr {
     pub const GETEGID: usize = 177;
     pub const GETPPID: usize = 173;
     pub const GETTID: usize = 178;
+    pub const TKILL: usize = 130;
+    pub const SET_TID_ADDRESS: usize = 96;
     pub const GETDENTS64: usize = 61;
     pub const CLOCK_GETTIME: usize = 113;
     pub const CLOCK_NANOSLEEP: usize = 115;
