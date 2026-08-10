@@ -179,6 +179,10 @@ pub const SIGUSR2: i32 = 12;
 pub const SIGTERM: i32 = 15;
 pub const SIGCHLD: i32 = 17;
 
+/// `sigaction` special handlers / flags (kernel ABI).
+pub const SIG_DFL: usize = 0;
+pub const SIG_IGN: usize = 1;
+
 /// poll(2) events.
 pub const POLLIN: i16 = 0x0001;
 pub const POLLOUT: i16 = 0x0004;
@@ -264,5 +268,174 @@ impl Default for UtsName {
     fn default() -> Self {
         // Safety: all-zero is a valid bit pattern for this POD struct.
         unsafe { core::mem::zeroed() }
+    }
+}
+
+/// Memory sync / remap flags.
+pub const MS_ASYNC: i32 = 1;
+pub const MS_SYNC: i32 = 4;
+pub const MREMAP_MAYMOVE: i32 = 1;
+
+/// memfd_create flags.
+pub const MFD_CLOEXEC: i32 = 0x0001;
+pub const MFD_ALLOW_SEALING: i32 = 0x0002;
+
+/// timerfd_create flags.
+pub const TFD_CLOEXEC: i32 = 0o2000000;
+pub const TFD_NONBLOCK: i32 = 0o4000;
+pub const TFD_TIMER_ABSTIME: i32 = 1;
+
+/// flock(2) operations.
+pub const LOCK_SH: i32 = 1;
+pub const LOCK_EX: i32 = 2;
+pub const LOCK_UN: i32 = 8;
+pub const LOCK_NB: i32 = 4;
+
+/// getpriority / setpriority `which`.
+pub const PRIO_PROCESS: i32 = 0;
+
+/// getrusage `who`.
+pub const RUSAGE_SELF: i32 = 0;
+pub const RUSAGE_CHILDREN: i32 = -1;
+
+/// sched_getscheduler policy.
+pub const SCHED_OTHER: i32 = 0;
+
+/// waitid id types.
+pub const P_PID: i32 = 1;
+pub const P_ALL: i32 = 0;
+
+/// rt_sigprocmask `how`.
+pub const SIG_BLOCK: i32 = 0;
+pub const SIG_UNBLOCK: i32 = 1;
+pub const SIG_SETMASK: i32 = 2;
+
+/// Socket option levels and names.
+pub const SOL_SOCKET: i32 = 1;
+pub const SO_TYPE: i32 = 3;
+pub const SO_REUSEADDR: i32 = 2;
+pub const SO_RCVBUF: i32 = 8;
+
+/// prctl options for thread name.
+pub const PR_SET_NAME: i32 = 15;
+pub const PR_GET_NAME: i32 = 16;
+
+/// fcntl sealing (memfd).
+pub const F_ADD_SEALS: i32 = 1033;
+pub const F_GET_SEALS: i32 = 1034;
+pub const F_SEAL_WRITE: i32 = 0x0008;
+
+/// futex op codes (private).
+pub const FUTEX_WAIT: u32 = 0;
+pub const FUTEX_WAKE: u32 = 1;
+pub const FUTEX_PRIVATE_FLAG: u32 = 128;
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct Itimerspec {
+    pub it_interval: Timespec,
+    pub it_value: Timespec,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct Statfs {
+    pub f_type: i64,
+    pub f_bsize: i64,
+    pub f_blocks: u64,
+    pub f_bfree: u64,
+    pub f_bavail: u64,
+    pub f_files: u64,
+    pub f_ffree: u64,
+    pub f_fsid: [i32; 2],
+    pub f_namelen: i64,
+    pub f_frsize: i64,
+    pub f_flags: i64,
+    pub f_spare: [i64; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct Sysinfo {
+    pub uptime: i64,
+    pub loads: [u64; 3],
+    pub totalram: u64,
+    pub freeram: u64,
+    pub sharedram: u64,
+    pub bufferram: u64,
+    pub totalswap: u64,
+    pub freeswap: u64,
+    pub procs: u16,
+    pub pad: u16,
+    pub totalhigh: u64,
+    pub freehigh: u64,
+    pub mem_unit: u32,
+    pub _f: [u8; 4],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct Rusage {
+    pub ru_utime: Timeval,
+    pub ru_stime: Timeval,
+    pub ru_maxrss: i64,
+    pub ru_ixrss: i64,
+    pub ru_idrss: i64,
+    pub ru_isrss: i64,
+    pub ru_minflt: i64,
+    pub ru_majflt: i64,
+    pub ru_nswap: i64,
+    pub ru_inblock: i64,
+    pub ru_oublock: i64,
+    pub ru_msgsnd: i64,
+    pub ru_msgrcv: i64,
+    pub ru_nsignals: i64,
+    pub ru_nvcsw: i64,
+    pub ru_nivcsw: i64,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct Tms {
+    pub tms_utime: i64,
+    pub tms_stime: i64,
+    pub tms_cutime: i64,
+    pub tms_cstime: i64,
+}
+
+/// Minimal `siginfo_t` buffer for waitid(2).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Siginfo {
+    pub data: [u8; 128],
+}
+
+impl Default for Siginfo {
+    fn default() -> Self {
+        Self { data: [0u8; 128] }
+    }
+}
+
+/// Linux `kernel_sigset_t` on 64-bit targets.
+pub type Sigset = u64;
+
+/// Kernel `struct sigaction` layout used by `rt_sigaction` on x86_64/aarch64.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Sigaction {
+    pub sa_handler: usize,
+    pub sa_flags: usize,
+    pub sa_restorer: usize,
+    pub sa_mask: Sigset,
+}
+
+impl Default for Sigaction {
+    fn default() -> Self {
+        Self {
+            sa_handler: SIG_DFL,
+            sa_flags: 0,
+            sa_restorer: 0,
+            sa_mask: 0,
+        }
     }
 }

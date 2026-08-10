@@ -49,6 +49,10 @@ impl Errno {
     pub const EAFNOSUPPORT: Self = Self(97);
     pub const EADDRINUSE: Self = Self(98);
     pub const ECONNREFUSED: Self = Self(111);
+    pub const ETIMEDOUT: Self = Self(110);
+    pub const EWOULDBLOCK: Self = Self(11);
+    pub const ENOTSUP: Self = Self(95);
+    pub const EBUSY: Self = Self(16);
 
     pub fn as_isize(self) -> isize {
         -(self.0 as isize)

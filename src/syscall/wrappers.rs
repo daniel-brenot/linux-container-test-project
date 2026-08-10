@@ -874,3 +874,483 @@ pub fn chown(path: &[u8], uid: u32, gid: u32) -> Result<()> {
         }
     }
 }
+
+// --- Extended syscall wrappers (LTP-style tests) ---
+
+pub fn clock_getres(clock_id: i32) -> Result<super::Timespec> {
+    let mut ts = super::Timespec::default();
+    unsafe {
+        sys2(
+            nr::CLOCK_GETRES,
+            clock_id as usize,
+            &mut ts as *mut super::Timespec as usize,
+        )?;
+    }
+    Ok(ts)
+}
+
+pub fn mremap(
+    old_addr: usize,
+    old_len: usize,
+    new_len: usize,
+    flags: i32,
+    new_addr: usize,
+) -> Result<usize> {
+    unsafe {
+        sys5(
+            nr::MREMAP,
+            old_addr,
+            old_len,
+            new_len,
+            flags as usize,
+            new_addr,
+        )
+    }
+}
+
+pub fn msync(addr: usize, len: usize, flags: i32) -> Result<()> {
+    unsafe { sys3(nr::MSYNC, addr, len, flags as usize).map(|_| ()) }
+}
+
+pub fn mincore(addr: usize, len: usize, vec: &mut [u8]) -> Result<()> {
+    unsafe {
+        sys3(
+            nr::MINCORE,
+            addr,
+            len,
+            vec.as_mut_ptr() as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn sendfile(out_fd: i32, in_fd: i32, offset: &mut i64, count: usize) -> Result<usize> {
+    unsafe {
+        sys4(
+            nr::SENDFILE,
+            out_fd as usize,
+            in_fd as usize,
+            offset as *mut i64 as usize,
+            count,
+        )
+    }
+}
+
+pub fn splice(
+    fd_in: i32,
+    off_in: Option<&mut i64>,
+    fd_out: i32,
+    off_out: Option<&mut i64>,
+    len: usize,
+    flags: u32,
+) -> Result<usize> {
+    let oi = off_in.map(|p| p as *mut i64 as usize).unwrap_or(0);
+    let oo = off_out.map(|p| p as *mut i64 as usize).unwrap_or(0);
+    unsafe {
+        sys6(
+            nr::SPLICE,
+            fd_in as usize,
+            oi,
+            fd_out as usize,
+            oo,
+            len,
+            flags as usize,
+        )
+    }
+}
+
+pub fn copy_file_range(
+    fd_in: i32,
+    off_in: Option<&mut i64>,
+    fd_out: i32,
+    off_out: Option<&mut i64>,
+    len: usize,
+    flags: u32,
+) -> Result<usize> {
+    let oi = off_in.map(|p| p as *mut i64 as usize).unwrap_or(0);
+    let oo = off_out.map(|p| p as *mut i64 as usize).unwrap_or(0);
+    unsafe {
+        sys6(
+            nr::COPY_FILE_RANGE,
+            fd_in as usize,
+            oi,
+            fd_out as usize,
+            oo,
+            len,
+            flags as usize,
+        )
+    }
+}
+
+pub fn memfd_create(name: &[u8], flags: u32) -> Result<i32> {
+    unsafe {
+        sys2(nr::MEMFD_CREATE, name.as_ptr() as usize, flags as usize)
+            .map(|v| v as i32)
+    }
+}
+
+pub fn timerfd_create(clockid: i32, flags: i32) -> Result<i32> {
+    unsafe {
+        sys2(nr::TIMERFD_CREATE, clockid as usize, flags as usize).map(|v| v as i32)
+    }
+}
+
+pub fn timerfd_settime(fd: i32, flags: i32, new_value: &super::Itimerspec) -> Result<()> {
+    unsafe {
+        sys4(
+            nr::TIMERFD_SETTIME,
+            fd as usize,
+            flags as usize,
+            new_value as *const super::Itimerspec as usize,
+            0,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn timerfd_gettime(fd: i32) -> Result<super::Itimerspec> {
+    let mut its = super::Itimerspec::default();
+    unsafe {
+        sys2(
+            nr::TIMERFD_GETTIME,
+            fd as usize,
+            &mut its as *mut super::Itimerspec as usize,
+        )?;
+    }
+    Ok(its)
+}
+
+pub fn futex_wait(
+    uaddr: &core::sync::atomic::AtomicU32,
+    val: u32,
+    timeout: Option<&super::Timespec>,
+) -> Result<()> {
+    let op = super::FUTEX_WAIT | super::FUTEX_PRIVATE_FLAG;
+    let to = timeout
+        .map(|t| t as *const super::Timespec as usize)
+        .unwrap_or(0);
+    unsafe {
+        sys6(
+            nr::FUTEX,
+            uaddr as *const _ as usize,
+            op as usize,
+            val as usize,
+            to,
+            0,
+            0,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn futex_wake(uaddr: &core::sync::atomic::AtomicU32, count: u32) -> Result<usize> {
+    let op = super::FUTEX_WAKE | super::FUTEX_PRIVATE_FLAG;
+    unsafe {
+        sys6(
+            nr::FUTEX,
+            uaddr as *const _ as usize,
+            op as usize,
+            count as usize,
+            0,
+            0,
+            0,
+        )
+    }
+}
+
+pub fn waitid(idtype: i32, id: i32, infop: &mut super::Siginfo, options: i32) -> Result<()> {
+    unsafe {
+        sys5(
+            nr::WAITID,
+            idtype as usize,
+            id as usize,
+            infop as *mut super::Siginfo as usize,
+            options as usize,
+            0,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn getpgid(pid: i32) -> Result<i32> {
+    unsafe { sys1(nr::GETPGID, pid as usize).map(|v| v as i32) }
+}
+
+pub fn setpgid(pid: i32, pgid: i32) -> Result<()> {
+    unsafe { sys2(nr::SETPGID, pid as usize, pgid as usize).map(|_| ()) }
+}
+
+pub fn getsid(pid: i32) -> Result<i32> {
+    unsafe { sys1(nr::GETSID, pid as usize).map(|v| v as i32) }
+}
+
+pub fn setsid() -> Result<i32> {
+    unsafe { sys0(nr::SETSID).map(|v| v as i32) }
+}
+
+pub fn getpriority(which: i32, who: i32) -> Result<i32> {
+    let ret = unsafe { syscall(nr::GETPRIORITY, which as usize, who as usize, 0, 0, 0, 0) };
+    if ret < 0 {
+        from_ret(ret).map(|_| 0)
+    } else {
+        // getpriority returns nice in 1..40 range; userspace expects -20..19.
+        Ok(20 - ret as i32)
+    }
+}
+
+pub fn sched_getaffinity(pid: i32, mask: &mut [u8]) -> Result<()> {
+    unsafe {
+        sys3(
+            nr::SCHED_GETAFFINITY,
+            pid as usize,
+            mask.len(),
+            mask.as_mut_ptr() as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn sched_getscheduler(pid: i32) -> Result<i32> {
+    unsafe { sys1(nr::SCHED_GETSCHEDULER, pid as usize).map(|v| v as i32) }
+}
+
+pub fn prctl_get_name(buf: &mut [u8; 16]) -> Result<()> {
+    unsafe {
+        sys2(
+            nr::PRCTL,
+            super::PR_GET_NAME as usize,
+            buf.as_mut_ptr() as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn prctl_set_name(name: &[u8]) -> Result<()> {
+    unsafe {
+        sys2(
+            nr::PRCTL,
+            super::PR_SET_NAME as usize,
+            name.as_ptr() as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn sysinfo() -> Result<super::Sysinfo> {
+    let mut info = super::Sysinfo::default();
+    unsafe {
+        sys1(nr::SYSINFO, &mut info as *mut super::Sysinfo as usize)?;
+    }
+    Ok(info)
+}
+
+pub fn getrusage(who: i32) -> Result<super::Rusage> {
+    let mut ru = super::Rusage::default();
+    unsafe {
+        sys2(
+            nr::GETRUSAGE,
+            who as usize,
+            &mut ru as *mut super::Rusage as usize,
+        )?;
+    }
+    Ok(ru)
+}
+
+pub fn times() -> Result<super::Tms> {
+    let mut t = super::Tms::default();
+    unsafe {
+        sys1(nr::TIMES, &mut t as *mut super::Tms as usize)?;
+    }
+    Ok(t)
+}
+
+pub fn sync() -> Result<()> {
+    unsafe { sys0(nr::SYNC).map(|_| ()) }
+}
+
+pub fn syncfs(fd: i32) -> Result<()> {
+    unsafe { sys1(nr::SYNCFS, fd as usize).map(|_| ()) }
+}
+
+pub fn flock(fd: i32, op: i32) -> Result<()> {
+    unsafe { sys2(nr::FLOCK, fd as usize, op as usize).map(|_| ()) }
+}
+
+pub fn statfs(path: &[u8]) -> Result<super::Statfs> {
+    let p = c_str_ptr(path)?;
+    let mut st = super::Statfs::default();
+    unsafe {
+        sys2(nr::STATFS, p as usize, &mut st as *mut super::Statfs as usize)?;
+    }
+    Ok(st)
+}
+
+pub fn fstatfs(fd: i32) -> Result<super::Statfs> {
+    let mut st = super::Statfs::default();
+    unsafe {
+        sys2(nr::FSTATFS, fd as usize, &mut st as *mut super::Statfs as usize)?;
+    }
+    Ok(st)
+}
+
+pub fn getsockname(fd: i32, addr: &mut [u8], len: &mut u32) -> Result<()> {
+    unsafe {
+        sys3(
+            nr::GETSOCKNAME,
+            fd as usize,
+            addr.as_mut_ptr() as usize,
+            len as *mut u32 as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn getpeername(fd: i32, addr: &mut [u8], len: &mut u32) -> Result<()> {
+    unsafe {
+        sys3(
+            nr::GETPEERNAME,
+            fd as usize,
+            addr.as_mut_ptr() as usize,
+            len as *mut u32 as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn setsockopt(fd: i32, level: i32, optname: i32, optval: &[u8]) -> Result<()> {
+    unsafe {
+        sys5(
+            nr::SETSOCKOPT,
+            fd as usize,
+            level as usize,
+            optname as usize,
+            optval.as_ptr() as usize,
+            optval.len(),
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn getsockopt(fd: i32, level: i32, optname: i32, optval: &mut [u8]) -> Result<usize> {
+    let mut len = optval.len() as u32;
+    unsafe {
+        sys5(
+            nr::GETSOCKOPT,
+            fd as usize,
+            level as usize,
+            optname as usize,
+            optval.as_mut_ptr() as usize,
+            &mut len as *mut u32 as usize,
+        )
+        .map(|_| len as usize)
+    }
+}
+
+pub fn getresuid() -> Result<(u32, u32, u32)> {
+    let mut ruid = 0u32;
+    let mut euid = 0u32;
+    let mut suid = 0u32;
+    unsafe {
+        sys3(
+            nr::GETRESUID,
+            &mut ruid as *mut u32 as usize,
+            &mut euid as *mut u32 as usize,
+            &mut suid as *mut u32 as usize,
+        )?;
+    }
+    Ok((ruid, euid, suid))
+}
+
+pub fn getresgid() -> Result<(u32, u32, u32)> {
+    let mut rgid = 0u32;
+    let mut egid = 0u32;
+    let mut sgid = 0u32;
+    unsafe {
+        sys3(
+            nr::GETRESGID,
+            &mut rgid as *mut u32 as usize,
+            &mut egid as *mut u32 as usize,
+            &mut sgid as *mut u32 as usize,
+        )?;
+    }
+    Ok((rgid, egid, sgid))
+}
+
+pub fn rt_sigprocmask(
+    how: i32,
+    set: Option<super::Sigset>,
+    oldset: Option<&mut super::Sigset>,
+) -> Result<()> {
+    // Keep `set` alive for the syscall; do not take a pointer to a temporary.
+    let set_storage = set;
+    let set_ptr = match &set_storage {
+        Some(s) => s as *const super::Sigset as usize,
+        None => 0,
+    };
+    let old_ptr = oldset
+        .map(|s| s as *mut super::Sigset as usize)
+        .unwrap_or(0);
+    unsafe {
+        sys4(
+            nr::RT_SIGPROCMASK,
+            how as usize,
+            set_ptr,
+            old_ptr,
+            core::mem::size_of::<super::Sigset>(),
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn rt_sigpending(set: &mut super::Sigset) -> Result<()> {
+    unsafe {
+        sys2(
+            nr::RT_SIGPENDING,
+            set as *mut super::Sigset as usize,
+            core::mem::size_of::<super::Sigset>(),
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn rt_sigaction(
+    sig: i32,
+    act: Option<&super::Sigaction>,
+    oldact: Option<&mut super::Sigaction>,
+) -> Result<()> {
+    let act_ptr = act.map(|a| a as *const super::Sigaction as usize).unwrap_or(0);
+    let old_ptr = oldact
+        .map(|a| a as *mut super::Sigaction as usize)
+        .unwrap_or(0);
+    unsafe {
+        sys4(
+            nr::RT_SIGACTION,
+            sig as usize,
+            act_ptr,
+            old_ptr,
+            core::mem::size_of::<super::Sigset>(),
+        )
+        .map(|_| ())
+    }
+}
+
+/// Install `SIG_IGN` so a later unblock of a pending signal does not terminate the process.
+pub fn signal_ignore(sig: i32) -> Result<()> {
+    let act = super::Sigaction {
+        sa_handler: super::SIG_IGN,
+        ..super::Sigaction::default()
+    };
+    rt_sigaction(sig, Some(&act), None)
+}
+
+pub fn signal_default(sig: i32) -> Result<()> {
+    let act = super::Sigaction {
+        sa_handler: super::SIG_DFL,
+        ..super::Sigaction::default()
+    };
+    rt_sigaction(sig, Some(&act), None)
+}
+
+pub fn sigmask(sig: i32) -> super::Sigset {
+    1u64 << (sig - 1)
+}
