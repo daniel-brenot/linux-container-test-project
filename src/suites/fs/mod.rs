@@ -9,6 +9,7 @@ mod link;
 mod mkdir;
 mod mkfifo;
 mod open;
+mod pjdfstest_depth2;
 mod rename;
 mod rmdir;
 mod stat;

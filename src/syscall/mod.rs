@@ -227,6 +227,8 @@ pub const EPOLLIN: u32 = 0x001;
 pub const EPOLLOUT: u32 = 0x004;
 pub const EPOLLERR: u32 = 0x008;
 pub const EPOLLHUP: u32 = 0x010;
+pub const EPOLLET: u32 = 0x8000_0000;
+pub const EPOLLONESHOT: u32 = 1 << 30;
 pub const EPOLL_CTL_ADD: i32 = 1;
 pub const EPOLL_CTL_DEL: i32 = 2;
 pub const EPOLL_CTL_MOD: i32 = 3;
@@ -352,12 +354,22 @@ pub const SIG_SETMASK: i32 = 2;
 
 /// Socket option levels and names.
 pub const SOL_SOCKET: i32 = 1;
-pub const SO_TYPE: i32 = 3;
+pub const SO_DEBUG: i32 = 1;
 pub const SO_REUSEADDR: i32 = 2;
+pub const SO_TYPE: i32 = 3;
+pub const SO_ERROR: i32 = 4;
+pub const SO_DONTROUTE: i32 = 5;
+pub const SO_BROADCAST: i32 = 6;
+pub const SO_SNDBUF: i32 = 7;
 pub const SO_RCVBUF: i32 = 8;
 pub const SO_KEEPALIVE: i32 = 9;
+pub const SO_OOBINLINE: i32 = 10;
 pub const SO_LINGER: i32 = 13;
-pub const SO_SNDBUF: i32 = 7;
+pub const SO_REUSEPORT: i32 = 15;
+pub const SO_PASSCRED: i32 = 16;
+pub const SO_ACCEPTCONN: i32 = 30;
+pub const SO_PROTOCOL: i32 = 38;
+pub const SO_DOMAIN: i32 = 39;
 /// `send` / `recv` flags.
 pub const MSG_DONTWAIT: i32 = 0x40;
 pub const MSG_PEEK: i32 = 0x02;
@@ -380,6 +392,9 @@ pub const PR_GET_NO_NEW_PRIVS: i32 = 39;
 /// fcntl sealing (memfd).
 pub const F_ADD_SEALS: i32 = 1033;
 pub const F_GET_SEALS: i32 = 1034;
+pub const F_SEAL_SEAL: i32 = 0x0001;
+pub const F_SEAL_SHRINK: i32 = 0x0002;
+pub const F_SEAL_GROW: i32 = 0x0004;
 pub const F_SEAL_WRITE: i32 = 0x0008;
 
 /// futex op codes (private).
