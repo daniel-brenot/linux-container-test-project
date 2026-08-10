@@ -1,0 +1,268 @@
+//! Raw Linux syscall ABI and thin wrappers.
+//!
+//! All kernel interaction goes through this module so tests exercise the
+//! syscall interface directly rather than a C library.
+
+#![allow(dead_code)]
+
+mod arch;
+mod errno;
+mod wrappers;
+
+pub use errno::Errno;
+pub use wrappers::*;
+
+/// Linux `AT_FDCWD` — interpret relative paths against the current directory.
+pub const AT_FDCWD: i32 = -100;
+
+/// `open` / `openat` flags (subset).
+pub mod oflag {
+    pub const O_RDONLY: i32 = 0;
+    pub const O_WRONLY: i32 = 1;
+    pub const O_RDWR: i32 = 2;
+    pub const O_CREAT: i32 = 0o100;
+    pub const O_EXCL: i32 = 0o200;
+    pub const O_NOCTTY: i32 = 0o400;
+    pub const O_TRUNC: i32 = 0o1000;
+    pub const O_APPEND: i32 = 0o2000;
+    pub const O_NONBLOCK: i32 = 0o4000;
+    pub const O_DIRECTORY: i32 = 0o200000;
+    pub const O_NOFOLLOW: i32 = 0o400000;
+    pub const O_CLOEXEC: i32 = 0o2000000;
+    pub const O_PATH: i32 = 0o10000000;
+}
+
+/// `mmap` / `mprotect` protection bits.
+pub mod prot {
+    pub const PROT_NONE: i32 = 0;
+    pub const PROT_READ: i32 = 1;
+    pub const PROT_WRITE: i32 = 2;
+    pub const PROT_EXEC: i32 = 4;
+}
+
+/// `mmap` flags.
+pub mod map {
+    pub const MAP_SHARED: i32 = 0x01;
+    pub const MAP_PRIVATE: i32 = 0x02;
+    pub const MAP_FIXED: i32 = 0x10;
+    pub const MAP_ANONYMOUS: i32 = 0x20;
+}
+
+/// `waitid` / `wait4` options.
+pub mod wait {
+    pub const WNOHANG: i32 = 1;
+    pub const WUNTRACED: i32 = 2;
+    pub const WEXITED: i32 = 4;
+}
+
+/// `clock_gettime` clock ids.
+pub mod clock {
+    pub const CLOCK_REALTIME: i32 = 0;
+    pub const CLOCK_MONOTONIC: i32 = 1;
+    pub const CLOCK_PROCESS_CPUTIME_ID: i32 = 2;
+    pub const CLOCK_THREAD_CPUTIME_ID: i32 = 3;
+    pub const CLOCK_MONOTONIC_RAW: i32 = 4;
+}
+
+/// `fcntl` commands.
+pub mod fcntl_cmd {
+    pub const F_DUPFD: i32 = 0;
+    pub const F_GETFD: i32 = 1;
+    pub const F_SETFD: i32 = 2;
+    pub const F_GETFL: i32 = 3;
+    pub const F_SETFL: i32 = 4;
+    pub const F_DUPFD_CLOEXEC: i32 = 1030;
+}
+
+pub const FD_CLOEXEC: i32 = 1;
+
+/// `unlinkat` flag: remove a directory.
+pub const AT_REMOVEDIR: i32 = 0x200;
+
+/// `fchmodat` / `faccessat` flag: do not follow symlinks.
+pub const AT_SYMLINK_NOFOLLOW: i32 = 0x100;
+
+/// Standard fds.
+pub const STDIN_FILENO: i32 = 0;
+pub const STDOUT_FILENO: i32 = 1;
+pub const STDERR_FILENO: i32 = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct Timespec {
+    pub tv_sec: i64,
+    pub tv_nsec: i64,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Stat {
+    // Layout matches the kernel `struct stat` used by `newfstatat` on
+    // x86_64 and aarch64 (64-bit). Fields after the ones we care about are
+    // padding so size stays correct for the syscall.
+    pub st_dev: u64,
+    pub st_ino: u64,
+    pub st_nlink: u64,
+    pub st_mode: u32,
+    pub st_uid: u32,
+    pub st_gid: u32,
+    pub __pad0: u32,
+    pub st_rdev: u64,
+    pub st_size: i64,
+    pub st_blksize: i64,
+    pub st_blocks: i64,
+    pub st_atime: i64,
+    pub st_atime_nsec: i64,
+    pub st_mtime: i64,
+    pub st_mtime_nsec: i64,
+    pub st_ctime: i64,
+    pub st_ctime_nsec: i64,
+    pub __unused: [i64; 3],
+}
+
+impl Default for Stat {
+    fn default() -> Self {
+        // Safety: all-zero is a valid bit pattern for this POD struct.
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+impl Stat {
+    pub fn is_reg(&self) -> bool {
+        (self.st_mode & 0o170000) == 0o100000
+    }
+
+    pub fn is_dir(&self) -> bool {
+        (self.st_mode & 0o170000) == 0o040000
+    }
+
+    pub fn is_lnk(&self) -> bool {
+        (self.st_mode & 0o170000) == 0o120000
+    }
+
+    pub fn is_fifo(&self) -> bool {
+        (self.st_mode & 0o170000) == 0o010000
+    }
+
+    pub fn mode_bits(&self) -> u32 {
+        self.st_mode & 0o7777
+    }
+}
+
+/// File type bits for `mknodat`.
+pub const S_IFIFO: u32 = 0o010000;
+pub const S_IFCHR: u32 = 0o020000;
+pub const S_IFDIR: u32 = 0o040000;
+pub const S_IFBLK: u32 = 0o060000;
+pub const S_IFREG: u32 = 0o100000;
+pub const S_IFLNK: u32 = 0o120000;
+pub const S_IFSOCK: u32 = 0o140000;
+
+/// Socket domain / type.
+pub const AF_UNIX: i32 = 1;
+pub const AF_INET: i32 = 2;
+pub const SOCK_STREAM: i32 = 1;
+pub const SOCK_DGRAM: i32 = 2;
+pub const SOCK_CLOEXEC: i32 = 0o2000000;
+pub const SOCK_NONBLOCK: i32 = 0o4000;
+pub const SHUT_RD: i32 = 0;
+pub const SHUT_WR: i32 = 1;
+pub const SHUT_RDWR: i32 = 2;
+
+/// Signals.
+pub const SIGHUP: i32 = 1;
+pub const SIGINT: i32 = 2;
+pub const SIGQUIT: i32 = 3;
+pub const SIGKILL: i32 = 9;
+pub const SIGUSR1: i32 = 10;
+pub const SIGUSR2: i32 = 12;
+pub const SIGTERM: i32 = 15;
+pub const SIGCHLD: i32 = 17;
+
+/// poll(2) events.
+pub const POLLIN: i16 = 0x0001;
+pub const POLLOUT: i16 = 0x0004;
+pub const POLLERR: i16 = 0x0008;
+pub const POLLHUP: i16 = 0x0010;
+
+/// epoll.
+pub const EPOLLIN: u32 = 0x001;
+pub const EPOLLOUT: u32 = 0x004;
+pub const EPOLLERR: u32 = 0x008;
+pub const EPOLLHUP: u32 = 0x010;
+pub const EPOLL_CTL_ADD: i32 = 1;
+pub const EPOLL_CTL_DEL: i32 = 2;
+pub const EPOLL_CTL_MOD: i32 = 3;
+
+/// utimensat special nsec values.
+pub const UTIME_NOW: i64 = (1 << 30) - 1;
+pub const UTIME_OMIT: i64 = (1 << 30) - 2;
+
+/// prlimit resource ids.
+pub const RLIMIT_NOFILE: i32 = 7;
+
+pub mod madvise {
+    pub const MADV_NORMAL: i32 = 0;
+    pub const MADV_RANDOM: i32 = 1;
+    pub const MADV_SEQUENTIAL: i32 = 2;
+    pub const MADV_WILLNEED: i32 = 3;
+    pub const MADV_DONTNEED: i32 = 4;
+}
+
+pub mod poll {
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    pub struct PollFd {
+        pub fd: i32,
+        pub events: i16,
+        pub revents: i16,
+    }
+}
+
+pub mod epoll {
+    #[repr(C)]
+    #[derive(Clone, Copy)]
+    pub struct EpollEvent {
+        pub events: u32,
+        pub data: u64,
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct IoVec {
+    pub iov_base: *mut u8,
+    pub iov_len: usize,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct Timeval {
+    pub tv_sec: i64,
+    pub tv_usec: i64,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct Rlimit {
+    pub rlim_cur: u64,
+    pub rlim_max: u64,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct UtsName {
+    pub sysname: [u8; 65],
+    pub nodename: [u8; 65],
+    pub release: [u8; 65],
+    pub version: [u8; 65],
+    pub machine: [u8; 65],
+    pub domainname: [u8; 65],
+}
+
+impl Default for UtsName {
+    fn default() -> Self {
+        // Safety: all-zero is a valid bit pattern for this POD struct.
+        unsafe { core::mem::zeroed() }
+    }
+}

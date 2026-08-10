@@ -1,118 +1,87 @@
-# Linux Container Test Project
+# Linux Container Test
 
-This repository contains the code for a project meant to verify a container runtimes ability
-to run linux programs. It combines multiple different testing projects into one single test container,
-and allows the user to invoke some or all of the tests for either quick verification or full comprehensive testing.
+Freestanding Rust (`no_std` / `no_main`) suite that verifies Linux container
+runtimes by calling the kernel syscall ABI directly. One musl-static binary
+covers the behaviours previously exercised via LTP, Open POSIX, and pjdfstest —
+without Python, Perl, or a separate glibc build.
 
-This project uses three testing projects:
+## Suites
 
-**Linux Test Project:** Testing most of the linux syscalls
-**POSIX Test Suite:** Testing userspace/posix functionality
-**pjdfstest:** Tests filesystem semantics
+| Suite | Flag | Role |
+|-------|------|------|
+| **bootstrap** | `--bootstrap` | Prerequisites for everything else. Always runs first; remaining suites are refused if it fails. |
+| **syscall** | `--syscall` | Linux syscall behaviour (LTP-inspired, unprivileged only): files, process, memory, time, IPC, poll/epoll, signals, misc |
+| **posix** | `--posix` | POSIX path/open/errno/IO/signal semantics |
+| **fs** | `--fs` | Filesystem semantics (pjdfstest-inspired): chmod, link, mkdir, mkfifo, open, rename, rmdir, symlink, truncate, unlink, utimensat, chown-EPERM |
 
-## Usage
+Only tests that work in a **non-privileged** Docker container are included (~225 cases in `--full`).
 
-Two images are provided so you can exercise either musl or glibc userspace.
-Published tags are multi-arch (`linux/amd64` and `linux/arm64`), so the same tag works on both.
-
-| Dockerfile | Libc | Local tag | Published tag |
-|------------|------|-----------|---------------|
-| `Dockerfile` | musl (Alpine) | `linux-container-test:latest-musl` | `<dockerhub-user>/linux-container-test:latest-musl` |
-| `Dockerfile.glibc` | glibc (Ubuntu) | `linux-container-test:latest-glibc` | `<dockerhub-user>/linux-container-test:latest-glibc` |
-
-### Build
+## Build
 
 ```bash
-# musl / Alpine (current machine arch)
-docker build -f Dockerfile -t linux-container-test:latest-musl .
-
-# glibc / Ubuntu (current machine arch)
-docker build -f Dockerfile.glibc -t linux-container-test:latest-glibc .
+docker build -t linux-container-test:latest .
 ```
 
-Published images from CI are multi-arch (`linux/amd64` + `linux/arm64`). To build and push a multi-arch image yourself:
+Multi-arch (`linux/amd64` + `linux/arm64`) images are published by CI.
+
+## Run
 
 ```bash
-docker buildx build --platform linux/amd64,linux/arm64 \
-  -f Dockerfile -t <dockerhub-user>/linux-container-test:latest-musl --push .
-```
+# Quick pass, all suites (default)
+docker run --rm linux-container-test:latest
 
-### Run
+# Full pass
+docker run --rm linux-container-test:latest --full
 
-The image entrypoint is `container-test`. With no arguments it runs a quick pass of all suites:
+# Selected suites (bootstrap still runs as a gate)
+docker run --rm linux-container-test:latest --quick --syscall --fs
 
-```bash
-docker run --rm linux-container-test:latest-musl
-docker run --rm linux-container-test:latest-glibc
-```
+# List tests
+docker run --rm linux-container-test:latest --list
 
-Show help:
-
-```bash
-docker run --rm linux-container-test:latest-musl -h
+docker run --rm linux-container-test:latest --help
 ```
 
 ### Modes
 
 | Flag | Description |
 |------|-------------|
-| `-q`, `--quick` | Quick smoke pass (default) |
-| `-f`, `--full` | Full comprehensive suites |
+| `-q`, `--quick` | Smoke pass (default); skips `full_only` cases |
+| `-f`, `--full` | Include longer / fuller cases |
 
-### Suites
+## Why musl-only / no glibc image
 
-If no suite flags are given, all suites run.
+Tests use raw syscalls, not libc wrappers, so glibc vs musl userspace differences
+are out of scope. A single static binary (built for `*-linux-musl`) is enough.
 
-| Flag | Suite |
-|------|-------|
-| `--ltp` | Linux Test Project |
-| `--posix` | Open POSIX Test Suite |
-| `--pjdfstest` | pjdfstest filesystem suite |
+## Layout
 
-### Examples
-
-```bash
-# Quick pass, all suites (default) — musl
-docker run --rm linux-container-test:latest-musl
-
-# Quick pass, LTP only — glibc
-docker run --rm linux-container-test:latest-glibc --quick --ltp
-
-# Quick pass, POSIX and pjdfstest
-docker run --rm linux-container-test:latest-musl --posix --pjdfstest
-
-# Full pass, all suites
-docker run --rm linux-container-test:latest-glibc --full
-
-# Full LTP syscalls (may need privileged for fewer skips)
-docker run --rm --privileged linux-container-test:latest-glibc --full --ltp
+```
+src/
+  main.rs              _start + no_std entry
+  syscall/             arch syscall ABI + wrappers
+  runtime/             panic, print, mem builtins, path helpers
+  harness/             CLI, asserts, runner, temp dirs, ALL_TESTS registry
+  suites/
+    bootstrap/         gate tests
+    common.rs          shared helpers
+    syscall/ … posix/ … fs/
+lctp-macros/           #[lctp_test] proc-macro
 ```
 
-### Publishing
+Tests are registered with attributes instead of static arrays:
 
-On pushes to `main`/`master` (and via `workflow_dispatch`), GitHub Actions builds each image on native `amd64` and `arm64` runners, then publishes multi-arch manifests to Docker Hub:
+```rust
+#[lctp_test(suite = fs)]
+fn chmod_file_644() -> TestResult { ... }
 
-- `<dockerhub-user>/linux-container-test:latest-musl` (`linux/amd64`, `linux/arm64`)
-- `<dockerhub-user>/linux-container-test:latest-glibc` (`linux/amd64`, `linux/arm64`)
+#[lctp_test(suite = fs, full)]
+fn chmod_file_777() -> TestResult { ... }
+```
 
-On an ARM host, `docker pull` / `docker run` of those tags uses the arm64 variant automatically.
+## Coverage notes
 
-Add these repository secrets before the workflow can publish:
-
-| Secret | Value |
-|--------|-------|
-| `DOCKERHUB_USERNAME` | Docker Hub username |
-| `DOCKERHUB_TOKEN` | Docker Hub access token |
-
-Optional repository variable `DOCKERHUB_REPOSITORY` overrides the image name (default: `linux-container-test`).
-
-See [`.github/workflows/publish-images.yml`](.github/workflows/publish-images.yml).
-
-### Quick vs full
-
-| Suite | Quick | Full |
-|-------|-------|------|
-| LTP | `smoketest` | `syscalls` |
-| Open POSIX | `SIG` option group | all option groups |
-| pjdfstest | `tests/chmod` | entire `tests/` |
-
+Privileged-only areas from the old LTP skip list (mount, reboot, modules,
+fanotify-as-root, chown-to-other-uid success paths, etc.) are intentionally
+omitted. Unprivileged equivalents and expected `EPERM`/`EACCES` failures are
+covered where useful.

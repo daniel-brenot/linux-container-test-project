@@ -1,0 +1,25 @@
+[package]
+name = "linux-container-test"
+version = "0.1.0"
+edition = "2021"
+description = "no_std Linux container verification suite (syscalls, POSIX, filesystem)"
+license = "MIT"
+publish = false
+
+[[bin]]
+name = "linux-container-test"
+path = "src/main.rs"
+
+[dependencies]
+lctp-macros = { path = "lctp-macros" }
+linkme = { version = "0.3", default-features = false }
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1
+opt-level = "s"
+strip = "symbols"

@@ -1,127 +1,45 @@
-# Linux Container Test Project — musl (Alpine) image
-# Combines LTP, Open POSIX Test Suite, and pjdfstest behind a single CLI.
+# Linux Container Test — freestanding Rust (no_std) suite
 #
-# Build (current arch):
-#   docker build -f Dockerfile -t linux-container-test:latest-musl .
-# Multi-arch (amd64 + arm64) is published by CI; locally:
-#   docker buildx build --platform linux/amd64,linux/arm64 -f Dockerfile -t linux-container-test:latest-musl --push .
+# Build:
+#   docker build -t linux-container-test:latest .
 #
 # Run:
-#   docker run --rm linux-container-test:latest-musl
-#   docker run --rm linux-container-test:latest-musl -h
-#
-# See Dockerfile.glibc for the Ubuntu/glibc variant.
+#   docker run --rm linux-container-test:latest
+#   docker run --rm linux-container-test:latest --full
+#   docker run --rm linux-container-test:latest --help
 
 ARG ALPINE_VERSION=3.20
-ARG LTP_REF=master
-ARG PJDFSTEST_REF=master
-ARG LTPROOT=/opt/ltp
-ARG PJDFSTEST_ROOT=/opt/pjdfstest
+ARG RUST_VERSION=1.85.0
 
-FROM alpine:${ALPINE_VERSION} AS build
-ARG LTP_REF
-ARG PJDFSTEST_REF
-ARG LTPROOT
-ARG PJDFSTEST_ROOT
+FROM rust:${RUST_VERSION}-alpine${ALPINE_VERSION} AS build
+ARG TARGETARCH
 
-RUN apk add --no-cache \
-    acl-dev \
-    autoconf \
-    automake \
-    clang \
-    curl \
-    e2fsprogs-extra \
-    gcc \
-    git \
-    jq \
-    keyutils-dev \
-    libaio-dev \
-    libcap-dev \
-    libselinux-dev \
-    libsepol-dev \
-    libtirpc-dev \
-    linux-headers \
-    make \
-    musl-dev \
-    numactl-dev \
-    openssl-dev \
-    pkgconfig \
-    python3
+RUN apk add --no-cache musl-dev
 
-# --- Linux Test Project (includes Open POSIX Test Suite for in-tree builds) ---
-WORKDIR /build/ltp
-# kirk is a submodule (tools/kirk/kirk-src); without it, make install skips kirk.
-RUN git clone --depth 1 --recurse-submodules --shallow-submodules \
-      --branch "${LTP_REF}" \
-      https://github.com/linux-test-project/ltp.git .
+WORKDIR /src
+COPY Cargo.toml ./
+COPY lctp-macros ./lctp-macros
+COPY .cargo ./.cargo
+COPY src ./src
 
-# Alpine/musl cannot build a few cases yet (upstream ci/alpine.sh + off64_t gaps).
-RUN rm -rfv \
-      testcases/kernel/syscalls/fmtmsg/fmtmsg01.c \
-      testcases/kernel/syscalls/timer_create/timer_create01.c \
-      testcases/kernel/syscalls/timer_create/timer_create03.c \
-      testcases/kernel/mem/hugetlb/hugemmap/hugemmap36.c
-
-# In-tree build enables --with-open-posix-testsuite by default via build.sh.
-# _LARGEFILE64_SOURCE helps remaining LFS64 typedefs on older musl headers.
-RUN CPPFLAGS="${CPPFLAGS:-} -D_LARGEFILE64_SOURCE" \
-    ./build.sh -p "${LTPROOT}" -i \
-    && test -x "${LTPROOT}/kirk" \
-    && test -d "${LTPROOT}/testcases/open_posix_testsuite"
-
-# --- pjdfstest ---
-WORKDIR /build/pjdfstest
-RUN git clone --depth 1 --branch "${PJDFSTEST_REF}" \
-      https://github.com/pjd/pjdfstest.git . \
-    && autoreconf -ifs \
-    && ./configure \
-    && make pjdfstest \
-    && mkdir -p "${PJDFSTEST_ROOT}" \
-    && cp -a pjdfstest tests "${PJDFSTEST_ROOT}/" \
-    && test -x "${PJDFSTEST_ROOT}/pjdfstest"
+RUN case "${TARGETARCH}" in \
+      amd64) echo x86_64-unknown-linux-musl > /tmp/target ;; \
+      arm64) echo aarch64-unknown-linux-musl > /tmp/target ;; \
+      *) echo "unsupported arch: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+ && rustup target add "$(cat /tmp/target)" \
+ && cargo build --release --target "$(cat /tmp/target)" \
+ && cp "target/$(cat /tmp/target)/release/linux-container-test" /linux-container-test \
+ && chmod 755 /linux-container-test
 
 FROM alpine:${ALPINE_VERSION}
-ARG LTPROOT
-ARG PJDFSTEST_ROOT
+RUN adduser -D -g "unprivileged test user" tester \
+ && mkdir -p /tmp && chmod 1777 /tmp
 
-RUN apk add --no-cache \
-    acl \
-    curl \
-    jq \
-    keyutils \
-    libaio \
-    libacl \
-    libcap \
-    libselinux \
-    libsepol \
-    libtirpc \
-    make \
-    numactl \
-    openssl \
-    perl \
-    perl-test-harness \
-    perl-test-harness-utils \
-    py3-msgpack \
-    python3 \
-    && adduser -D -g "Unprivileged LTP user" ltp
+COPY --from=build /linux-container-test /usr/local/bin/linux-container-test
 
-COPY --from=build ${LTPROOT} ${LTPROOT}
-COPY --from=build ${PJDFSTEST_ROOT} ${PJDFSTEST_ROOT}
-COPY skipfiles/musl/ltp-unprivileged.skip ${LTPROOT}/docker-unprivileged.skip
-COPY skipfiles/musl/open-posix.skip ${LTPROOT}/docker-posix.skip
-COPY container-test.sh /usr/local/bin/container-test
+USER tester
+WORKDIR /home/tester
 
-RUN chmod 755 /usr/local/bin/container-test \
-    && ln -sf /usr/local/bin/container-test /usr/local/bin/container-test.sh
-
-ENV LTPROOT=${LTPROOT}
-ENV PJDFSTEST_ROOT=${PJDFSTEST_ROOT}
-ENV OPEN_POSIX_ROOT=${LTPROOT}/testcases/open_posix_testsuite
-ENV CONTAINER_TEST_LIBC=musl
-ENV PATH=${PJDFSTEST_ROOT}:${LTPROOT}/testcases/bin:${LTPROOT}/bin:${LTPROOT}:/usr/local/bin:${PATH}
-
-WORKDIR ${LTPROOT}
-
-# Default: quick pass across LTP, Open POSIX, and pjdfstest.
-ENTRYPOINT ["/usr/local/bin/container-test"]
+ENTRYPOINT ["/usr/local/bin/linux-container-test"]
 CMD ["--quick"]

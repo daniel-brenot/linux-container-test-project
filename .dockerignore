@@ -1,0 +1,7 @@
+# syntax attention: keep context small
+target
+.git
+.gitignore
+README.md
+.github
+**/*.md
