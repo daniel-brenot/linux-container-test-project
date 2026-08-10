@@ -128,3 +128,69 @@ fn mmap_fixed_not_used() -> TestResult {
     check_ok!(syscall::munmap(addr, 4096), "munmap");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn mmap_populate_anon() -> TestResult {
+    let len = 4096usize;
+    let addr = check_ok!(
+        syscall::mmap(
+            0,
+            len,
+            prot::PROT_READ | prot::PROT_WRITE,
+            map::MAP_PRIVATE | map::MAP_ANONYMOUS | map::MAP_POPULATE,
+            -1,
+            0
+        ),
+        "mmap populate"
+    );
+    unsafe {
+        *(addr as *mut u8) = 0x11;
+        check_eq!(*(addr as *const u8), 0x11, "byte");
+    }
+    check_ok!(syscall::munmap(addr, len), "munmap");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn mlock_munlock_soft() -> TestResult {
+    let len = 4096usize;
+    let addr = check_ok!(
+        syscall::mmap(
+            0,
+            len,
+            prot::PROT_READ | prot::PROT_WRITE,
+            map::MAP_PRIVATE | map::MAP_ANONYMOUS,
+            -1,
+            0
+        ),
+        "mmap"
+    );
+    match syscall::mlock(addr, len) {
+        Ok(()) => {
+            check_ok!(syscall::munlock(addr, len), "munlock");
+        }
+        Err(crate::syscall::Errno::EPERM)
+        | Err(crate::syscall::Errno::ENOMEM)
+        | Err(crate::syscall::Errno::EAGAIN)
+        | Err(crate::syscall::Errno::EINVAL)
+        | Err(crate::syscall::Errno::ENOSYS) => {}
+        Err(_) => {
+            let _ = syscall::munmap(addr, len);
+            return Err(crate::harness::AssertFail::msg("mlock errno"));
+        }
+    }
+    // munlock without prior mlock may succeed or fail softly.
+    match syscall::munlock(addr, len) {
+        Ok(()) => {}
+        Err(crate::syscall::Errno::ENOMEM)
+        | Err(crate::syscall::Errno::EINVAL)
+        | Err(crate::syscall::Errno::EPERM)
+        | Err(crate::syscall::Errno::ENOSYS) => {}
+        Err(_) => {
+            let _ = syscall::munmap(addr, len);
+            return Err(crate::harness::AssertFail::msg("munlock errno"));
+        }
+    }
+    check_ok!(syscall::munmap(addr, len), "munmap");
+    Ok(())
+}

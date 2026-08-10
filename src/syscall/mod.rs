@@ -48,6 +48,7 @@ pub mod map {
     pub const MAP_PRIVATE: i32 = 0x02;
     pub const MAP_FIXED: i32 = 0x10;
     pub const MAP_ANONYMOUS: i32 = 0x20;
+    pub const MAP_POPULATE: i32 = 0x8000;
 }
 
 /// `waitid` / `wait4` options.
@@ -330,6 +331,7 @@ pub const SCHED_OTHER: i32 = 0;
 /// waitid id types.
 pub const P_PID: i32 = 1;
 pub const P_ALL: i32 = 0;
+pub const P_PIDFD: i32 = 3;
 
 /// rt_sigprocmask `how`.
 pub const SIG_BLOCK: i32 = 0;
@@ -342,9 +344,13 @@ pub const SO_TYPE: i32 = 3;
 pub const SO_REUSEADDR: i32 = 2;
 pub const SO_RCVBUF: i32 = 8;
 
-/// prctl options for thread name.
+/// prctl options.
+pub const PR_GET_DUMPABLE: i32 = 3;
+pub const PR_SET_DUMPABLE: i32 = 4;
 pub const PR_SET_NAME: i32 = 15;
 pub const PR_GET_NAME: i32 = 16;
+pub const PR_SET_NO_NEW_PRIVS: i32 = 38;
+pub const PR_GET_NO_NEW_PRIVS: i32 = 39;
 
 /// fcntl sealing (memfd).
 pub const F_ADD_SEALS: i32 = 1033;
@@ -868,12 +874,25 @@ pub const CLONE_NEWUSER: u64 = 0x1000_0000;
 /// `kcmp` comparison types.
 pub const KCMP_FILE: i32 = 0;
 
-/// System V IPC key / shm flags.
+/// System V IPC key / shm / sem / msg flags.
 pub const IPC_PRIVATE: i32 = 0;
 pub const IPC_CREAT: i32 = 0o1000;
 pub const IPC_EXCL: i32 = 0o2000;
 pub const IPC_RMID: i32 = 0;
 pub const SHM_RDONLY: i32 = 0o10000;
+/// `semctl` commands.
+pub const GETVAL: i32 = 12;
+pub const SETVAL: i32 = 16;
+/// eventfd2 flags.
+pub const EFD_SEMAPHORE: i32 = 1;
+pub const EFD_CLOEXEC: i32 = 0o2000000;
+pub const EFD_NONBLOCK: i32 = 0o4000;
+/// POSIX timer notification.
+pub const SIGEV_SIGNAL: i32 = 0;
+pub const SIGEV_NONE: i32 = 1;
+/// `fsconfig` commands (probe only).
+pub const FSCONFIG_SET_FLAG: u32 = 0;
+pub const FSCONFIG_CMD_CREATE: u32 = 6;
 
 /// Kernel `struct mq_attr`.
 #[repr(C)]
@@ -899,3 +918,67 @@ pub struct LandlockRulesetAttr {
 /// userfaultfd flags.
 pub const UFFD_CLOEXEC: i32 = 0o2000000;
 pub const UFFD_NONBLOCK: i32 = 0o4000;
+
+/// Kernel `struct io_uring_params` (offsets opaque; size must match ABI).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct IoUringParams {
+    pub sq_entries: u32,
+    pub cq_entries: u32,
+    pub flags: u32,
+    pub sq_thread_cpu: u32,
+    pub sq_thread_idle: u32,
+    pub features: u32,
+    pub wq_fd: u32,
+    pub resv: [u32; 3],
+    pub sq_off: [u8; 40],
+    pub cq_off: [u8; 40],
+}
+
+impl Default for IoUringParams {
+    fn default() -> Self {
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+/// Kernel `struct sigevent` (subset used with SIGEV_NONE).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Sigevent {
+    pub sigev_value: usize,
+    pub sigev_signo: i32,
+    pub sigev_notify: i32,
+    pub _pad: [u8; 48],
+}
+
+impl Default for Sigevent {
+    fn default() -> Self {
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+/// Kernel `struct sembuf`.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct Sembuf {
+    pub sem_num: u16,
+    pub sem_op: i16,
+    pub sem_flg: i16,
+}
+
+/// Message buffer header + small payload for SysV msgsnd/msgrcv.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct MsgBuf {
+    pub mtype: i64,
+    pub mtext: [u8; 32],
+}
+
+impl Default for MsgBuf {
+    fn default() -> Self {
+        Self {
+            mtype: 0,
+            mtext: [0; 32],
+        }
+    }
+}

@@ -159,3 +159,39 @@ fn linkat_symlink_follow() -> TestResult {
     check_eq!(st_t.st_ino, st_d.st_ino, "followed to target");
     Ok(())
 }
+
+#[crate::lctp_test(suite = fs)]
+fn link_then_chmod_shared() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"a")?;
+    let b = copy_child(&mut tmp, b"b")?;
+    check_ok!(syscall::link(&a, &b), "link");
+    check_ok!(syscall::chmod(&a, 0o640), "chmod a");
+    let sb = check_ok!(syscall::stat(&b), "stat b");
+    check_eq!(sb.mode_bits() & 0o777, 0o640, "shared mode");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn link_dot_fails() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let dst = copy_child(&mut tmp, b"dotlink")?;
+    match syscall::link(b".\0", &dst) {
+        Err(Errno::EPERM) | Err(Errno::EACCES) | Err(Errno::EISDIR) | Err(Errno::EINVAL) => {}
+        Ok(()) => return Err(crate::harness::AssertFail::msg("link . ok")),
+        Err(_) => return Err(crate::harness::AssertFail::msg("link . errno")),
+    }
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn link_nlink_after_unlink() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"a")?;
+    let b = copy_child(&mut tmp, b"b")?;
+    check_ok!(syscall::link(&a, &b), "link");
+    check_ok!(syscall::unlink(&b), "unlink b");
+    let st = check_ok!(syscall::stat(&a), "stat");
+    check_eq!(st.st_nlink, 1, "nlink back to 1");
+    Ok(())
+}

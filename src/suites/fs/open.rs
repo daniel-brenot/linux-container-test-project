@@ -207,3 +207,68 @@ fn open_tmpfile_soft() -> TestResult {
     }
     Ok(())
 }
+
+#[crate::lctp_test(suite = fs)]
+fn open_creat_mode_bits() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = copy_child(&mut tmp, b"mode")?;
+    let fd = check_ok!(
+        syscall::open(&path, oflag::O_RDWR | oflag::O_CREAT | oflag::O_EXCL, 0o600),
+        "creat"
+    );
+    check_ok!(syscall::close(fd), "close");
+    let st = check_ok!(syscall::stat(&path), "stat");
+    check_eq!(st.mode_bits() & 0o777, 0o600, "mode");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn open_nonblock_regular() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"nb")?;
+    let fd = check_ok!(
+        syscall::open(&path, oflag::O_RDWR | oflag::O_NONBLOCK, 0),
+        "nonblock"
+    );
+    let fl = check_ok!(syscall::fcntl(fd, crate::syscall::fcntl_cmd::F_GETFL, 0), "getfl");
+    check!(fl as i32 & oflag::O_NONBLOCK != 0, "O_NONBLOCK");
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn open_cloexec_flag() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"ce")?;
+    let fd = check_ok!(
+        syscall::open(&path, oflag::O_RDONLY | oflag::O_CLOEXEC, 0),
+        "cloexec"
+    );
+    let fl = check_ok!(syscall::fcntl(fd, crate::syscall::fcntl_cmd::F_GETFD, 0), "getfd");
+    check!(fl & crate::syscall::FD_CLOEXEC as usize != 0, "CLOEXEC");
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn open_enoent_nested() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let mut path = [0u8; 160];
+    let base = tmp.path();
+    let blen = base.iter().position(|&c| c == 0).unwrap();
+    let suffix = b"/no/such/file";
+    check!(blen + suffix.len() + 1 < path.len(), "path fits");
+    path[..blen].copy_from_slice(&base[..blen]);
+    path[blen..blen + suffix.len()].copy_from_slice(suffix);
+    path[blen + suffix.len()] = 0;
+    check_err!(
+        syscall::open(
+            crate::suites::common::truncate_cstr(&path),
+            oflag::O_RDONLY,
+            0
+        ),
+        Errno::ENOENT,
+        "nested missing"
+    );
+    Ok(())
+}

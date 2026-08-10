@@ -151,3 +151,26 @@ fn udp_largeish_datagram() -> TestResult {
     check_ok!(syscall::close(srv), "close srv");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn udp_connected_socket_bidirectional() -> TestResult {
+    let (srv, bound) = bind_udp_ephemeral()?;
+    let cli = check_ok!(
+        syscall::socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0),
+        "client"
+    );
+    check_ok!(syscall::bind(cli, &SockAddrIn::loopback(0)), "bind cli");
+    check_ok!(syscall::connect(cli, &bound), "connect");
+    let cli_addr = check_ok!(syscall::getsockname_in(cli), "cli addr");
+    check_ok!(syscall::connect(srv, &cli_addr), "connect srv");
+    check_ok!(syscall::send(cli, b"up", 0), "cli send");
+    let mut buf = [0u8; 8];
+    check_eq!(check_ok!(syscall::recv(srv, &mut buf, 0), "srv recv"), 2, "up");
+    check_eq!(&buf[..2], b"up", "up data");
+    check_ok!(syscall::send(srv, b"dn", 0), "srv send");
+    check_eq!(check_ok!(syscall::recv(cli, &mut buf, 0), "cli recv"), 2, "dn");
+    check_eq!(&buf[..2], b"dn", "dn data");
+    check_ok!(syscall::close(cli), "close cli");
+    check_ok!(syscall::close(srv), "close srv");
+    Ok(())
+}

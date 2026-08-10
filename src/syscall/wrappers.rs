@@ -2111,3 +2111,248 @@ pub fn fcntl_flock(fd: i32, cmd: i32, lock: &mut super::Flock) -> Result<()> {
         .map(|_| ())
     }
 }
+
+/// `waitpid` — alias of `wait4` with null rusage.
+pub fn waitpid(pid: i32, status: &mut i32, options: i32) -> Result<i32> {
+    wait4(pid, status, options)
+}
+
+pub fn wifstopped(status: i32) -> bool {
+    (status & 0xff) == 0x7f
+}
+
+pub fn wstopsig(status: i32) -> i32 {
+    (status >> 8) & 0xff
+}
+
+pub fn io_uring_setup(entries: u32, params: &mut super::IoUringParams) -> Result<i32> {
+    unsafe {
+        sys2(
+            nr::IO_URING_SETUP,
+            entries as usize,
+            params as *mut super::IoUringParams as usize,
+        )
+        .map(|v| v as i32)
+    }
+}
+
+pub fn io_uring_enter(
+    fd: i32,
+    to_submit: u32,
+    min_complete: u32,
+    flags: u32,
+    sig: usize,
+) -> Result<usize> {
+    unsafe {
+        sys6(
+            nr::IO_URING_ENTER,
+            fd as usize,
+            to_submit as usize,
+            min_complete as usize,
+            flags as usize,
+            sig,
+            0,
+        )
+    }
+}
+
+pub fn io_uring_register(fd: i32, opcode: u32, arg: usize, nr_args: u32) -> Result<usize> {
+    unsafe {
+        sys4(
+            nr::IO_URING_REGISTER,
+            fd as usize,
+            opcode as usize,
+            arg,
+            nr_args as usize,
+        )
+    }
+}
+
+pub fn timer_create(clock_id: i32, sevp: Option<&super::Sigevent>, timerid: &mut usize) -> Result<()> {
+    let sev = sevp
+        .map(|s| s as *const super::Sigevent as usize)
+        .unwrap_or(0);
+    unsafe {
+        sys3(
+            nr::TIMER_CREATE,
+            clock_id as usize,
+            sev,
+            timerid as *mut usize as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn timer_settime(
+    timerid: usize,
+    flags: i32,
+    new_value: &super::Itimerspec,
+    old_value: Option<&mut super::Itimerspec>,
+) -> Result<()> {
+    let old = old_value
+        .map(|o| o as *mut super::Itimerspec as usize)
+        .unwrap_or(0);
+    unsafe {
+        sys4(
+            nr::TIMER_SETTIME,
+            timerid,
+            flags as usize,
+            new_value as *const super::Itimerspec as usize,
+            old,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn timer_gettime(timerid: usize) -> Result<super::Itimerspec> {
+    let mut cur = super::Itimerspec::default();
+    unsafe {
+        sys2(
+            nr::TIMER_GETTIME,
+            timerid,
+            &mut cur as *mut super::Itimerspec as usize,
+        )?;
+    }
+    Ok(cur)
+}
+
+pub fn timer_delete(timerid: usize) -> Result<()> {
+    unsafe { sys1(nr::TIMER_DELETE, timerid).map(|_| ()) }
+}
+
+pub fn semget(key: i32, nsems: i32, semflg: i32) -> Result<i32> {
+    unsafe {
+        sys3(
+            nr::SEMGET,
+            key as usize,
+            nsems as usize,
+            semflg as usize,
+        )
+        .map(|v| v as i32)
+    }
+}
+
+pub fn semop(semid: i32, sops: &[super::Sembuf]) -> Result<()> {
+    #[cfg(target_arch = "x86_64")]
+    unsafe {
+        sys3(
+            nr::SEMOP,
+            semid as usize,
+            sops.as_ptr() as usize,
+            sops.len(),
+        )
+        .map(|_| ())
+    }
+    #[cfg(target_arch = "aarch64")]
+    unsafe {
+        // aarch64 exposes semtimedop; NULL timeout == semop.
+        sys4(
+            nr::SEMTIMEDOP,
+            semid as usize,
+            sops.as_ptr() as usize,
+            sops.len(),
+            0,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn semctl(semid: i32, semnum: i32, cmd: i32, arg: usize) -> Result<i32> {
+    unsafe {
+        sys4(
+            nr::SEMCTL,
+            semid as usize,
+            semnum as usize,
+            cmd as usize,
+            arg,
+        )
+        .map(|v| v as i32)
+    }
+}
+
+pub fn msgget(key: i32, msgflg: i32) -> Result<i32> {
+    unsafe {
+        sys2(nr::MSGGET, key as usize, msgflg as usize).map(|v| v as i32)
+    }
+}
+
+pub fn msgsnd(msqid: i32, msgp: &super::MsgBuf, msgsz: usize, msgflg: i32) -> Result<()> {
+    unsafe {
+        sys4(
+            nr::MSGSND,
+            msqid as usize,
+            msgp as *const super::MsgBuf as usize,
+            msgsz,
+            msgflg as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn msgrcv(
+    msqid: i32,
+    msgp: &mut super::MsgBuf,
+    msgsz: usize,
+    msgtyp: i64,
+    msgflg: i32,
+) -> Result<usize> {
+    unsafe {
+        sys5(
+            nr::MSGRCV,
+            msqid as usize,
+            msgp as *mut super::MsgBuf as usize,
+            msgsz,
+            msgtyp as usize,
+            msgflg as usize,
+        )
+    }
+}
+
+pub fn msgctl(msqid: i32, cmd: i32, buf: usize) -> Result<i32> {
+    unsafe {
+        sys3(nr::MSGCTL, msqid as usize, cmd as usize, buf).map(|v| v as i32)
+    }
+}
+
+pub fn fsopen(fsname: &[u8], flags: u32) -> Result<i32> {
+    let p = c_str_ptr(fsname)?;
+    unsafe {
+        sys2(nr::FSOPEN, p as usize, flags as usize).map(|v| v as i32)
+    }
+}
+
+pub fn fsconfig(fd: i32, cmd: u32, key: usize, value: usize, aux: i32) -> Result<()> {
+    unsafe {
+        sys5(
+            nr::FSCONFIG,
+            fd as usize,
+            cmd as usize,
+            key,
+            value,
+            aux as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn mlock(addr: usize, len: usize) -> Result<()> {
+    unsafe { sys2(nr::MLOCK, addr, len).map(|_| ()) }
+}
+
+pub fn munlock(addr: usize, len: usize) -> Result<()> {
+    unsafe { sys2(nr::MUNLOCK, addr, len).map(|_| ()) }
+}
+
+pub fn prctl(option: i32, arg2: usize, arg3: usize, arg4: usize, arg5: usize) -> Result<i32> {
+    unsafe {
+        sys5(
+            nr::PRCTL,
+            option as usize,
+            arg2,
+            arg3,
+            arg4,
+            arg5,
+        )
+        .map(|v| v as i32)
+    }
+}

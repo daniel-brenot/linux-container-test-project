@@ -196,3 +196,54 @@ fn tcp_shutdown_rdwr() -> TestResult {
     check_ok!(syscall::close(srv), "close srv");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall, full)]
+fn tcp_large_send_recv() -> TestResult {
+    let (srv, bound) = listen_ephemeral()?;
+    let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
+    check_ok!(syscall::connect(cli, &bound), "connect");
+    let acc = check_ok!(syscall::accept4(srv, None, None, SOCK_CLOEXEC), "accept4");
+    let mut msg = [0u8; 8192];
+    for (i, b) in msg.iter_mut().enumerate() {
+        *b = (i % 251) as u8;
+    }
+    let mut sent = 0usize;
+    while sent < msg.len() {
+        let n = check_ok!(syscall::send(cli, &msg[sent..], 0), "send");
+        check!(n > 0, "send progress");
+        sent += n;
+    }
+    let mut buf = [0u8; 8192];
+    let mut got = 0usize;
+    while got < msg.len() {
+        let n = check_ok!(syscall::recv(acc, &mut buf[got..], 0), "recv");
+        check!(n > 0, "recv progress");
+        got += n;
+    }
+    check!(&buf == &msg, "payload");
+    check_ok!(syscall::close(acc), "close acc");
+    check_ok!(syscall::close(cli), "close cli");
+    check_ok!(syscall::close(srv), "close srv");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn tcp_shutdown_wr_then_recv_zero() -> TestResult {
+    let (srv, bound) = listen_ephemeral()?;
+    let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
+    check_ok!(syscall::connect(cli, &bound), "connect");
+    let acc = check_ok!(syscall::accept4(srv, None, None, SOCK_CLOEXEC), "accept4");
+    check_ok!(syscall::send(cli, b"pre", 0), "send pre");
+    let mut buf = [0u8; 8];
+    check_eq!(check_ok!(syscall::recv(acc, &mut buf, 0), "recv pre"), 3, "pre");
+    check_ok!(syscall::shutdown(cli, syscall::SHUT_WR), "SHUT_WR");
+    let n = check_ok!(syscall::recv(acc, &mut buf, 0), "recv eof");
+    check_eq!(n, 0, "EOF after SHUT_WR");
+    // Peer can still write the other way.
+    check_ok!(syscall::send(acc, b"ack", 0), "peer send");
+    check_eq!(check_ok!(syscall::recv(cli, &mut buf, 0), "cli recv"), 3, "ack");
+    check_ok!(syscall::close(acc), "close acc");
+    check_ok!(syscall::close(cli), "close cli");
+    check_ok!(syscall::close(srv), "close srv");
+    Ok(())
+}

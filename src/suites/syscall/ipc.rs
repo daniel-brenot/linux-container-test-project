@@ -110,3 +110,49 @@ fn eventfd_cloexec() -> TestResult {
     check_ok!(syscall::close(efd), "close");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn eventfd_write_twice_accumulates() -> TestResult {
+    let efd = check_ok!(syscall::eventfd(0, 0), "eventfd");
+    let one = 1u64.to_le_bytes();
+    check_ok!(syscall::write(efd, &one), "write1");
+    check_ok!(syscall::write(efd, &one), "write2");
+    let mut out = [0u8; 8];
+    check_ok!(syscall::read(efd, &mut out), "read");
+    check_eq!(u64::from_le_bytes(out), 2, "accumulated");
+    check_ok!(syscall::close(efd), "close");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn eventfd_semaphore_style() -> TestResult {
+    let efd = check_ok!(
+        syscall::eventfd(0, crate::syscall::EFD_SEMAPHORE),
+        "eventfd sem"
+    );
+    let one = 1u64.to_le_bytes();
+    check_ok!(syscall::write(efd, &one), "w1");
+    check_ok!(syscall::write(efd, &one), "w2");
+    let mut out = [0u8; 8];
+    check_ok!(syscall::read(efd, &mut out), "r1");
+    check_eq!(u64::from_le_bytes(out), 1, "sem read1");
+    check_ok!(syscall::read(efd, &mut out), "r2");
+    check_eq!(u64::from_le_bytes(out), 1, "sem read2");
+    check_ok!(syscall::close(efd), "close");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall, full)]
+fn eventfd_semaphore_nonblock_eagain() -> TestResult {
+    let efd = check_ok!(
+        syscall::eventfd(
+            0,
+            crate::syscall::EFD_SEMAPHORE | crate::syscall::EFD_NONBLOCK
+        ),
+        "sem nb"
+    );
+    let mut out = [0u8; 8];
+    check_err!(syscall::read(efd, &mut out), Errno::EAGAIN, "empty");
+    check_ok!(syscall::close(efd), "close");
+    Ok(())
+}

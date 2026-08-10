@@ -332,3 +332,45 @@ fn renameat2_whiteout_soft() -> TestResult {
     }
     Ok(())
 }
+
+#[crate::lctp_test(suite = fs)]
+fn rename_to_self() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"self")?;
+    write_file(&a, b"x")?;
+    check_ok!(syscall::rename(&a, &a), "rename self");
+    check_ok!(syscall::stat(&a), "still there");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn rename_empty_dst_component_enoent() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let src = create_empty(&mut tmp, b"src")?;
+    let mut dest = [0u8; 160];
+    let base = tmp.path();
+    let blen = base.iter().position(|&c| c == 0).unwrap();
+    dest[..blen].copy_from_slice(&base[..blen]);
+    dest[blen..blen + 12].copy_from_slice(b"/missing/dst");
+    dest[blen + 12] = 0;
+    check_err!(
+        syscall::rename(&src, truncate_cstr(&dest)),
+        Errno::ENOENT,
+        "missing parent"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn rename_replace_same_content() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"ra")?;
+    let b = create_empty(&mut tmp, b"rb")?;
+    write_file(&a, b"same")?;
+    write_file(&b, b"old")?;
+    check_ok!(syscall::rename(&a, &b), "rename");
+    let mut buf = [0u8; 8];
+    check_eq!(crate::suites::common::read_file(&b, &mut buf)?, 4, "len");
+    check_eq!(&buf[..4], b"same", "data");
+    Ok(())
+}

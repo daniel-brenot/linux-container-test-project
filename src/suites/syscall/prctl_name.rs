@@ -97,3 +97,55 @@ fn prctl_get_name_readable() -> TestResult {
     }
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn prctl_get_set_dumpable() -> TestResult {
+    let orig = check_ok!(
+        syscall::prctl(syscall::PR_GET_DUMPABLE, 0, 0, 0, 0),
+        "get dumpable"
+    );
+    check!(orig == 0 || orig == 1 || orig == 2, "dumpable range");
+    check_ok!(
+        syscall::prctl(syscall::PR_SET_DUMPABLE, 1, 0, 0, 0),
+        "set dumpable 1"
+    );
+    let v = check_ok!(
+        syscall::prctl(syscall::PR_GET_DUMPABLE, 0, 0, 0, 0),
+        "get after set"
+    );
+    check_eq!(v, 1, "dumpable 1");
+    check_ok!(
+        syscall::prctl(syscall::PR_SET_DUMPABLE, orig as usize, 0, 0, 0),
+        "restore"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn prctl_get_no_new_privs() -> TestResult {
+    let v = check_ok!(
+        syscall::prctl(syscall::PR_GET_NO_NEW_PRIVS, 0, 0, 0, 0),
+        "get nnp"
+    );
+    check!(v == 0 || v == 1, "nnp 0/1");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall, full)]
+fn prctl_set_dumpable_zero_readback() -> TestResult {
+    let orig = check_ok!(
+        syscall::prctl(syscall::PR_GET_DUMPABLE, 0, 0, 0, 0),
+        "orig"
+    );
+    check_ok!(
+        syscall::prctl(syscall::PR_SET_DUMPABLE, 0, 0, 0, 0),
+        "set 0"
+    );
+    let v = check_ok!(
+        syscall::prctl(syscall::PR_GET_DUMPABLE, 0, 0, 0, 0),
+        "get"
+    );
+    check_eq!(v, 0, "dumpable 0");
+    let _ = syscall::prctl(syscall::PR_SET_DUMPABLE, orig as usize, 0, 0, 0);
+    Ok(())
+}

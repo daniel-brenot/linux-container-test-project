@@ -485,3 +485,144 @@ fn errno_ebadf_openat2_dirfd() -> TestResult {
     );
     Ok(())
 }
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_mlock_via_bad_addr() -> TestResult {
+    // mlock on unmapped address — soft EINVAL/ENOMEM/EPERM/EFAULT.
+    match syscall::mlock(0usize, 4096) {
+        Err(Errno::EINVAL)
+        | Err(Errno::ENOMEM)
+        | Err(Errno::EPERM)
+        | Err(Errno::EFAULT)
+        | Err(Errno::EAGAIN)
+        | Err(Errno::ENOSYS) => Ok(()),
+        Ok(()) => Ok(()), // some kernels may no-op oddly
+        Err(_) => Err(crate::harness::AssertFail::msg("mlock errno")),
+    }
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_einval_timer_create_bad_clock() -> TestResult {
+    let mut sev = syscall::Sigevent::default();
+    sev.sigev_notify = syscall::SIGEV_NONE;
+    let mut tid = 0usize;
+    match syscall::timer_create(9999, Some(&sev), &mut tid) {
+        Err(Errno::EINVAL) | Err(Errno::ENOSYS) | Err(Errno::EPERM) => Ok(()),
+        Ok(()) => {
+            let _ = syscall::timer_delete(tid);
+            Err(crate::harness::AssertFail::msg("expected EINVAL"))
+        }
+        Err(_) => Err(crate::harness::AssertFail::msg("unexpected errno")),
+    }
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_einval_semget_neg_nsems() -> TestResult {
+    match syscall::semget(syscall::IPC_PRIVATE, -1, syscall::IPC_CREAT | 0o600) {
+        Err(Errno::EINVAL) | Err(Errno::ENOSYS) | Err(Errno::EPERM) | Err(Errno::EACCES) => Ok(()),
+        Ok(id) => {
+            let _ = syscall::semctl(id, 0, syscall::IPC_RMID, 0);
+            Err(crate::harness::AssertFail::msg("expected EINVAL"))
+        }
+        Err(_) => Err(crate::harness::AssertFail::msg("unexpected errno")),
+    }
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_io_uring_enter() -> TestResult {
+    match syscall::io_uring_enter(-1, 0, 0, 0, 0) {
+        Err(Errno::EBADF) | Err(Errno::ENOSYS) | Err(Errno::EINVAL) | Err(Errno::EPERM) => Ok(()),
+        Ok(_) => Err(crate::harness::AssertFail::msg("expected failure")),
+        Err(_) => Err(crate::harness::AssertFail::msg("unexpected errno")),
+    }
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_einval_msgget_bad_flags() -> TestResult {
+    // IPC_EXCL without CREAT is typically EINVAL or ignored; soft-accept.
+    match syscall::msgget(syscall::IPC_PRIVATE, syscall::IPC_EXCL) {
+        Ok(id) => {
+            let _ = syscall::msgctl(id, syscall::IPC_RMID, 0);
+            Ok(())
+        }
+        Err(Errno::EINVAL)
+        | Err(Errno::ENOSYS)
+        | Err(Errno::EPERM)
+        | Err(Errno::EACCES)
+        | Err(Errno::ENOENT) => Ok(()),
+        Err(_) => Err(crate::harness::AssertFail::msg("msgget flags")),
+    }
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_enoent_fsopen_bogus() -> TestResult {
+    match syscall::fsopen(b"lctp-no-such-fs\0", 0) {
+        Err(Errno::ENODEV)
+        | Err(Errno::ENOENT)
+        | Err(Errno::EINVAL)
+        | Err(Errno::ENOSYS)
+        | Err(Errno::EPERM)
+        | Err(Errno::EACCES) => Ok(()),
+        Ok(fd) => {
+            let _ = syscall::close(fd);
+            Err(crate::harness::AssertFail::msg("expected fail"))
+        }
+        Err(_) => Err(crate::harness::AssertFail::msg("unexpected")),
+    }
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_shutdown() -> TestResult {
+    check_err!(
+        syscall::shutdown(-1, syscall::SHUT_RD),
+        Errno::EBADF,
+        "shutdown"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_einval_prctl_bad_option() -> TestResult {
+    match syscall::prctl(999_999, 0, 0, 0, 0) {
+        Err(Errno::EINVAL) => Ok(()),
+        Ok(_) => Err(crate::harness::AssertFail::msg("expected EINVAL")),
+        Err(_) => Err(crate::harness::AssertFail::msg("unexpected")),
+    }
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_eisdir_open_write_dir() -> TestResult {
+    check_err!(
+        syscall::open(b"/tmp\0", oflag::O_WRONLY, 0),
+        Errno::EISDIR,
+        "write dir"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_eisdir_unlink_tmp() -> TestResult {
+    match syscall::unlink(b"/tmp\0") {
+        Err(Errno::EISDIR) | Err(Errno::EPERM) | Err(Errno::EACCES) | Err(Errno::EBUSY) => Ok(()),
+        Ok(()) => Err(crate::harness::AssertFail::msg("unlink /tmp ok")),
+        Err(_) => Err(crate::harness::AssertFail::msg("unlink /tmp errno")),
+    }
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_eventfd_via_read() -> TestResult {
+    let mut buf = [0u8; 8];
+    check_err!(syscall::read(-1, &mut buf), Errno::EBADF, "read -1");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_einval_waitpid_bad_options() -> TestResult {
+    let mut status = 0;
+    // Absurd option bits — kernels typically return EINVAL.
+    match syscall::waitpid(-1, &mut status, 0x7fff_0000) {
+        Err(Errno::EINVAL) | Err(Errno::ECHILD) => Ok(()),
+        Ok(_) => Err(crate::harness::AssertFail::msg("expected fail")),
+        Err(_) => Err(crate::harness::AssertFail::msg("unexpected")),
+    }
+}

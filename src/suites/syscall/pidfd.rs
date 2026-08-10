@@ -140,3 +140,33 @@ fn pidfd_getfd_from_child_soft() -> TestResult {
     check_ok!(syscall::close(a), "close a");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn pidfd_waitid_p_pidfd() -> TestResult {
+    use crate::syscall::{wait, Errno, P_PIDFD, Siginfo};
+
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        syscall::exit(21);
+    }
+    let pfd = check_ok!(syscall::pidfd_open(pid, 0), "pidfd_open");
+    let mut info = Siginfo::default();
+    match syscall::waitid(P_PIDFD, pfd, &mut info, wait::WEXITED) {
+        Ok(()) => {}
+        Err(Errno::EINVAL) | Err(Errno::ENOSYS) => {
+            // Older kernels without P_PIDFD — fall back to wait4.
+            let mut st = 0;
+            check_ok!(syscall::wait4(pid, &mut st, 0), "wait4 fallback");
+            check_ok!(syscall::close(pfd), "close");
+            return Ok(());
+        }
+        Err(_) => {
+            let _ = syscall::close(pfd);
+            let mut st = 0;
+            let _ = syscall::wait4(pid, &mut st, 0);
+            return Err(crate::harness::AssertFail::msg("waitid P_PIDFD"));
+        }
+    }
+    check_ok!(syscall::close(pfd), "close");
+    Ok(())
+}

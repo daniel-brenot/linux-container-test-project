@@ -209,4 +209,22 @@ pub mod nr {
     pub const USERFAULTFD: usize = 323;
     pub const PIDFD_GETFD: usize = 438;
     pub const CLOCK_SETTIME: usize = 227;
+    pub const IO_URING_SETUP: usize = 425;
+    pub const IO_URING_ENTER: usize = 426;
+    pub const IO_URING_REGISTER: usize = 427;
+    pub const TIMER_CREATE: usize = 222;
+    pub const TIMER_SETTIME: usize = 223;
+    pub const TIMER_GETTIME: usize = 224;
+    pub const TIMER_DELETE: usize = 226;
+    pub const SEMGET: usize = 64;
+    pub const SEMOP: usize = 65;
+    pub const SEMCTL: usize = 66;
+    pub const MSGGET: usize = 68;
+    pub const MSGSND: usize = 69;
+    pub const MSGRCV: usize = 70;
+    pub const MSGCTL: usize = 71;
+    pub const FSOPEN: usize = 430;
+    pub const FSCONFIG: usize = 431;
+    pub const MLOCK: usize = 149;
+    pub const MUNLOCK: usize = 150;
 }

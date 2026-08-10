@@ -123,3 +123,64 @@ fn gettid_equals_pid() -> TestResult {
     check_eq!(syscall::gettid(), syscall::getpid(), "tid != pid");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn waitpid_alias_reap() -> TestResult {
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        syscall::exit(19);
+    }
+    let mut status = 0;
+    check_eq!(
+        check_ok!(syscall::waitpid(pid, &mut status, 0), "waitpid"),
+        pid,
+        "pid"
+    );
+    check!(syscall::wifexited(status), "exited");
+    check_eq!(syscall::wexitstatus(status), 19, "status");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn waitpid_wuntraced_soft() -> TestResult {
+    // Without stopping the child, WUNTRACED still reaps a normal exit.
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        syscall::exit(5);
+    }
+    let mut status = 0;
+    check_ok!(
+        syscall::waitpid(pid, &mut status, wait::WUNTRACED),
+        "wait WUNTRACED"
+    );
+    check!(syscall::wifexited(status), "exited");
+    check_eq!(syscall::wexitstatus(status), 5, "status");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall, full)]
+fn waitpid_wnohang_after_exit() -> TestResult {
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        syscall::exit(8);
+    }
+    // Give the child a moment to exit; loop with WNOHANG.
+    let mut status = 0;
+    let mut got = 0i32;
+    for _ in 0..1000 {
+        match syscall::waitpid(pid, &mut status, wait::WNOHANG) {
+            Ok(0) => {
+                let _ = syscall::sched_yield();
+            }
+            Ok(p) => {
+                got = p;
+                break;
+            }
+            Err(Errno::ECHILD) => break,
+            Err(_) => return Err(crate::harness::AssertFail::msg("waitpid nohang")),
+        }
+    }
+    check_eq!(got, pid, "reaped");
+    check_eq!(syscall::wexitstatus(status), 8, "status");
+    Ok(())
+}
