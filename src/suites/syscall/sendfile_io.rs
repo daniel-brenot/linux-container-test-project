@@ -237,3 +237,59 @@ fn sendfile_zero_count() -> TestResult {
     check_ok!(syscall::close(r), "close r");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn tee_pipe_to_pipe() -> TestResult {
+    let (r1, w1) = check_ok!(syscall::pipe2(0), "pipe1");
+    let (r2, w2) = check_ok!(syscall::pipe2(0), "pipe2");
+    let msg = b"tee-payload";
+    check_ok!(syscall::write(w1, msg), "write");
+    let n = check_ok!(syscall::tee(r1, w2, msg.len(), 0), "tee");
+    check_eq!(n, msg.len(), "teed");
+    // tee copies without consuming input; both pipes should have data.
+    let mut a = [0u8; 32];
+    let mut b = [0u8; 32];
+    check_eq!(check_ok!(syscall::read(r1, &mut a), "read r1"), msg.len(), "r1");
+    check_eq!(check_ok!(syscall::read(r2, &mut b), "read r2"), msg.len(), "r2");
+    check!(&a[..msg.len()] == msg, "r1 data");
+    check!(&b[..msg.len()] == msg, "r2 data");
+    check_ok!(syscall::close(r1), "close r1");
+    check_ok!(syscall::close(w1), "close w1");
+    check_ok!(syscall::close(r2), "close r2");
+    check_ok!(syscall::close(w2), "close w2");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn tee_partial() -> TestResult {
+    let (r1, w1) = check_ok!(syscall::pipe2(0), "pipe1");
+    let (r2, w2) = check_ok!(syscall::pipe2(0), "pipe2");
+    check_ok!(syscall::write(w1, b"ABCDEFGH"), "write");
+    let n = check_ok!(syscall::tee(r1, w2, 4, 0), "tee");
+    check_eq!(n, 4, "partial");
+    let mut out = [0u8; 8];
+    check_eq!(check_ok!(syscall::read(r2, &mut out), "read"), 4, "rlen");
+    check_eq!(&out[..4], b"ABCD", "prefix");
+    // Input still fully present.
+    check_eq!(check_ok!(syscall::read(r1, &mut out), "read in"), 8, "full in");
+    check_eq!(&out[..8], b"ABCDEFGH", "input intact");
+    check_ok!(syscall::close(r1), "close r1");
+    check_ok!(syscall::close(w1), "close w1");
+    check_ok!(syscall::close(r2), "close r2");
+    check_ok!(syscall::close(w2), "close w2");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall, full)]
+fn tee_zero_len() -> TestResult {
+    let (r1, w1) = check_ok!(syscall::pipe2(0), "pipe1");
+    let (r2, w2) = check_ok!(syscall::pipe2(0), "pipe2");
+    check_ok!(syscall::write(w1, b"x"), "write");
+    let n = check_ok!(syscall::tee(r1, w2, 0, 0), "tee");
+    check_eq!(n, 0, "zero");
+    check_ok!(syscall::close(r1), "close r1");
+    check_ok!(syscall::close(w1), "close w1");
+    check_ok!(syscall::close(r2), "close r2");
+    check_ok!(syscall::close(w2), "close w2");
+    Ok(())
+}

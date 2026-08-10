@@ -161,3 +161,80 @@ fn rename_file_cross_dir() -> TestResult {
     check_ok!(syscall::rmdir(&d2), "rmdir d2");
     Ok(())
 }
+
+#[crate::lctp_test(suite = fs)]
+fn renameat2_basic() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let src = create_empty(&mut tmp, b"src2")?;
+    let dst = copy_child(&mut tmp, b"dst2")?;
+    check_ok!(
+        syscall::renameat2(syscall::AT_FDCWD, &src, syscall::AT_FDCWD, &dst, 0),
+        "renameat2"
+    );
+    check_err!(syscall::stat(&src), Errno::ENOENT, "src gone");
+    check_ok!(syscall::stat(&dst), "dst exists");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn renameat2_noreplace_eexist() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = create_empty(&mut tmp, b"a")?;
+    let b = create_empty(&mut tmp, b"b")?;
+    write_file(&a, b"A")?;
+    write_file(&b, b"B")?;
+    check_err!(
+        syscall::renameat2(
+            syscall::AT_FDCWD,
+            &a,
+            syscall::AT_FDCWD,
+            &b,
+            syscall::RENAME_NOREPLACE
+        ),
+        Errno::EEXIST,
+        "NOREPLACE"
+    );
+    // Both paths still present with original content.
+    let mut buf = [0u8; 1];
+    check_eq!(crate::suites::common::read_file(&a, &mut buf)?, 1, "a len");
+    check_eq!(buf[0], b'A', "a data");
+    check_eq!(crate::suites::common::read_file(&b, &mut buf)?, 1, "b len");
+    check_eq!(buf[0], b'B', "b data");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn renameat2_noreplace_success() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let src = create_empty(&mut tmp, b"src")?;
+    let dst = copy_child(&mut tmp, b"fresh")?;
+    check_ok!(
+        syscall::renameat2(
+            syscall::AT_FDCWD,
+            &src,
+            syscall::AT_FDCWD,
+            &dst,
+            syscall::RENAME_NOREPLACE
+        ),
+        "noreplace ok"
+    );
+    check_ok!(syscall::stat(&dst), "dst");
+    check_err!(syscall::stat(&src), Errno::ENOENT, "src");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn renameat2_preserves_content() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let src = create_empty(&mut tmp, b"src")?;
+    write_file(&src, b"payload")?;
+    let dst = copy_child(&mut tmp, b"dst")?;
+    check_ok!(
+        syscall::renameat2(syscall::AT_FDCWD, &src, syscall::AT_FDCWD, &dst, 0),
+        "renameat2"
+    );
+    let mut buf = [0u8; 8];
+    check_eq!(crate::suites::common::read_file(&dst, &mut buf)?, 7, "len");
+    check_eq!(&buf[..7], b"payload", "data");
+    Ok(())
+}

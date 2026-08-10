@@ -155,4 +155,13 @@ pub mod nr {
     pub const PSELECT6: usize = 72;
     pub const RECVMMSG: usize = 243;
     pub const SENDMMSG: usize = 269;
+    pub const SENDMSG: usize = 211;
+    pub const RECVMSG: usize = 212;
+    pub const INOTIFY_INIT1: usize = 26;
+    pub const INOTIFY_ADD_WATCH: usize = 27;
+    pub const INOTIFY_RM_WATCH: usize = 28;
+    pub const CLOSE_RANGE: usize = 436;
+    pub const RENAMEAT2: usize = 276;
+    pub const PIDFD_OPEN: usize = 434;
+    pub const PIDFD_SEND_SIGNAL: usize = 424;
 }

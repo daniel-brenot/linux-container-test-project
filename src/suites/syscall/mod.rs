@@ -1,24 +1,31 @@
 //! Linux syscall behaviour tests (LTP-inspired, unprivileged-only).
 
+mod close_range;
 mod file;
 mod flock_statfs;
 mod futex_basic;
+mod inotify;
+mod ioctl;
 mod ipc;
 mod memfd;
 mod memory;
 mod misc;
 mod mremap_msync;
 mod net;
+mod pidfd;
+mod ppoll_test;
 mod prctl_name;
 mod process;
 mod process_ids;
 mod sched;
 mod sendfile_io;
 mod signal;
+mod signalfd;
 mod sigmask;
 mod sockopt;
 mod sync_ops;
 mod sysinfo_rusage;
+mod tcp;
 mod time;
 mod timerfd;
 mod waitid_test;

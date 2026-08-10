@@ -1354,3 +1354,250 @@ pub fn signal_default(sig: i32) -> Result<()> {
 pub fn sigmask(sig: i32) -> super::Sigset {
     1u64 << (sig - 1)
 }
+
+pub fn bind(fd: i32, addr: &super::SockAddrIn) -> Result<()> {
+    unsafe {
+        sys3(
+            nr::BIND,
+            fd as usize,
+            addr as *const super::SockAddrIn as usize,
+            core::mem::size_of::<super::SockAddrIn>(),
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn listen(fd: i32, backlog: i32) -> Result<()> {
+    unsafe { sys2(nr::LISTEN, fd as usize, backlog as usize).map(|_| ()) }
+}
+
+pub fn connect(fd: i32, addr: &super::SockAddrIn) -> Result<()> {
+    unsafe {
+        sys3(
+            nr::CONNECT,
+            fd as usize,
+            addr as *const super::SockAddrIn as usize,
+            core::mem::size_of::<super::SockAddrIn>(),
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn accept4(
+    fd: i32,
+    addr: Option<&mut super::SockAddrIn>,
+    addrlen: Option<&mut u32>,
+    flags: i32,
+) -> Result<i32> {
+    let addr_ptr = addr
+        .map(|a| a as *mut super::SockAddrIn as usize)
+        .unwrap_or(0);
+    let len_ptr = addrlen.map(|l| l as *mut u32 as usize).unwrap_or(0);
+    unsafe {
+        sys4(
+            nr::ACCEPT4,
+            fd as usize,
+            addr_ptr,
+            len_ptr,
+            flags as usize,
+        )
+        .map(|v| v as i32)
+    }
+}
+
+pub fn getsockname_in(fd: i32) -> Result<super::SockAddrIn> {
+    let mut addr = super::SockAddrIn::default();
+    let mut len = core::mem::size_of::<super::SockAddrIn>() as u32;
+    unsafe {
+        sys3(
+            nr::GETSOCKNAME,
+            fd as usize,
+            &mut addr as *mut super::SockAddrIn as usize,
+            &mut len as *mut u32 as usize,
+        )?;
+    }
+    Ok(addr)
+}
+
+pub fn getpeername_in(fd: i32) -> Result<super::SockAddrIn> {
+    let mut addr = super::SockAddrIn::default();
+    let mut len = core::mem::size_of::<super::SockAddrIn>() as u32;
+    unsafe {
+        sys3(
+            nr::GETPEERNAME,
+            fd as usize,
+            &mut addr as *mut super::SockAddrIn as usize,
+            &mut len as *mut u32 as usize,
+        )?;
+    }
+    Ok(addr)
+}
+
+pub fn signalfd(fd: i32, mask: super::Sigset, flags: i32) -> Result<i32> {
+    // Keep mask alive for the syscall duration.
+    let mask_storage = mask;
+    unsafe {
+        sys4(
+            nr::SIGNALFD4,
+            fd as usize,
+            &mask_storage as *const super::Sigset as usize,
+            core::mem::size_of::<super::Sigset>(),
+            flags as usize,
+        )
+        .map(|v| v as i32)
+    }
+}
+
+pub fn ppoll(
+    fds: &mut [super::poll::PollFd],
+    timeout: Option<&Timespec>,
+    sigmask: Option<&super::Sigset>,
+) -> Result<usize> {
+    let ts_ptr = timeout
+        .map(|t| t as *const Timespec as usize)
+        .unwrap_or(0);
+    let mask_ptr = sigmask
+        .map(|s| s as *const super::Sigset as usize)
+        .unwrap_or(0);
+    let mask_size = if mask_ptr != 0 {
+        core::mem::size_of::<super::Sigset>()
+    } else {
+        0
+    };
+    unsafe {
+        sys5(
+            nr::PPOLL,
+            fds.as_mut_ptr() as usize,
+            fds.len(),
+            ts_ptr,
+            mask_ptr,
+            mask_size,
+        )
+    }
+}
+
+pub fn tee(fd_in: i32, fd_out: i32, len: usize, flags: u32) -> Result<usize> {
+    unsafe {
+        sys4(
+            nr::TEE,
+            fd_in as usize,
+            fd_out as usize,
+            len,
+            flags as usize,
+        )
+    }
+}
+
+pub fn close_range(first: u32, last: u32, flags: u32) -> Result<()> {
+    unsafe {
+        sys3(
+            nr::CLOSE_RANGE,
+            first as usize,
+            last as usize,
+            flags as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn renameat2(
+    olddirfd: i32,
+    oldpath: &[u8],
+    newdirfd: i32,
+    newpath: &[u8],
+    flags: u32,
+) -> Result<()> {
+    let old = c_str_ptr(oldpath)?;
+    let new = c_str_ptr(newpath)?;
+    unsafe {
+        sys5(
+            nr::RENAMEAT2,
+            olddirfd as usize,
+            old as usize,
+            newdirfd as usize,
+            new as usize,
+            flags as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn inotify_init1(flags: i32) -> Result<i32> {
+    unsafe { sys1(nr::INOTIFY_INIT1, flags as usize).map(|v| v as i32) }
+}
+
+pub fn inotify_add_watch(fd: i32, path: &[u8], mask: u32) -> Result<i32> {
+    let p = c_str_ptr(path)?;
+    unsafe {
+        sys3(
+            nr::INOTIFY_ADD_WATCH,
+            fd as usize,
+            p as usize,
+            mask as usize,
+        )
+        .map(|v| v as i32)
+    }
+}
+
+pub fn inotify_rm_watch(fd: i32, wd: i32) -> Result<()> {
+    unsafe {
+        sys2(nr::INOTIFY_RM_WATCH, fd as usize, wd as usize).map(|_| ())
+    }
+}
+
+pub fn ioctl(fd: i32, request: usize, arg: usize) -> Result<usize> {
+    unsafe { sys3(nr::IOCTL, fd as usize, request, arg) }
+}
+
+pub fn preadv(fd: i32, iov: &mut [super::IoVec], offset: i64) -> Result<usize> {
+    unsafe {
+        sys5(
+            nr::PREADV,
+            fd as usize,
+            iov.as_mut_ptr() as usize,
+            iov.len(),
+            offset as usize,
+            0,
+        )
+    }
+}
+
+pub fn pwritev(fd: i32, iov: &mut [super::IoVec], offset: i64) -> Result<usize> {
+    unsafe {
+        sys5(
+            nr::PWRITEV,
+            fd as usize,
+            iov.as_mut_ptr() as usize,
+            iov.len(),
+            offset as usize,
+            0,
+        )
+    }
+}
+
+pub fn pidfd_open(pid: i32, flags: u32) -> Result<i32> {
+    unsafe {
+        sys2(nr::PIDFD_OPEN, pid as usize, flags as usize).map(|v| v as i32)
+    }
+}
+
+pub fn pidfd_send_signal(
+    pidfd: i32,
+    sig: i32,
+    info: Option<&super::Siginfo>,
+    flags: u32,
+) -> Result<()> {
+    let info_ptr = info
+        .map(|i| i as *const super::Siginfo as usize)
+        .unwrap_or(0);
+    unsafe {
+        sys4(
+            nr::PIDFD_SEND_SIGNAL,
+            pidfd as usize,
+            sig as usize,
+            info_ptr,
+            flags as usize,
+        )
+        .map(|_| ())
+    }
+}

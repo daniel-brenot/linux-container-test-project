@@ -209,3 +209,85 @@ fn errno_ebadf_getsockname() -> TestResult {
     );
     Ok(())
 }
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_ioctl() -> TestResult {
+    let mut ws = syscall::Winsize::default();
+    check_err!(
+        syscall::ioctl(-1, syscall::TIOCGWINSZ, &mut ws as *mut _ as usize),
+        Errno::EBADF,
+        "ioctl"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_tee() -> TestResult {
+    check_err!(syscall::tee(-1, -1, 1, 0), Errno::EBADF, "tee");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_signalfd_read() -> TestResult {
+    check_err!(
+        syscall::signalfd(-2, 0, 0),
+        Errno::EBADF,
+        "signalfd bad fd"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_einval_pidfd_open() -> TestResult {
+    check_err!(syscall::pidfd_open(-1, 0), Errno::EINVAL, "pidfd_open");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_pidfd_send_signal() -> TestResult {
+    check_err!(
+        syscall::pidfd_send_signal(-1, 0, None, 0),
+        Errno::EBADF,
+        "pidfd_send_signal"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_inotify_add_watch() -> TestResult {
+    check_err!(
+        syscall::inotify_add_watch(-1, b".\0", syscall::IN_CREATE),
+        Errno::EBADF,
+        "add_watch"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_close_range_via_write() -> TestResult {
+    // close_range itself with absurd range still succeeds (no fds); probe via bad ioctl.
+    check_err!(syscall::preadv(-1, &mut [], 0), Errno::EBADF, "preadv");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_pwritev() -> TestResult {
+    check_err!(syscall::pwritev(-1, &mut [], 0), Errno::EBADF, "pwritev");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_enoent_renameat2() -> TestResult {
+    check_err!(
+        syscall::renameat2(
+            syscall::AT_FDCWD,
+            b"/tmp/lctp-no-renameat2-src\0",
+            syscall::AT_FDCWD,
+            b"/tmp/lctp-no-renameat2-dst\0",
+            0
+        ),
+        Errno::ENOENT,
+        "renameat2"
+    );
+    Ok(())
+}

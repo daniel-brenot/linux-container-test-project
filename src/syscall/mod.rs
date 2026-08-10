@@ -439,3 +439,134 @@ impl Default for Sigaction {
         }
     }
 }
+
+/// IPv4 socket address (`struct sockaddr_in`).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SockAddrIn {
+    pub sin_family: u16,
+    pub sin_port: u16,
+    pub sin_addr: u32,
+    pub sin_zero: [u8; 8],
+}
+
+impl Default for SockAddrIn {
+    fn default() -> Self {
+        Self {
+            sin_family: 0,
+            sin_port: 0,
+            sin_addr: 0,
+            sin_zero: [0; 8],
+        }
+    }
+}
+
+impl SockAddrIn {
+    /// Build a loopback address with `port` in host byte order.
+    pub fn loopback(port: u16) -> Self {
+        Self {
+            sin_family: AF_INET as u16,
+            sin_port: port.to_be(),
+            sin_addr: INADDR_LOOPBACK.to_be(),
+            sin_zero: [0; 8],
+        }
+    }
+
+    pub fn port_host(&self) -> u16 {
+        u16::from_be(self.sin_port)
+    }
+}
+
+/// IPv4 loopback in host order (`127.0.0.1`).
+pub const INADDR_LOOPBACK: u32 = 0x7f00_0001;
+
+/// signalfd4 flags.
+pub const SFD_CLOEXEC: i32 = 0o2000000;
+pub const SFD_NONBLOCK: i32 = 0o4000;
+
+/// Kernel `struct signalfd_siginfo` (128 bytes).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct SignalfdSiginfo {
+    pub ssi_signo: u32,
+    pub ssi_errno: i32,
+    pub ssi_code: i32,
+    pub ssi_pid: u32,
+    pub ssi_uid: u32,
+    pub ssi_fd: i32,
+    pub ssi_tid: u32,
+    pub ssi_band: u32,
+    pub ssi_overrun: u32,
+    pub ssi_trapno: u32,
+    pub ssi_status: i32,
+    pub ssi_int: i32,
+    pub ssi_ptr: u64,
+    pub ssi_utime: u64,
+    pub ssi_stime: u64,
+    pub ssi_addr: u64,
+    pub ssi_addr_lsb: u16,
+    pub __pad2: u16,
+    pub ssi_syscall: i32,
+    pub ssi_call_addr: u64,
+    pub ssi_arch: u32,
+    pub __pad: [u8; 28],
+}
+
+impl Default for SignalfdSiginfo {
+    fn default() -> Self {
+        // Safety: all-zero is a valid bit pattern for this POD struct.
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+/// renameat2 flags.
+pub const RENAME_NOREPLACE: u32 = 1 << 0;
+pub const RENAME_EXCHANGE: u32 = 1 << 1;
+pub const RENAME_WHITEOUT: u32 = 1 << 2;
+
+/// close_range flags.
+pub const CLOSE_RANGE_UNSHARE: u32 = 1 << 1;
+pub const CLOSE_RANGE_CLOEXEC: u32 = 1 << 2;
+
+/// ioctl: get terminal window size.
+pub const TIOCGWINSZ: usize = 0x5413;
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct Winsize {
+    pub ws_row: u16,
+    pub ws_col: u16,
+    pub ws_xpixel: u16,
+    pub ws_ypixel: u16,
+}
+
+/// inotify_init1 flags.
+pub const IN_CLOEXEC: i32 = 0o2000000;
+pub const IN_NONBLOCK: i32 = 0o4000;
+
+/// inotify event masks.
+pub const IN_ACCESS: u32 = 0x0000_0001;
+pub const IN_MODIFY: u32 = 0x0000_0002;
+pub const IN_ATTRIB: u32 = 0x0000_0004;
+pub const IN_CLOSE_WRITE: u32 = 0x0000_0008;
+pub const IN_CLOSE_NOWRITE: u32 = 0x0000_0010;
+pub const IN_OPEN: u32 = 0x0000_0020;
+pub const IN_MOVED_FROM: u32 = 0x0000_0040;
+pub const IN_MOVED_TO: u32 = 0x0000_0080;
+pub const IN_CREATE: u32 = 0x0000_0100;
+pub const IN_DELETE: u32 = 0x0000_0200;
+pub const IN_DELETE_SELF: u32 = 0x0000_0400;
+pub const IN_MOVE_SELF: u32 = 0x0000_0800;
+
+/// Fixed header of `struct inotify_event` (name[] follows).
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct InotifyEvent {
+    pub wd: i32,
+    pub mask: u32,
+    pub cookie: u32,
+    pub len: u32,
+}
+
+/// pidfd_open flags.
+pub const PIDFD_NONBLOCK: u32 = 0o4000;

@@ -416,3 +416,99 @@ fn open_creat_trunc() -> TestResult {
     check_eq!(st.st_size, 0, "truncated");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn pwritev_preadv_offset() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
+    let a = b"AB";
+    let b = b"CD";
+    let mut iov = [
+        IoVec {
+            iov_base: a.as_ptr() as *mut u8,
+            iov_len: a.len(),
+        },
+        IoVec {
+            iov_base: b.as_ptr() as *mut u8,
+            iov_len: b.len(),
+        },
+    ];
+    let n = check_ok!(syscall::pwritev(fd, &mut iov, 2), "pwritev");
+    check_eq!(n, 4, "wrote");
+    let mut o1 = [0u8; 2];
+    let mut o2 = [0u8; 2];
+    let mut riov = [
+        IoVec {
+            iov_base: o1.as_mut_ptr(),
+            iov_len: 2,
+        },
+        IoVec {
+            iov_base: o2.as_mut_ptr(),
+            iov_len: 2,
+        },
+    ];
+    let rn = check_ok!(syscall::preadv(fd, &mut riov, 2), "preadv");
+    check_eq!(rn, 4, "read");
+    check_eq!(&o1, b"AB", "part1");
+    check_eq!(&o2, b"CD", "part2");
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn pwritev_no_offset_change() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
+    check_ok!(syscall::lseek(fd, 7, syscall::SEEK_SET), "seek");
+    let data = b"Z";
+    let mut iov = [IoVec {
+        iov_base: data.as_ptr() as *mut u8,
+        iov_len: 1,
+    }];
+    check_ok!(syscall::pwritev(fd, &mut iov, 0), "pwritev");
+    check_eq!(
+        check_ok!(syscall::lseek(fd, 0, syscall::SEEK_CUR), "cur"),
+        7,
+        "offset unchanged"
+    );
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn preadv_beyond_eof() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
+    check_ok!(syscall::write(fd, b"ab"), "write");
+    let mut out = [0u8; 8];
+    let mut iov = [IoVec {
+        iov_base: out.as_mut_ptr(),
+        iov_len: out.len(),
+    }];
+    let n = check_ok!(syscall::preadv(fd, &mut iov, 10), "preadv");
+    check_eq!(n, 0, "past eof");
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall, full)]
+fn pwritev_gap_then_preadv() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
+    let data = b"XYZ";
+    let mut iov = [IoVec {
+        iov_base: data.as_ptr() as *mut u8,
+        iov_len: data.len(),
+    }];
+    check_ok!(syscall::pwritev(fd, &mut iov, 4), "pwritev");
+    let mut out = [0u8; 8];
+    let mut riov = [IoVec {
+        iov_base: out.as_mut_ptr(),
+        iov_len: out.len(),
+    }];
+    let n = check_ok!(syscall::preadv(fd, &mut riov, 0), "preadv");
+    check_eq!(n, 7, "len with hole");
+    check_eq!(&out[4..7], b"XYZ", "tail");
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}
