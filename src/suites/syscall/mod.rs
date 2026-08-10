@@ -1,6 +1,7 @@
 //! Linux syscall behaviour tests (LTP-inspired, unprivileged-only).
 
 mod close_range;
+mod fadvise_readahead;
 mod file;
 mod flock_statfs;
 mod futex_basic;
@@ -14,6 +15,7 @@ mod memory;
 mod misc;
 mod mremap_msync;
 mod net;
+mod openat2_test;
 mod pidfd;
 mod ppoll_test;
 mod prctl_name;
@@ -28,11 +30,13 @@ mod signal;
 mod signalfd;
 mod sigmask;
 mod sockopt;
+mod statx_test;
 mod sync_ops;
 mod sysinfo_rusage;
 mod tcp;
 mod time;
 mod timerfd;
 mod udp;
+mod unshare_test;
 mod vmsplice_test;
 mod waitid_test;

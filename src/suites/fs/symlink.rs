@@ -2,10 +2,11 @@
 
 use crate::check;
 use crate::check_eq;
+use crate::check_err;
 use crate::check_ok;
 use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_empty, write_file};
-use crate::syscall::{self, oflag};
+use crate::syscall::{self, oflag, Errno};
 
 #[crate::lctp_test(suite = fs)]
 fn symlink_create_readlink() -> TestResult {
@@ -113,4 +114,30 @@ fn symlink_empty_target() -> TestResult {
             "symlink empty unexpected errno",
         )),
     }
+}
+
+#[crate::lctp_test(suite = fs)]
+fn symlink_loop_stat_eloop() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = copy_child(&mut tmp, b"a")?;
+    let b = copy_child(&mut tmp, b"b")?;
+    check_ok!(syscall::symlink(b"b\0", &a), "a->b");
+    check_ok!(syscall::symlink(b"a\0", &b), "b->a");
+    check_err!(syscall::stat(&a), Errno::ELOOP, "stat loop");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn symlink_loop_open_eloop() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = copy_child(&mut tmp, b"la")?;
+    let b = copy_child(&mut tmp, b"lb")?;
+    check_ok!(syscall::symlink(b"lb\0", &a), "a->b");
+    check_ok!(syscall::symlink(b"la\0", &b), "b->a");
+    check_err!(
+        syscall::open(&a, oflag::O_RDONLY, 0),
+        Errno::ELOOP,
+        "open loop"
+    );
+    Ok(())
 }

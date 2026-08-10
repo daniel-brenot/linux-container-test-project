@@ -2,9 +2,10 @@
 
 use crate::check;
 use crate::check_eq;
+use crate::check_err;
 use crate::check_ok;
 use crate::harness::TestResult;
-use crate::syscall::{self, oflag, AF_UNIX, SOCK_STREAM};
+use crate::syscall::{self, oflag, AF_UNIX, SOCK_STREAM, Errno};
 
 #[crate::lctp_test(suite = syscall)]
 fn pipe2_roundtrip() -> TestResult {
@@ -22,6 +23,19 @@ fn pipe2_roundtrip() -> TestResult {
 #[crate::lctp_test(suite = syscall)]
 fn pipe2_cloexec() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(oflag::O_CLOEXEC), "pipe2 cloexec");
+    check_ok!(syscall::close(r), "close r");
+    check_ok!(syscall::close(w), "close w");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn pipe2_nonblock() -> TestResult {
+    let (r, w) = check_ok!(syscall::pipe2(oflag::O_NONBLOCK), "pipe2 nonblock");
+    let fl = check_ok!(syscall::fcntl(r, crate::syscall::fcntl_cmd::F_GETFL, 0), "getfl");
+    check!(fl as i32 & oflag::O_NONBLOCK != 0, "O_NONBLOCK on read");
+    // Empty nonblocking read returns EAGAIN.
+    let mut buf = [0u8; 1];
+    check_err!(syscall::read(r, &mut buf), Errno::EAGAIN, "EAGAIN");
     check_ok!(syscall::close(r), "close r");
     check_ok!(syscall::close(w), "close w");
     Ok(())

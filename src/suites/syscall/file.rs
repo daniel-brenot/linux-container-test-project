@@ -550,3 +550,50 @@ fn pwritev_gap_then_preadv() -> TestResult {
     check_ok!(syscall::close(fd), "close");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn dup3_same_fd_einval() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
+    // dup3(old, old, ...) is EINVAL (unlike dup2).
+    check_err!(syscall::dup3(fd, fd, 0), Errno::EINVAL, "dup3 same");
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn dup3_no_cloexec() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
+    let d3 = check_ok!(syscall::dup3(fd, 75, 0), "dup3");
+    check_eq!(d3, 75, "fd");
+    let flags = check_ok!(syscall::fcntl(d3, fcntl_cmd::F_GETFD, 0), "F_GETFD");
+    check!(flags & FD_CLOEXEC as usize == 0, "no cloexec");
+    check_ok!(syscall::close(fd), "close fd");
+    check_ok!(syscall::close(d3), "close d3");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn dup3_overwrite_target() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let a = check_ok!(tmp.create_file(b"a", 0o644), "a");
+    let b = check_ok!(tmp.create_file(b"b", 0o644), "b");
+    check_ok!(syscall::write(a, b"AAA"), "write a");
+    check_ok!(syscall::write(b, b"BBB"), "write b");
+    let d = check_ok!(syscall::dup3(a, b, 0), "dup3 overwrite");
+    check_eq!(d, b, "newfd");
+    check_ok!(syscall::lseek(d, 0, syscall::SEEK_SET), "lseek");
+    let mut buf = [0u8; 3];
+    check_eq!(check_ok!(syscall::read(d, &mut buf), "read"), 3, "len");
+    check_eq!(&buf, b"AAA", "now a");
+    check_ok!(syscall::close(a), "close a");
+    check_ok!(syscall::close(d), "close d");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn dup3_bad_old_ebadf() -> TestResult {
+    check_err!(syscall::dup3(-1, 10, 0), Errno::EBADF, "bad old");
+    Ok(())
+}

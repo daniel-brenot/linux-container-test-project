@@ -1798,3 +1798,109 @@ pub fn sigaltstack(
         .unwrap_or(0);
     unsafe { sys2(nr::SIGALTSTACK, n, o).map(|_| ()) }
 }
+
+pub fn statx(
+    dirfd: i32,
+    path: &[u8],
+    flags: i32,
+    mask: u32,
+    buf: &mut super::Statx,
+) -> Result<()> {
+    let p = c_str_ptr(path)?;
+    unsafe {
+        sys5(
+            nr::STATX,
+            dirfd as usize,
+            p as usize,
+            flags as usize,
+            mask as usize,
+            buf as *mut super::Statx as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn openat2(dirfd: i32, path: &[u8], how: &super::OpenHow) -> Result<i32> {
+    let p = c_str_ptr(path)?;
+    unsafe {
+        sys4(
+            nr::OPENAT2,
+            dirfd as usize,
+            p as usize,
+            how as *const super::OpenHow as usize,
+            core::mem::size_of::<super::OpenHow>(),
+        )
+        .map(|v| v as i32)
+    }
+}
+
+pub fn sync_file_range(fd: i32, offset: i64, nbytes: i64, flags: u32) -> Result<()> {
+    unsafe {
+        sys4(
+            nr::SYNC_FILE_RANGE,
+            fd as usize,
+            offset as usize,
+            nbytes as usize,
+            flags as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn fadvise64(fd: i32, offset: i64, len: i64, advice: i32) -> Result<()> {
+    unsafe {
+        sys4(
+            nr::FADVISE64,
+            fd as usize,
+            offset as usize,
+            len as usize,
+            advice as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+/// Alias matching the POSIX name; same kernel entry as `fadvise64`.
+pub fn posix_fadvise(fd: i32, offset: i64, len: i64, advice: i32) -> Result<()> {
+    fadvise64(fd, offset, len, advice)
+}
+
+pub fn membarrier(cmd: i32, flags: u32) -> Result<i32> {
+    unsafe {
+        sys2(nr::MEMBARRIER, cmd as usize, flags as usize).map(|v| v as i32)
+    }
+}
+
+pub fn personality(persona: u32) -> Result<u32> {
+    unsafe { sys1(nr::PERSONALITY, persona as usize).map(|v| v as u32) }
+}
+
+pub fn capget(
+    header: &mut super::CapUserHeader,
+    data: &mut [super::CapUserData],
+) -> Result<()> {
+    unsafe {
+        sys2(
+            nr::CAPGET,
+            header as *mut super::CapUserHeader as usize,
+            data.as_mut_ptr() as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+pub fn unshare(flags: u64) -> Result<()> {
+    unsafe { sys1(nr::UNSHARE, flags as usize).map(|_| ()) }
+}
+
+pub fn readahead(fd: i32, offset: i64, count: usize) -> Result<()> {
+    unsafe {
+        sys3(
+            nr::READAHEAD,
+            fd as usize,
+            offset as usize,
+            count,
+        )
+        .map(|_| ())
+    }
+}

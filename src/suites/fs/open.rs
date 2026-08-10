@@ -139,3 +139,48 @@ fn open_existing_no_trunc() -> TestResult {
     check_eq!(&buf[..4], b"keep", "preserved");
     Ok(())
 }
+
+#[crate::lctp_test(suite = fs)]
+fn open_opath_file() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    write_file(&path, b"opath")?;
+    let fd = check_ok!(syscall::open(&path, oflag::O_PATH, 0), "O_PATH");
+    // O_PATH fds reject normal read/write with EBADF.
+    check_err!(syscall::read(fd, &mut [0u8; 1]), Errno::EBADF, "no read");
+    check_err!(syscall::write(fd, b"x"), Errno::EBADF, "no write");
+    // fstat still works on O_PATH.
+    let st = check_ok!(syscall::fstat(fd), "fstat");
+    check!(st.is_reg(), "reg");
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn open_opath_directory() -> TestResult {
+    let tmp = check_ok!(TempDir::create(), "tempdir");
+    let fd = check_ok!(
+        syscall::open(tmp.path(), oflag::O_PATH | oflag::O_DIRECTORY, 0),
+        "O_PATH dir"
+    );
+    let st = check_ok!(syscall::fstat(fd), "fstat");
+    check!(st.is_dir(), "dir");
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn open_opath_symlink_nofollow() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let _ = create_empty(&mut tmp, b"tgt")?;
+    let link = copy_child(&mut tmp, b"lnk")?;
+    check_ok!(syscall::symlink(b"tgt\0", &link), "symlink");
+    let fd = check_ok!(
+        syscall::open(&link, oflag::O_PATH | oflag::O_NOFOLLOW, 0),
+        "O_PATH|O_NOFOLLOW"
+    );
+    let st = check_ok!(syscall::fstat(fd), "fstat");
+    check!(st.is_lnk(), "symlink");
+    check_ok!(syscall::close(fd), "close");
+    Ok(())
+}

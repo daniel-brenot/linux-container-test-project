@@ -167,4 +167,13 @@ pub mod nr {
     pub const GETITIMER: usize = 102;
     pub const SETITIMER: usize = 103;
     pub const VMSPLICE: usize = 75;
+    pub const STATX: usize = 291;
+    pub const OPENAT2: usize = 437;
+    pub const SYNC_FILE_RANGE: usize = 84;
+    pub const FADVISE64: usize = 223;
+    pub const MEMBARRIER: usize = 283;
+    pub const PERSONALITY: usize = 92;
+    pub const CAPGET: usize = 90;
+    pub const UNSHARE: usize = 97;
+    pub const READAHEAD: usize = 213;
 }

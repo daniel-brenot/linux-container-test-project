@@ -385,3 +385,103 @@ fn errno_einval_pselect6_bad_nfds() -> TestResult {
     );
     Ok(())
 }
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_statx() -> TestResult {
+    let mut sx = syscall::Statx::default();
+    check_err!(
+        syscall::statx(-1, b"x\0", 0, syscall::STATX_BASIC_STATS, &mut sx),
+        Errno::EBADF,
+        "statx bad dirfd"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_enoent_statx() -> TestResult {
+    let mut sx = syscall::Statx::default();
+    check_err!(
+        syscall::statx(
+            syscall::AT_FDCWD,
+            b"/tmp/lctp-no-statx\0",
+            0,
+            syscall::STATX_BASIC_STATS,
+            &mut sx
+        ),
+        Errno::ENOENT,
+        "statx missing"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_sync_file_range() -> TestResult {
+    check_err!(
+        syscall::sync_file_range(-1, 0, 0, syscall::SYNC_FILE_RANGE_WRITE),
+        Errno::EBADF,
+        "sync_file_range"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_fadvise64() -> TestResult {
+    check_err!(
+        syscall::fadvise64(-1, 0, 0, syscall::POSIX_FADV_NORMAL),
+        Errno::EBADF,
+        "fadvise"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_readahead() -> TestResult {
+    check_err!(syscall::readahead(-1, 0, 1), Errno::EBADF, "readahead");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_enoent_openat2() -> TestResult {
+    let how = syscall::OpenHow {
+        flags: oflag::O_RDONLY as u64,
+        mode: 0,
+        resolve: 0,
+    };
+    check_err!(
+        syscall::openat2(syscall::AT_FDCWD, b"/tmp/lctp-no-openat2\0", &how),
+        Errno::ENOENT,
+        "openat2"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_einval_dup3_same() -> TestResult {
+    check_err!(syscall::dup3(1, 1, 0), Errno::EINVAL, "dup3 same");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_einval_membarrier_bad_flags() -> TestResult {
+    // Non-zero flags with QUERY should fail EINVAL on modern kernels.
+    match syscall::membarrier(syscall::MEMBARRIER_CMD_QUERY, 1) {
+        Err(Errno::EINVAL) => Ok(()),
+        Ok(_) => Err(crate::harness::AssertFail::msg("expected EINVAL")),
+        Err(_) => Err(crate::harness::AssertFail::msg("unexpected errno")),
+    }
+}
+
+#[crate::lctp_test(suite = posix)]
+fn errno_ebadf_openat2_dirfd() -> TestResult {
+    let how = syscall::OpenHow {
+        flags: oflag::O_RDONLY as u64,
+        mode: 0,
+        resolve: 0,
+    };
+    check_err!(
+        syscall::openat2(-1, b"x\0", &how),
+        Errno::EBADF,
+        "openat2 bad dirfd"
+    );
+    Ok(())
+}

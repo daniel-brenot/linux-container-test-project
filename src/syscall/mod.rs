@@ -709,3 +709,133 @@ pub fn cmsg_len(data_len: usize) -> usize {
 pub fn cmsg_space(data_len: usize) -> usize {
     cmsg_align(core::mem::size_of::<CmsgHdr>()) + cmsg_align(data_len)
 }
+
+/// `statx` mask bits.
+pub const STATX_TYPE: u32 = 0x0000_0001;
+pub const STATX_MODE: u32 = 0x0000_0002;
+pub const STATX_NLINK: u32 = 0x0000_0004;
+pub const STATX_UID: u32 = 0x0000_0008;
+pub const STATX_GID: u32 = 0x0000_0010;
+pub const STATX_ATIME: u32 = 0x0000_0020;
+pub const STATX_MTIME: u32 = 0x0000_0040;
+pub const STATX_CTIME: u32 = 0x0000_0080;
+pub const STATX_INO: u32 = 0x0000_0100;
+pub const STATX_SIZE: u32 = 0x0000_0200;
+pub const STATX_BLOCKS: u32 = 0x0000_0400;
+pub const STATX_BASIC_STATS: u32 = 0x0000_07ff;
+
+/// Kernel `struct statx_timestamp`.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct StatxTimestamp {
+    pub tv_sec: i64,
+    pub tv_nsec: u32,
+    pub __reserved: i32,
+}
+
+/// Kernel `struct statx` (subset used by tests; size matches ABI).
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct Statx {
+    pub stx_mask: u32,
+    pub stx_blksize: u32,
+    pub stx_attributes: u64,
+    pub stx_nlink: u32,
+    pub stx_uid: u32,
+    pub stx_gid: u32,
+    pub stx_mode: u16,
+    pub __spare0: u16,
+    pub stx_ino: u64,
+    pub stx_size: u64,
+    pub stx_blocks: u64,
+    pub stx_attributes_mask: u64,
+    pub stx_atime: StatxTimestamp,
+    pub stx_btime: StatxTimestamp,
+    pub stx_ctime: StatxTimestamp,
+    pub stx_mtime: StatxTimestamp,
+    pub stx_rdev_major: u32,
+    pub stx_rdev_minor: u32,
+    pub stx_dev_major: u32,
+    pub stx_dev_minor: u32,
+    pub stx_mnt_id: u64,
+    pub stx_dio_mem_align: u32,
+    pub stx_dio_offset_align: u32,
+    pub __spare3: [u64; 12],
+}
+
+impl Default for Statx {
+    fn default() -> Self {
+        // Safety: all-zero is a valid bit pattern for this POD struct.
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+impl Statx {
+    pub fn is_reg(&self) -> bool {
+        (self.stx_mode as u32 & 0o170000) == 0o100000
+    }
+
+    pub fn is_lnk(&self) -> bool {
+        (self.stx_mode as u32 & 0o170000) == 0o120000
+    }
+
+    pub fn mode_bits(&self) -> u32 {
+        self.stx_mode as u32 & 0o7777
+    }
+}
+
+/// `openat2` resolve flags.
+pub const RESOLVE_NO_XDEV: u64 = 0x01;
+pub const RESOLVE_NO_MAGICLINKS: u64 = 0x02;
+pub const RESOLVE_NO_SYMLINKS: u64 = 0x04;
+pub const RESOLVE_BENEATH: u64 = 0x08;
+pub const RESOLVE_IN_ROOT: u64 = 0x10;
+
+/// Kernel `struct open_how`.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct OpenHow {
+    pub flags: u64,
+    pub mode: u64,
+    pub resolve: u64,
+}
+
+/// `sync_file_range` flags.
+pub const SYNC_FILE_RANGE_WAIT_BEFORE: u32 = 1;
+pub const SYNC_FILE_RANGE_WRITE: u32 = 2;
+pub const SYNC_FILE_RANGE_WAIT_AFTER: u32 = 4;
+
+/// `posix_fadvise` / `fadvise64` advice values.
+pub const POSIX_FADV_NORMAL: i32 = 0;
+pub const POSIX_FADV_RANDOM: i32 = 1;
+pub const POSIX_FADV_SEQUENTIAL: i32 = 2;
+pub const POSIX_FADV_WILLNEED: i32 = 3;
+pub const POSIX_FADV_DONTNEED: i32 = 4;
+pub const POSIX_FADV_NOREUSE: i32 = 5;
+
+/// `membarrier` commands.
+pub const MEMBARRIER_CMD_QUERY: i32 = 0;
+
+/// Linux capability ABI version 3.
+pub const LINUX_CAPABILITY_VERSION_3: u32 = 0x2008_0522;
+pub const LINUX_CAPABILITY_U32S_3: usize = 2;
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct CapUserHeader {
+    pub version: u32,
+    pub pid: i32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct CapUserData {
+    pub effective: u32,
+    pub permitted: u32,
+    pub inheritable: u32,
+}
+
+/// `unshare` / `clone` flag: share file descriptor table until unshared.
+pub const CLONE_FILES: u64 = 0x0000_0400;
+/// `unshare` flag: new user namespace (often EPERM when unprivileged).
+pub const CLONE_NEWUSER: u64 = 0x1000_0000;

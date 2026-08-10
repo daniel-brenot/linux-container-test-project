@@ -68,3 +68,46 @@ fn prlimit_nofile_positive() -> TestResult {
     check!(old.rlim_cur >= 32, "nofile soft too small");
     Ok(())
 }
+
+#[crate::lctp_test(suite = syscall)]
+fn membarrier_query() -> TestResult {
+    let mask = check_ok!(
+        syscall::membarrier(syscall::MEMBARRIER_CMD_QUERY, 0),
+        "query"
+    );
+    // Supported command bitmask; may be zero on unusual kernels but QUERY itself succeeds.
+    let _ = mask;
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn personality_query() -> TestResult {
+    // 0xffffffff asks for the current personality without changing it.
+    let p = check_ok!(syscall::personality(0xffff_ffff), "personality");
+    // Query again; value should be stable.
+    let p2 = check_ok!(syscall::personality(0xffff_ffff), "personality2");
+    check_eq!(p, p2, "stable");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn capget_v3() -> TestResult {
+    let mut hdr = syscall::CapUserHeader {
+        version: syscall::LINUX_CAPABILITY_VERSION_3,
+        pid: 0,
+    };
+    let mut data = [syscall::CapUserData::default(); 2];
+    check_ok!(syscall::capget(&mut hdr, &mut data), "capget");
+    // Unprivileged process: effective caps are typically empty, but data is filled.
+    let _ = data[0].effective | data[0].permitted | data[1].effective;
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall, full)]
+fn membarrier_query_nonzero_or_zero() -> TestResult {
+    let mask = check_ok!(syscall::membarrier(syscall::MEMBARRIER_CMD_QUERY, 0), "q");
+    // Just ensure we can call it twice with a consistent result.
+    let mask2 = check_ok!(syscall::membarrier(syscall::MEMBARRIER_CMD_QUERY, 0), "q2");
+    check_eq!(mask, mask2, "stable mask");
+    Ok(())
+}

@@ -133,3 +133,57 @@ fn chmod_set_executable() -> TestResult {
     check!(st.mode_bits() & 0o111 != 0, "execute bits");
     Ok(())
 }
+
+#[crate::lctp_test(suite = fs)]
+fn chmod_file_640() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    check_ok!(syscall::chmod(&path, 0o640), "chmod");
+    assert_mode(&path, 0o640)
+}
+
+#[crate::lctp_test(suite = fs)]
+fn chmod_file_400() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    check_ok!(syscall::chmod(&path, 0o400), "chmod");
+    assert_mode(&path, 0o400)
+}
+
+#[crate::lctp_test(suite = fs)]
+fn chmod_file_200() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    check_ok!(syscall::chmod(&path, 0o200), "chmod");
+    assert_mode(&path, 0o200)
+}
+
+#[crate::lctp_test(suite = fs, full)]
+fn chmod_file_711() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    check_ok!(syscall::chmod(&path, 0o711), "chmod");
+    assert_mode(&path, 0o711)
+}
+
+#[crate::lctp_test(suite = fs)]
+fn chmod_dir_555() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let dir = create_dir(&mut tmp, b"d", 0o755)?;
+    check_ok!(syscall::chmod(&dir, 0o555), "chmod");
+    assert_mode(&dir, 0o555)?;
+    // Restore write so cleanup can rmdir.
+    check_ok!(syscall::chmod(&dir, 0o755), "restore");
+    check_ok!(syscall::rmdir(&dir), "rmdir");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = fs)]
+fn fchmod_0700() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let path = create_empty(&mut tmp, b"f")?;
+    let fd = check_ok!(syscall::open(&path, oflag::O_RDWR, 0), "open");
+    check_ok!(syscall::fchmod(fd, 0o700), "fchmod");
+    check_ok!(syscall::close(fd), "close");
+    assert_mode(&path, 0o700)
+}
