@@ -13,7 +13,7 @@ without Python, Perl, or a separate glibc build.
 | **syscall** | `--syscall` | Linux syscall behaviour (LTP-inspired, unprivileged only): files, process, memory, time, IPC, net, signals, inotify, pidfd, … |
 | **posix** | `--posix` | POSIX path/open/errno/IO/signal/process semantics |
 | **fs** | `--fs` | Filesystem semantics (pjdfstest-inspired): chmod, link, mkdir, mkfifo, open, rename, rmdir, symlink, truncate, unlink, utimensat, flock, statfs, sync, chown-EPERM |
-Only tests that work in a **non-privileged** Docker container are included (~689 cases in `--full`).
+Only tests that work in a **non-privileged** Docker container are included (~1863 cases in `--full`).
 
 ## Build
 

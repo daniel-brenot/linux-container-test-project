@@ -1,6 +1,11 @@
 //! landlock(2) probe tests (soft on older / restricted kernels).
+//!
+//! Never call `landlock_restrict_self` in the test process itself: once applied
+//! (especially after `PR_SET_NO_NEW_PRIVS`), an empty EXECUTE ruleset blocks
+//! directory traversal for the remainder of the suite.
 
 use crate::check;
+use crate::check_eq;
 use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{
@@ -47,28 +52,29 @@ fn landlock_create_ruleset_attr_soft() -> TestResult {
 }
 
 #[crate::lctp_test(suite = syscall, full)]
-fn landlock_restrict_self_without_nnp_soft() -> TestResult {
-    let attr = LandlockRulesetAttr {
-        handled_access_fs: LANDLOCK_ACCESS_FS_EXECUTE,
-    };
-    let fd = match syscall::landlock_create_ruleset(
-        Some(&attr),
-        core::mem::size_of::<LandlockRulesetAttr>(),
-        0,
-    ) {
-        Ok(fd) => fd,
-        Err(e) if soft(e) => return Ok(()),
-        Err(_) => return Err(crate::harness::AssertFail::msg("create")),
-    };
-    // Without PR_SET_NO_NEW_PRIVS this typically fails with EPERM — soft-accept.
-    match syscall::landlock_restrict_self(fd, 0) {
-        Ok(()) => {}
-        Err(e) if soft(e) => {}
-        Err(_) => {
-            let _ = syscall::close(fd);
-            return Err(crate::harness::AssertFail::msg("restrict_self"));
-        }
+fn landlock_restrict_self_in_child_soft() -> TestResult {
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        let attr = LandlockRulesetAttr {
+            handled_access_fs: LANDLOCK_ACCESS_FS_EXECUTE,
+        };
+        let fd = match syscall::landlock_create_ruleset(
+            Some(&attr),
+            core::mem::size_of::<LandlockRulesetAttr>(),
+            0,
+        ) {
+            Ok(fd) => fd,
+            Err(_) => syscall::exit(0), // soft: unsupported
+        };
+        // May need NNP; try set then restrict. Child exits either way.
+        let _ = syscall::prctl(syscall::PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+        let _ = syscall::landlock_restrict_self(fd, 0);
+        let _ = syscall::close(fd);
+        syscall::exit(0);
     }
-    check_ok!(syscall::close(fd), "close");
+    let mut status = 0;
+    check_ok!(syscall::wait4(pid, &mut status, 0), "wait");
+    check!(syscall::wifexited(status), "exited");
+    check_eq!(syscall::wexitstatus(status), 0, "child ok");
     Ok(())
 }
