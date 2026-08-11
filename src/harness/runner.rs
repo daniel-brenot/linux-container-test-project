@@ -42,6 +42,8 @@ pub unsafe fn run(argc: usize, argv: *const usize) -> i32 {
         return 0;
     }
 
+    let live = stdout_is_tty();
+
     println!("linux-container-test (no_std)");
     println!(
         "mode={} suites={}",
@@ -51,7 +53,7 @@ pub unsafe fn run(argc: usize, argv: *const usize) -> i32 {
     println!();
 
     let mut total = Counters::default();
-    let boot = run_suite(&args, Suite::Bootstrap, &mut total);
+    let boot = run_suite(&args, Suite::Bootstrap, &mut total, live);
     if boot.failed > 0 {
         println!();
         println!(
@@ -64,13 +66,13 @@ pub unsafe fn run(argc: usize, argv: *const usize) -> i32 {
     }
 
     if args.wants(Suite::Syscall) {
-        let _ = run_suite(&args, Suite::Syscall, &mut total);
+        let _ = run_suite(&args, Suite::Syscall, &mut total, live);
     }
     if args.wants(Suite::Posix) {
-        let _ = run_suite(&args, Suite::Posix, &mut total);
+        let _ = run_suite(&args, Suite::Posix, &mut total, live);
     }
     if args.wants(Suite::Fs) {
-        let _ = run_suite(&args, Suite::Fs, &mut total);
+        let _ = run_suite(&args, Suite::Fs, &mut total, live);
     }
 
     println!();
@@ -82,7 +84,7 @@ pub unsafe fn run(argc: usize, argv: *const usize) -> i32 {
     }
 }
 
-fn run_suite(args: &Args, suite: Suite, total: &mut Counters) -> Counters {
+fn run_suite(args: &Args, suite: Suite, total: &mut Counters, live: bool) -> Counters {
     let mut local = Counters::default();
     // Bootstrap exercises clock/write primitives; skip per-test timing there.
     let time_tests = suite != Suite::Bootstrap;
@@ -90,15 +92,24 @@ fn run_suite(args: &Args, suite: Suite, total: &mut Counters) -> Counters {
 
     suites::for_each_in_suite(suite, |t| {
         if t.full_only && args.mode != Mode::Full {
-            print_result(args.color, Status::Skip, t.name, Some("full-only"), None);
+            begin_test(args.color, live, t.name);
+            finish_test(
+                args.color,
+                live,
+                Status::Skip,
+                t.name,
+                Some("full-only"),
+                None,
+            );
             local.skipped += 1;
             total.skipped += 1;
             return;
         }
 
+        begin_test(args.color, live, t.name);
         let start = if time_tests { monotonic_now() } else { None };
         let result = (t.func)();
-        let elapsed_ns = if time_tests {
+        let elapsed = if time_tests {
             elapsed_ns(start, monotonic_now())
         } else {
             None
@@ -106,12 +117,19 @@ fn run_suite(args: &Args, suite: Suite, total: &mut Counters) -> Counters {
 
         match result {
             Ok(()) => {
-                print_result(args.color, Status::Pass, t.name, None, elapsed_ns);
+                finish_test(args.color, live, Status::Pass, t.name, None, elapsed);
                 local.passed += 1;
                 total.passed += 1;
             }
             Err(AssertFail { message }) => {
-                print_result(args.color, Status::Fail, t.name, Some(message), elapsed_ns);
+                finish_test(
+                    args.color,
+                    live,
+                    Status::Fail,
+                    t.name,
+                    Some(message),
+                    elapsed,
+                );
                 local.failed += 1;
                 total.failed += 1;
             }
@@ -164,13 +182,44 @@ impl Status {
     }
 }
 
-fn print_result(
+/// True when stdout is a terminal (supports in-place line updates).
+fn stdout_is_tty() -> bool {
+    // Linux TCGETS — success means `fd` refers to a tty.
+    const TCGETS: usize = 0x5401;
+    let mut termios = [0u8; 64];
+    syscall::ioctl(
+        syscall::STDOUT_FILENO,
+        TCGETS,
+        termios.as_mut_ptr() as usize,
+    )
+    .is_ok()
+}
+
+/// Show that `name` is in progress. On a TTY this stays on the current line.
+fn begin_test(color: bool, live: bool, name: &str) {
+    if color {
+        print!("[\x1b[36mRUN \x1b[0m] {name}");
+    } else {
+        print!("[RUN ] {name}");
+    }
+    if !live {
+        // Non-TTY logs cannot rewrite a line; emit RUN then a separate result line.
+        println!();
+    }
+}
+
+fn finish_test(
     color: bool,
+    live: bool,
     status: Status,
     name: &str,
     detail: Option<&str>,
     elapsed_ns: Option<u64>,
 ) {
+    if live {
+        // Return to column 0 and clear the RUN line before printing the result.
+        print!("\r\x1b[2K");
+    }
     let tag = status.tag();
     if color {
         print!("[{}{tag}\x1b[0m] {name}", status.ansi());
