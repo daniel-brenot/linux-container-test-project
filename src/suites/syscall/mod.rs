@@ -2,6 +2,7 @@
 
 mod close_range;
 mod entropy_dev;
+mod epoll_semantics;
 mod exec_shell;
 mod fadvise_readahead;
 mod file;
@@ -42,6 +43,7 @@ mod process_depth;
 mod process_ids;
 mod process_vm;
 mod pselect_test;
+mod pty;
 mod sched;
 mod scm_rights;
 mod sendfile_io;

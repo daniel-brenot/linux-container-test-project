@@ -24,6 +24,9 @@ fn ipc_shm_create_rmid() -> TestResult {
         Ok(id) => {
             check_ok!(syscall::shmctl(id, IPC_RMID, 0), "rmid");
         }
+        Err(Errno::ENOSYS) => {
+            return Err(crate::harness::AssertFail::msg("shmget ENOSYS"));
+        }
         Err(e) if soft_ipc(e) => {}
         Err(_) => return Err(crate::harness::AssertFail::msg("shmget")),
     }
@@ -34,6 +37,9 @@ fn ipc_shm_create_rmid() -> TestResult {
 fn ipc_shm_attach_write() -> TestResult {
     let id = match syscall::shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0o600) {
         Ok(i) => i,
+        Err(Errno::ENOSYS) => {
+            return Err(crate::harness::AssertFail::msg("shmget ENOSYS"));
+        }
         Err(e) if soft_ipc(e) => return Ok(()),
         Err(_) => return Err(crate::harness::AssertFail::msg("shmget")),
     };
@@ -60,6 +66,9 @@ fn ipc_shm_attach_write() -> TestResult {
 fn ipc_shm_rdonly_attach_soft() -> TestResult {
     let id = match syscall::shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0o600) {
         Ok(i) => i,
+        Err(Errno::ENOSYS) => {
+            return Err(crate::harness::AssertFail::msg("shmget ENOSYS"));
+        }
         Err(e) if soft_ipc(e) => return Ok(()),
         Err(_) => return Err(crate::harness::AssertFail::msg("shmget")),
     };
@@ -406,6 +415,9 @@ fn ipc_shm_large_soft() -> TestResult {
     match syscall::shmget(IPC_PRIVATE, 65536, IPC_CREAT | 0o600) {
         Ok(id) => {
             check_ok!(syscall::shmctl(id, IPC_RMID, 0), "rmid");
+        }
+        Err(Errno::ENOSYS) => {
+            return Err(crate::harness::AssertFail::msg("shmget ENOSYS"));
         }
         Err(e) if soft_ipc(e) => {}
         Err(_) => return Err(crate::harness::AssertFail::msg("shm large")),

@@ -1,5 +1,4 @@
-//! Device and `/proc` entropy surfaces used by userspace CSPRNG init
-//! (e.g. Node's early `RAND_priv_bytes` self-check).
+//! Device and `/proc` entropy surfaces used by userspace RNG initialization.
 //!
 //! Guests that only implement `open("/dev/urandom")` without directory
 //! visibility, `stat` metadata, or `/proc/sys/kernel/random/*` break real
@@ -73,8 +72,8 @@ fn urandom_open_fstat_read() -> TestResult {
     };
     check_eq!(n, 32, "read len");
     check_ok!(syscall::close(fd), "close");
-    // Extremely unlikely all-zero from a real CSPRNG; still accept if
-    // synthetic sources fill zeros but length must be full.
+    // Extremely unlikely all-zero from a working RNG; still accept if a
+    // synthetic source fills zeros but the length must be full.
     let _ = buf;
     Ok(())
 }
@@ -222,7 +221,7 @@ fn proc_random_boot_id_soft() -> TestResult {
 
 #[crate::lctp_test(suite = syscall)]
 fn getrandom_matches_urandom_surface() -> TestResult {
-    // Both paths must produce full buffers; used together by libc/Node.
+    // Both entropy paths must produce full buffers.
     let mut g = [0u8; 32];
     let mut u = [0u8; 32];
     check_eq!(check_ok!(syscall::getrandom(&mut g, 0), "getrandom"), 32, "gr");

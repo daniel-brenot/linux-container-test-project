@@ -236,6 +236,8 @@ pub const EPOLLONESHOT: u32 = 1 << 30;
 pub const EPOLL_CTL_ADD: i32 = 1;
 pub const EPOLL_CTL_DEL: i32 = 2;
 pub const EPOLL_CTL_MOD: i32 = 3;
+/// `epoll_create1` flag (same bit as `O_CLOEXEC`).
+pub const EPOLL_CLOEXEC: i32 = 0o2000000;
 
 /// utimensat special nsec values.
 pub const UTIME_NOW: i64 = (1 << 30) - 1;
@@ -269,11 +271,30 @@ pub mod poll {
 }
 
 pub mod epoll {
-    #[repr(C)]
+    /// Linux `struct epoll_event`.
+    ///
+    /// On x86_64 the UAPI type is packed (12 bytes). On aarch64 it is naturally
+    /// aligned (16 bytes with padding before `data`).
+    #[cfg_attr(target_arch = "x86_64", repr(C, packed))]
+    #[cfg_attr(target_arch = "aarch64", repr(C))]
     #[derive(Clone, Copy)]
     pub struct EpollEvent {
         pub events: u32,
         pub data: u64,
+    }
+
+    impl EpollEvent {
+        pub const fn new(events: u32, data: u64) -> Self {
+            Self { events, data }
+        }
+
+        pub fn events(self) -> u32 {
+            self.events
+        }
+
+        pub fn data(self) -> u64 {
+            self.data
+        }
     }
 }
 
@@ -606,6 +627,12 @@ pub const CLOSE_RANGE_CLOEXEC: u32 = 1 << 2;
 
 /// ioctl: get terminal window size.
 pub const TIOCGWINSZ: usize = 0x5413;
+/// ioctl: get pty number for `/dev/ptmx` (`_IOR('T', 0x30, unsigned int)`).
+pub const TIOCGPTN: usize = 0x8004_5430;
+/// ioctl: lock/unlock pty (`_IOW('T', 0x31, int)`); unlock with `0`.
+pub const TIOCSPTLCK: usize = 0x4004_5431;
+/// ioctl: make fd the controlling terminal (`TIOCSCTTY`).
+pub const TIOCSCTTY: usize = 0x540E;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default)]
@@ -943,7 +970,11 @@ pub const IPC_CREAT: i32 = 0o1000;
 pub const IPC_EXCL: i32 = 0o2000;
 pub const IPC_NOWAIT: i32 = 0o4000;
 pub const IPC_RMID: i32 = 0;
+pub const IPC_SET: i32 = 1;
+pub const IPC_STAT: i32 = 2;
+pub const IPC_INFO: i32 = 3;
 pub const SHM_RDONLY: i32 = 0o10000;
+pub const SHM_RND: i32 = 0o20000;
 /// `semop` flags.
 pub const SEM_UNDO: i16 = 0o10000;
 /// `semctl` commands.

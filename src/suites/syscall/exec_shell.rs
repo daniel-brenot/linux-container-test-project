@@ -1,9 +1,8 @@
-//! `fork` + `execve` of a real dynamic `/bin/sh` (and soft `/bin/bash` /
-//! `node`) so guests catch loader and CSPRNG failures that bare syscalls miss.
+//! `fork` + `execve` of real ELF interpreters from the guest rootfs.
 //!
-//! Primary failure modes under incomplete guests:
-//! - glibc `/bin/sh` exits 127 ("cannot open shared object file")
-//! - Node ≥22 aborts (SIGABRT / exit 134) when early CSPRNG self-check fails
+//! Bare syscall probes cannot catch dynamic-linker failures (exit 127:
+//! "cannot open shared object file") or early runtime aborts during init.
+//! Soft cases only run when the binary is present on the image.
 
 use crate::check;
 use crate::check_eq;
@@ -18,7 +17,6 @@ fn exec_and_wait_status(path: &[u8], argv: &[*const u8]) -> Result<i32, crate::h
     if pid == 0 {
         let envp: [*const u8; 1] = [core::ptr::null()];
         let _ = syscall::execve(path, argv, &envp);
-        // exec failed — distinguish from shell's conventional 127 where possible.
         syscall::exit(126);
     }
     let mut status = 0;
@@ -27,9 +25,24 @@ fn exec_and_wait_status(path: &[u8], argv: &[*const u8]) -> Result<i32, crate::h
     Ok(syscall::wexitstatus(status))
 }
 
+fn exec_wait_full(path: &[u8], argv: &[*const u8]) -> Result<i32, crate::harness::AssertFail> {
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        let envp: [*const u8; 1] = [core::ptr::null()];
+        let _ = syscall::execve(path, argv, &envp);
+        syscall::exit(127);
+    }
+    let mut status = 0;
+    check_ok!(syscall::wait4(pid, &mut status, 0), "wait4");
+    if syscall::wifsignaled(status) {
+        return Err(crate::harness::AssertFail::msg("runtime signaled"));
+    }
+    check!(syscall::wifexited(status), "not exited");
+    Ok(syscall::wexitstatus(status))
+}
+
 #[crate::lctp_test(suite = syscall)]
 fn sh_exec_exit_zero() -> TestResult {
-    // `/bin/sh -c 'exit 0'` must load the dynamic linker and run builtins.
     check_ok!(syscall::access(b"/bin/sh\0", F_OK), "/bin/sh missing");
     let arg0 = b"sh\0";
     let arg1 = b"-c\0";
@@ -77,7 +90,6 @@ fn sh_exec_echo_ok() -> TestResult {
     check_ok!(syscall::wait4(pid, &mut status, 0), "wait4");
     check!(syscall::wifexited(status), "exited");
     check_eq!(syscall::wexitstatus(status), 0, "status");
-    // Accept "ok\n" or "ok\r\n".
     check!(n >= 2, "short stdout");
     check_eq!(buf[0], b'o', "o");
     check_eq!(buf[1], b'k', "k");
@@ -86,7 +98,6 @@ fn sh_exec_echo_ok() -> TestResult {
 
 #[crate::lctp_test(suite = syscall, full)]
 fn sh_test_urandom_chr_soft() -> TestResult {
-    // Shell-level probe that `/dev/urandom` is a character device (mirrors `test -c`).
     if syscall::access(b"/bin/sh\0", F_OK).is_err() {
         return Ok(());
     }
@@ -106,7 +117,6 @@ fn sh_test_urandom_chr_soft() -> TestResult {
 
 #[crate::lctp_test(suite = syscall, full)]
 fn bash_exec_exit_zero_soft() -> TestResult {
-    // Debian/Ubuntu images often set SHELL=/bin/bash; catch glibc loader gaps.
     if syscall::access(b"/bin/bash\0", F_OK).is_err() {
         return Ok(());
     }
@@ -124,65 +134,75 @@ fn bash_exec_exit_zero_soft() -> TestResult {
     Ok(())
 }
 
-fn first_node() -> Option<&'static [u8]> {
-    const CANDIDATES: &[&[u8]] = &[
-        b"/usr/bin/node\0",
-        b"/usr/local/bin/node\0",
-        b"/bin/node\0",
-    ];
-    for &p in CANDIDATES {
-        if syscall::access(p, F_OK).is_ok() {
-            return Some(p);
+#[crate::lctp_test(suite = syscall, full)]
+fn true_exec_exit_zero_soft() -> TestResult {
+    // Busybox/coreutils `true` is a tiny dynamically linked (or applet) binary.
+    for path in [b"/usr/bin/true\0" as &[u8], b"/bin/true\0"] {
+        if syscall::access(path, F_OK).is_err() {
+            continue;
         }
+        let arg0 = b"true\0";
+        let argv = [arg0.as_ptr(), core::ptr::null()];
+        let code = exec_and_wait_status(path, &argv)?;
+        check_eq!(code, 0, "true");
+        return Ok(());
     }
-    None
+    Ok(())
+}
+
+struct SoftInterp {
+    path: &'static [u8],
+    argv: [&'static [u8]; 3],
 }
 
 #[crate::lctp_test(suite = syscall, full)]
-fn node_eval_print_soft() -> TestResult {
-    // Node ≥22 aborts during `InitializeOncePerProcess` if CSPRNG self-check
-    // fails (`ncrypto::CSPRNG` → SIGABRT / exit 134). Soft when node is absent.
-    let Some(node) = first_node() else {
-        return Ok(());
-    };
-    let arg0 = b"node\0";
-    let arg1 = b"-e\0";
-    let arg2 = b"console.log(1)\0";
-    let argv = [
-        arg0.as_ptr(),
-        arg1.as_ptr(),
-        arg2.as_ptr(),
-        core::ptr::null(),
+fn soft_interpreter_eval_exit_zero() -> TestResult {
+    // Soft: if a common interpreter is installed, a one-liner must exit 0
+    // (covers early runtime init / crypto / loader failures as SIGABRT or 134).
+    const CASES: &[SoftInterp] = &[
+        SoftInterp {
+            path: b"/usr/bin/python3\0",
+            argv: [b"python3\0", b"-c\0", b"print(1)\0"],
+        },
+        SoftInterp {
+            path: b"/usr/bin/python\0",
+            argv: [b"python\0", b"-c\0", b"print(1)\0"],
+        },
+        SoftInterp {
+            path: b"/usr/bin/perl\0",
+            argv: [b"perl\0", b"-e\0", b"print 1\0"],
+        },
+        SoftInterp {
+            path: b"/usr/bin/node\0",
+            argv: [b"node\0", b"-e\0", b"console.log(1)\0"],
+        },
+        SoftInterp {
+            path: b"/usr/local/bin/node\0",
+            argv: [b"node\0", b"-e\0", b"console.log(1)\0"],
+        },
     ];
-    let pid = check_ok!(syscall::fork(), "fork");
-    if pid == 0 {
-        let envp: [*const u8; 1] = [core::ptr::null()];
-        let _ = syscall::execve(node, &argv, &envp);
-        syscall::exit(127);
+    let mut ran = false;
+    for case in CASES {
+        if syscall::access(case.path, F_OK).is_err() {
+            continue;
+        }
+        ran = true;
+        let argv = [
+            case.argv[0].as_ptr(),
+            case.argv[1].as_ptr(),
+            case.argv[2].as_ptr(),
+            core::ptr::null(),
+        ];
+        let code = exec_wait_full(case.path, &argv)?;
+        check!(code != 134, "exit 134 (SIGABRT)");
+        check_eq!(code, 0, "interp eval");
     }
-    let mut status = 0;
-    check_ok!(syscall::wait4(pid, &mut status, 0), "wait4");
-    if syscall::wifsignaled(status) {
-        let sig = syscall::wtermsig(status);
-        return Err(crate::harness::AssertFail::msg(
-            if sig == 6 {
-                "node aborted (SIGABRT / CSPRNG)"
-            } else {
-                "node signaled"
-            },
-        ));
-    }
-    check!(syscall::wifexited(status), "node not exited");
-    let code = syscall::wexitstatus(status);
-    // 134 is the shell-visible encoding of SIGABRT on some paths; treat as fail.
-    check!(code != 134, "node exit 134 (SIGABRT)");
-    check_eq!(code, 0, "node -e");
+    let _ = ran;
     Ok(())
 }
 
 #[crate::lctp_test(suite = syscall, full)]
 fn clone3_fork_like_soft() -> TestResult {
-    // Soft: ENOSYS is acceptable; if implemented, child must exit cleanly.
     let mut args = CloneArgs {
         exit_signal: SIGCHLD,
         ..CloneArgs::default()
