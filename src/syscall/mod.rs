@@ -175,6 +175,10 @@ impl Stat {
         (self.st_mode & 0o170000) == 0o010000
     }
 
+    pub fn is_chr(&self) -> bool {
+        (self.st_mode & 0o170000) == S_IFCHR
+    }
+
     pub fn mode_bits(&self) -> u32 {
         self.st_mode & 0o7777
     }

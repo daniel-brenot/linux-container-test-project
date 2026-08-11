@@ -463,6 +463,49 @@ pub fn getrandom(buf: &mut [u8], flags: u32) -> Result<usize> {
     }
 }
 
+/// `execve(2)` — on success this never returns.
+pub fn execve(path: &[u8], argv: &[*const u8], envp: &[*const u8]) -> Result<()> {
+    let p = c_str_ptr(path)?;
+    unsafe {
+        sys3(
+            nr::EXECVE,
+            p as usize,
+            argv.as_ptr() as usize,
+            envp.as_ptr() as usize,
+        )
+        .map(|_| ())
+    }
+}
+
+/// Minimal `clone_args` for `clone3(2)` (Linux 5.5+ layout through `cgroup`).
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct CloneArgs {
+    pub flags: u64,
+    pub pidfd: u64,
+    pub child_tid: u64,
+    pub parent_tid: u64,
+    pub exit_signal: u64,
+    pub stack: u64,
+    pub stack_size: u64,
+    pub tls: u64,
+    pub set_tid: u64,
+    pub set_tid_size: u64,
+    pub cgroup: u64,
+}
+
+/// Soft-surface `clone3(2)`. Returns child pid (0 in child) or an errno such as ENOSYS.
+pub fn clone3(args: &mut CloneArgs) -> Result<i32> {
+    unsafe {
+        sys2(
+            nr::CLONE3,
+            args as *mut CloneArgs as usize,
+            core::mem::size_of::<CloneArgs>(),
+        )
+        .map(|v| v as i32)
+    }
+}
+
 pub fn fork() -> Result<i32> {
     #[cfg(target_arch = "x86_64")]
     unsafe {

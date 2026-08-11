@@ -119,6 +119,7 @@ pub mod nr {
     pub const RECVFROM: usize = 207;
     pub const SHUTDOWN: usize = 210;
     pub const CLONE: usize = 220;
+    pub const EXECVE: usize = 221;
     pub const EXIT: usize = 93;
     pub const EXIT_GROUP: usize = 94;
     pub const WAIT4: usize = 260;
@@ -218,6 +219,8 @@ pub mod nr {
     pub const INOTIFY_INIT1: usize = 26;
     pub const INOTIFY_ADD_WATCH: usize = 27;
     pub const INOTIFY_RM_WATCH: usize = 28;
+    pub const EXECVEAT: usize = 281;
+    pub const CLONE3: usize = 435;
     pub const CLOSE_RANGE: usize = 436;
     pub const RENAMEAT2: usize = 276;
     pub const PIDFD_OPEN: usize = 434;

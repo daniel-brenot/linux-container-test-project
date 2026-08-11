@@ -132,6 +132,7 @@ pub mod nr {
     pub const SOCKETPAIR: usize = 53;
     pub const CLONE: usize = 56;
     pub const FORK: usize = 57;
+    pub const EXECVE: usize = 59;
     pub const EXIT: usize = 60;
     pub const WAIT4: usize = 61;
     pub const KILL: usize = 62;
@@ -244,6 +245,7 @@ pub mod nr {
     pub const INOTIFY_INIT1: usize = 294;
     pub const INOTIFY_ADD_WATCH: usize = 254;
     pub const INOTIFY_RM_WATCH: usize = 255;
+    pub const CLONE3: usize = 435;
     pub const CLOSE_RANGE: usize = 436;
     pub const RENAMEAT2: usize = 316;
     pub const PIDFD_OPEN: usize = 434;

@@ -1,6 +1,8 @@
 //! Linux syscall behaviour tests (LTP-inspired, unprivileged-only).
 
 mod close_range;
+mod entropy_dev;
+mod exec_shell;
 mod fadvise_readahead;
 mod file;
 mod file_depth;
