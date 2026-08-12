@@ -35,6 +35,7 @@ mod net;
 mod net_depth;
 mod openat2_test;
 mod pidfd;
+mod pipe_inherit;
 mod posix_timers;
 mod ppoll_test;
 mod prctl_name;

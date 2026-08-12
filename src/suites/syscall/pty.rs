@@ -343,3 +343,271 @@ fn pty_slave_gone_after_close_soft() -> TestResult {
     }
     Ok(())
 }
+
+fn buf_contains(hay: &[u8], needle: &[u8]) -> bool {
+    if needle.is_empty() || hay.len() < needle.len() {
+        return false;
+    }
+    for i in 0..=hay.len() - needle.len() {
+        if &hay[i..i + needle.len()] == needle {
+            return true;
+        }
+    }
+    false
+}
+
+fn pty_drain_until(
+    master: i32,
+    pid: i32,
+    pred: &dyn Fn(&[u8]) -> bool,
+    buf: &mut [u8],
+) -> Result<(usize, i32, bool), crate::harness::AssertFail> {
+    let mut filled = 0usize;
+    let mut reaped = false;
+    let mut status = 0i32;
+    for _ in 0..80 {
+        if !reaped {
+            match syscall::wait4(pid, &mut status, wait::WNOHANG) {
+                Ok(p) if p == pid => reaped = true,
+                _ => {}
+            }
+        }
+        let mut fds = [poll::PollFd {
+            fd: master,
+            events: POLLIN,
+            revents: 0,
+        }];
+        if syscall::poll(&mut fds, 100).unwrap_or(0) > 0 {
+            let end = if filled < buf.len() { buf.len() } else { filled };
+            if filled < buf.len() {
+                match syscall::read(master, &mut buf[filled..end]) {
+                    Ok(0) => break,
+                    Ok(n) => {
+                        filled += n;
+                        if pred(&buf[..filled]) {
+                            break;
+                        }
+                    }
+                    Err(Errno::EIO) => break,
+                    Err(_) => {}
+                }
+            }
+        } else if reaped {
+            if filled < buf.len() {
+                if let Ok(n) = syscall::read(master, &mut buf[filled..]) {
+                    filled += n;
+                }
+            }
+            break;
+        }
+    }
+    if !reaped {
+        // Bound final wait so a deadlock fails the suite.
+        for _ in 0..40 {
+            match syscall::wait4(pid, &mut status, wait::WNOHANG) {
+                Ok(p) if p == pid => {
+                    reaped = true;
+                    break;
+                }
+                _ => {}
+            }
+            let req = syscall::Timespec {
+                tv_sec: 0,
+                tv_nsec: 50_000_000,
+            };
+            let _ = syscall::nanosleep(&req);
+        }
+        if !reaped {
+            let _ = syscall::kill(pid, 9);
+            let _ = syscall::wait4(pid, &mut status, 0);
+            return Err(crate::harness::AssertFail::msg("pty child hung"));
+        }
+    }
+    Ok((filled, status, reaped))
+}
+
+fn pty_spawn_shell_cmd(shell: &[u8], arg0: &[u8], cmd: &[u8]) -> Result<(i32, i32), crate::harness::AssertFail> {
+    let (master, slave, _) = openpty_pair()?;
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        let _ = syscall::close(master);
+        let _ = syscall::setsid();
+        let _ = syscall::ioctl(slave, TIOCSCTTY, 0);
+        if syscall::dup2(slave, 0).is_err()
+            || syscall::dup2(slave, 1).is_err()
+            || syscall::dup2(slave, 2).is_err()
+        {
+            syscall::exit(125);
+        }
+        if slave > 2 {
+            let _ = syscall::close(slave);
+        }
+        let dash_c = b"-c\0";
+        let argv = [
+            arg0.as_ptr(),
+            dash_c.as_ptr(),
+            cmd.as_ptr(),
+            core::ptr::null(),
+        ];
+        let envp: [*const u8; 1] = [core::ptr::null()];
+        let _ = syscall::execve(shell, &argv, &envp);
+        syscall::exit(127);
+    }
+    let _ = syscall::close(slave);
+    Ok((master, pid))
+}
+
+#[crate::lctp_test(suite = syscall)]
+fn pty_shell_ls_root() -> TestResult {
+    // Shell forks an external `ls` with the PTY as stdio — must list and exit
+    // (deadlock if a child pipe read wrongly yields into the waiting parent).
+    check_ok!(syscall::access(b"/bin/sh\0", F_OK), "sh");
+    let (master, pid) = pty_spawn_shell_cmd(b"/bin/sh\0", b"sh\0", b"ls /\0")?;
+    let mut buf = [0u8; 1024];
+    let (n, status, _) = pty_drain_until(
+        master,
+        pid,
+        &|b| buf_contains(b, b"etc") || buf_contains(b, b"bin") || buf_contains(b, b"usr"),
+        &mut buf,
+    )?;
+    let _ = syscall::close(master);
+    check!(syscall::wifexited(status), "exited");
+    check_eq!(syscall::wexitstatus(status), 0, "ls status");
+    check!(
+        buf_contains(&buf[..n], b"etc")
+            || buf_contains(&buf[..n], b"bin")
+            || buf_contains(&buf[..n], b"usr")
+            || buf_contains(&buf[..n], b"tmp"),
+        "ls listing"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall, full)]
+fn pty_bash_ls_root_soft() -> TestResult {
+    if syscall::access(b"/bin/bash\0", F_OK).is_err() {
+        return Ok(());
+    }
+    let (master, pid) = pty_spawn_shell_cmd(b"/bin/bash\0", b"bash\0", b"ls /\0")?;
+    let mut buf = [0u8; 1024];
+    let (n, status, _) = pty_drain_until(
+        master,
+        pid,
+        &|b| buf_contains(b, b"etc") || buf_contains(b, b"bin") || buf_contains(b, b"usr"),
+        &mut buf,
+    )?;
+    let _ = syscall::close(master);
+    check!(syscall::wifexited(status), "exited");
+    check_eq!(syscall::wexitstatus(status), 0, "bash ls");
+    check!(
+        buf_contains(&buf[..n], b"etc")
+            || buf_contains(&buf[..n], b"bin")
+            || buf_contains(&buf[..n], b"usr")
+            || buf_contains(&buf[..n], b"tmp"),
+        "listing"
+    );
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall, full)]
+fn pty_shell_pipeline_on_pty() -> TestResult {
+    check_ok!(syscall::access(b"/bin/sh\0", F_OK), "sh");
+    let (master, pid) = pty_spawn_shell_cmd(b"/bin/sh\0", b"sh\0", b"printf ab | cat\0")?;
+    let mut buf = [0u8; 64];
+    let (n, status, _) =
+        pty_drain_until(master, pid, &|b| buf_contains(b, b"ab"), &mut buf)?;
+    let _ = syscall::close(master);
+    check!(syscall::wifexited(status), "exited");
+    check_eq!(syscall::wexitstatus(status), 0, "pipeline");
+    check!(buf_contains(&buf[..n], b"ab"), "pipeline out");
+    Ok(())
+}
+
+#[crate::lctp_test(suite = syscall, full)]
+fn pty_interactive_ls_line() -> TestResult {
+    // Drive a shell over the PTY like a terminal: write `ls /\n`, read listing.
+    check_ok!(syscall::access(b"/bin/sh\0", F_OK), "sh");
+    let (master, slave, _) = openpty_pair()?;
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        let _ = syscall::close(master);
+        let _ = syscall::setsid();
+        let _ = syscall::ioctl(slave, TIOCSCTTY, 0);
+        if syscall::dup2(slave, 0).is_err()
+            || syscall::dup2(slave, 1).is_err()
+            || syscall::dup2(slave, 2).is_err()
+        {
+            syscall::exit(125);
+        }
+        if slave > 2 {
+            let _ = syscall::close(slave);
+        }
+        // Interactive-ish: no -c; read commands from the tty.
+        let arg0 = b"sh\0";
+        let argv = [arg0.as_ptr(), core::ptr::null()];
+        let envp: [*const u8; 1] = [core::ptr::null()];
+        let _ = syscall::execve(b"/bin/sh\0", &argv, &envp);
+        syscall::exit(127);
+    }
+    let _ = syscall::close(slave);
+    // Give the shell a moment to start, then send a command line.
+    let req = syscall::Timespec {
+        tv_sec: 0,
+        tv_nsec: 100_000_000,
+    };
+    let _ = syscall::nanosleep(&req);
+    check_ok!(syscall::write(master, b"ls /\n"), "write ls");
+    let mut buf = [0u8; 2048];
+    let mut filled = 0usize;
+    let mut saw_listing = false;
+    for _ in 0..60 {
+        let mut fds = [poll::PollFd {
+            fd: master,
+            events: POLLIN,
+            revents: 0,
+        }];
+        if syscall::poll(&mut fds, 100).unwrap_or(0) > 0 {
+            if filled < buf.len() {
+                match syscall::read(master, &mut buf[filled..]) {
+                    Ok(0) => break,
+                    Ok(n) => {
+                        filled += n;
+                        if buf_contains(&buf[..filled], b"etc")
+                            || buf_contains(&buf[..filled], b"bin")
+                            || buf_contains(&buf[..filled], b"usr")
+                        {
+                            saw_listing = true;
+                            break;
+                        }
+                    }
+                    Err(Errno::EIO) => break,
+                    Err(_) => {}
+                }
+            }
+        }
+    }
+    let _ = syscall::write(master, b"exit\n");
+    let mut status = 0;
+    for _ in 0..40 {
+        match syscall::wait4(pid, &mut status, wait::WNOHANG) {
+            Ok(p) if p == pid => break,
+            _ => {
+                let req = syscall::Timespec {
+                    tv_sec: 0,
+                    tv_nsec: 50_000_000,
+                };
+                let _ = syscall::nanosleep(&req);
+            }
+        }
+    }
+    match syscall::wait4(pid, &mut status, wait::WNOHANG) {
+        Ok(p) if p == pid => {}
+        _ => {
+            let _ = syscall::kill(pid, 9);
+            let _ = syscall::wait4(pid, &mut status, 0);
+        }
+    }
+    let _ = syscall::close(master);
+    check!(saw_listing, "interactive ls listing");
+    Ok(())
+}
