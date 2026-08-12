@@ -1,6 +1,7 @@
 //! Minimal freestanding runtime: entry, panic, printing helpers.
 
 mod entry;
+mod ipc_echo;
 mod mem;
 mod panic;
 mod print;

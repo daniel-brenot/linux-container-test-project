@@ -3,7 +3,9 @@
 mod close_range;
 mod entropy_dev;
 mod epoll_semantics;
+mod exec_environ;
 mod exec_shell;
+mod exec_teardown;
 mod fadvise_readahead;
 mod file;
 mod file_depth;
