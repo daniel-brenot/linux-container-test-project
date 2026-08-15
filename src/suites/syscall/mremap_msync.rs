@@ -154,20 +154,22 @@ fn mremap_grow_preserves_data() -> TestResult {
         syscall::mmap(0, old_len, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE | map::MAP_ANONYMOUS, -1, 0),
         "mmap"
     );
+    let mut expected = [0u8; PAGE];
     unsafe {
         let s = core::slice::from_raw_parts_mut(addr as *mut u8, old_len);
         for (i, b) in s.iter_mut().enumerate() {
             *b = (i & 0xFF) as u8;
         }
+        expected.copy_from_slice(s);
     }
     let new_addr = check_ok!(
         syscall::mremap(addr, old_len, new_len, MREMAP_MAYMOVE, 0),
         "mremap"
     );
+    // MAYMOVE may relocate the mapping; only the new address remains valid.
     unsafe {
-        let s = core::slice::from_raw_parts(addr as *const u8, old_len);
         let t = core::slice::from_raw_parts(new_addr as *const u8, old_len);
-        check!(s == t, "data preserved");
+        check!(t == expected.as_slice(), "data preserved");
     }
     check_ok!(syscall::munmap(new_addr, new_len), "munmap");
     Ok(())

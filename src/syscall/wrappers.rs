@@ -5,7 +5,8 @@
 use super::arch::{nr, syscall};
 use super::errno::{from_ret, Errno, Result};
 use super::{
-    Stat, Timespec, UtsName, AT_FDCWD, AT_REMOVEDIR, STDERR_FILENO, STDOUT_FILENO,
+    KernelStat, Stat, Timespec, UtsName, AT_FDCWD, AT_REMOVEDIR, STDERR_FILENO,
+    STDOUT_FILENO,
 };
 
 #[inline]
@@ -129,17 +130,17 @@ pub const SEEK_HOLE: i32 = 4;
 
 pub fn fstatat(dirfd: i32, path: &[u8], flags: i32) -> Result<Stat> {
     let p = c_str_ptr(path)?;
-    let mut st = Stat::default();
+    let mut raw = KernelStat::default();
     unsafe {
         sys4(
             nr::NEWFSTATAT,
             dirfd as usize,
             p as usize,
-            &mut st as *mut Stat as usize,
+            &mut raw as *mut KernelStat as usize,
             flags as usize,
         )?;
     }
-    Ok(st)
+    Ok(Stat::from(raw))
 }
 
 pub fn stat(path: &[u8]) -> Result<Stat> {
@@ -173,8 +174,13 @@ pub fn dup2(oldfd: i32, newfd: i32) -> Result<i32> {
     }
     #[cfg(target_arch = "aarch64")]
     {
-        // aarch64 has no dup2; dup3 with flags=0 is equivalent.
-        dup3(oldfd, newfd, 0)
+        // aarch64 has no dup2. dup3(fd, fd) returns EINVAL, but dup2(fd, fd)
+        // is a no-op that still validates the descriptor.
+        if oldfd == newfd {
+            fcntl(oldfd, super::fcntl_cmd::F_GETFD, 0).map(|_| oldfd)
+        } else {
+            dup3(oldfd, newfd, 0)
+        }
     }
 }
 
@@ -632,11 +638,15 @@ pub fn eprint(s: &str) {
 }
 
 pub fn fstat(fd: i32) -> Result<Stat> {
-    let mut st = Stat::default();
+    let mut raw = KernelStat::default();
     unsafe {
-        sys2(nr::FSTAT, fd as usize, &mut st as *mut Stat as usize)?;
+        sys2(
+            nr::FSTAT,
+            fd as usize,
+            &mut raw as *mut KernelStat as usize,
+        )?;
     }
-    Ok(st)
+    Ok(Stat::from(raw))
 }
 
 pub fn fdatasync(fd: i32) -> Result<()> {

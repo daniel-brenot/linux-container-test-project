@@ -33,6 +33,7 @@ core::arch::global_asm!(
     ".type _start, @function",
     "_start:",
     "    mov x0, sp",
-    "    b {entry}",
+    "    bl {entry}",
+    "    brk #0",
     entry = sym runtime::rust_entry,
 );

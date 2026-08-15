@@ -16,6 +16,10 @@ pub use wrappers::*;
 pub const AT_FDCWD: i32 = -100;
 
 /// `open` / `openat` flags (subset).
+///
+/// `O_DIRECTORY` / `O_NOFOLLOW` / `O_DIRECT` differ on aarch64 (see
+/// `arch/arm64/include/uapi/asm/fcntl.h`) vs the asm-generic values used
+/// on x86_64.
 pub mod oflag {
     pub const O_RDONLY: i32 = 0;
     pub const O_WRONLY: i32 = 1;
@@ -26,8 +30,14 @@ pub mod oflag {
     pub const O_TRUNC: i32 = 0o1000;
     pub const O_APPEND: i32 = 0o2000;
     pub const O_NONBLOCK: i32 = 0o4000;
+    #[cfg(target_arch = "x86_64")]
     pub const O_DIRECTORY: i32 = 0o200000;
+    #[cfg(target_arch = "aarch64")]
+    pub const O_DIRECTORY: i32 = 0o40000;
+    #[cfg(target_arch = "x86_64")]
     pub const O_NOFOLLOW: i32 = 0o400000;
+    #[cfg(target_arch = "aarch64")]
+    pub const O_NOFOLLOW: i32 = 0o100000;
     pub const O_CLOEXEC: i32 = 0o2000000;
     pub const O_PATH: i32 = 0o10000000;
     /// Linux `O_TMPFILE` (`__O_TMPFILE | O_DIRECTORY`).
@@ -125,12 +135,14 @@ pub struct Timespec {
     pub tv_nsec: i64,
 }
 
+/// Portable `stat` view used by tests.
+///
+/// Kernel `struct stat` differs between x86_64 (custom layout) and aarch64
+/// (`asm-generic`). Wrappers convert from the arch-native layout so field
+/// types stay stable for assertions.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct Stat {
-    // Layout matches the kernel `struct stat` used by `newfstatat` on
-    // x86_64 and aarch64 (64-bit). Fields after the ones we care about are
-    // padding so size stays correct for the syscall.
     pub st_dev: u64,
     pub st_ino: u64,
     pub st_nlink: u64,
@@ -149,6 +161,71 @@ pub struct Stat {
     pub st_ctime: i64,
     pub st_ctime_nsec: i64,
     pub __unused: [i64; 3],
+}
+
+/// Kernel `struct stat` for `fstat` / `newfstatat`.
+#[cfg(target_arch = "x86_64")]
+pub(crate) type KernelStat = Stat;
+
+/// aarch64 uses the asm-generic `struct stat` (nlink/mode order and sizes differ).
+#[cfg(target_arch = "aarch64")]
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub(crate) struct KernelStat {
+    pub st_dev: u64,
+    pub st_ino: u64,
+    pub st_mode: u32,
+    pub st_nlink: u32,
+    pub st_uid: u32,
+    pub st_gid: u32,
+    pub st_rdev: u64,
+    pub __pad1: u64,
+    pub st_size: i64,
+    pub st_blksize: i32,
+    pub __pad2: i32,
+    pub st_blocks: i64,
+    pub st_atime: i64,
+    pub st_atime_nsec: u64,
+    pub st_mtime: i64,
+    pub st_mtime_nsec: u64,
+    pub st_ctime: i64,
+    pub st_ctime_nsec: u64,
+    pub __unused4: u32,
+    pub __unused5: u32,
+}
+
+#[cfg(target_arch = "aarch64")]
+impl Default for KernelStat {
+    fn default() -> Self {
+        // Safety: all-zero is a valid bit pattern for this POD struct.
+        unsafe { core::mem::zeroed() }
+    }
+}
+
+#[cfg(target_arch = "aarch64")]
+impl From<KernelStat> for Stat {
+    fn from(k: KernelStat) -> Self {
+        Self {
+            st_dev: k.st_dev,
+            st_ino: k.st_ino,
+            st_nlink: k.st_nlink as u64,
+            st_mode: k.st_mode,
+            st_uid: k.st_uid,
+            st_gid: k.st_gid,
+            __pad0: 0,
+            st_rdev: k.st_rdev,
+            st_size: k.st_size,
+            st_blksize: k.st_blksize as i64,
+            st_blocks: k.st_blocks,
+            st_atime: k.st_atime,
+            st_atime_nsec: k.st_atime_nsec as i64,
+            st_mtime: k.st_mtime,
+            st_mtime_nsec: k.st_mtime_nsec as i64,
+            st_ctime: k.st_ctime,
+            st_ctime_nsec: k.st_ctime_nsec as i64,
+            __unused: [0; 3],
+        }
+    }
 }
 
 impl Default for Stat {
