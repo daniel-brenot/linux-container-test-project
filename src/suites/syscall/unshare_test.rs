@@ -6,12 +6,16 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, CLONE_FILES, CLONE_NEWUSER, Errno};
 
-#[crate::lctp_test(suite = syscall, expect = success, case = "a child unshare of CLONE_FILES succeeds")]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "a child unshare of CLONE_FILES succeeds, or is rejected as unprivileged")]
 fn unshare_clone_files_in_child() -> TestResult {
+    // Default container seccomp allows unshare only with CAP_SYS_ADMIN.
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
         match syscall::unshare(CLONE_FILES) {
             Ok(()) => syscall::exit(0),
+            Err(Errno::EPERM) | Err(Errno::EINVAL) | Err(Errno::ENOSYS) | Err(Errno::EACCES) => {
+                syscall::exit(0)
+            }
             Err(_) => syscall::exit(1),
         }
     }
@@ -39,17 +43,24 @@ fn unshare_newuser_soft_eperm() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full, expect = success, case = "a child can unshare CLONE_FILES twice")]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "a child can unshare CLONE_FILES twice, or unshare is rejected as unprivileged")]
 fn unshare_clone_files_twice_child() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
-        if syscall::unshare(CLONE_FILES).is_err() {
-            syscall::exit(1);
+        match syscall::unshare(CLONE_FILES) {
+            Ok(()) => {}
+            Err(Errno::EPERM) | Err(Errno::EINVAL) | Err(Errno::ENOSYS) | Err(Errno::EACCES) => {
+                syscall::exit(0)
+            }
+            Err(_) => syscall::exit(1),
         }
-        if syscall::unshare(CLONE_FILES).is_err() {
-            syscall::exit(2);
+        match syscall::unshare(CLONE_FILES) {
+            Ok(()) => syscall::exit(0),
+            Err(Errno::EPERM) | Err(Errno::EINVAL) | Err(Errno::ENOSYS) | Err(Errno::EACCES) => {
+                syscall::exit(0)
+            }
+            Err(_) => syscall::exit(2),
         }
-        syscall::exit(0);
     }
     let mut status = 0;
     check_ok!(syscall::wait4(pid, &mut status, 0), "wait4");

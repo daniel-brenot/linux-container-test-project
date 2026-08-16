@@ -52,6 +52,7 @@ jobs:
           file: Dockerfile
           platforms: ${{ matrix.platform }}
           load: true
+          provenance: false
           tags: linux-container-test:ci
           cache-from: type=gha,scope=latest-${{ env.PLATFORM_PAIR }}
           cache-to: type=gha,mode=max,scope=latest-${{ env.PLATFORM_PAIR }}
