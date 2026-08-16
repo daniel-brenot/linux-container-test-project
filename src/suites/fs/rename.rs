@@ -8,7 +8,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_dir, create_empty, truncate_cstr, write_file};
 use crate::syscall::{self, oflag, Errno};
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of a regular file moves the name and removes the old path")]
 fn rename_file_basic() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let src = create_empty(&mut tmp, b"src")?;
@@ -19,7 +19,7 @@ fn rename_file_basic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of a directory succeeds and the new path is a directory")]
 fn rename_directory() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let src = create_dir(&mut tmp, b"src", 0o755)?;
@@ -31,7 +31,7 @@ fn rename_directory() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename over an existing file replaces its contents")]
 fn rename_replace_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -47,7 +47,7 @@ fn rename_replace_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of a file into a subdirectory succeeds")]
 fn rename_into_subdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let sub = create_dir(&mut tmp, b"sub", 0o755)?;
@@ -65,7 +65,7 @@ fn rename_into_subdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "rename of a regular file preserves the inode")]
 fn rename_same_inode() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -77,7 +77,7 @@ fn rename_same_inode() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "rename over a symlink replaces the link with a regular file")]
 fn rename_over_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"file")?;
@@ -91,7 +91,7 @@ fn rename_over_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rename of a missing source path returns ENOENT")]
 fn rename_missing_src() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dst = copy_child(&mut tmp, b"dst")?;
@@ -103,7 +103,7 @@ fn rename_missing_src() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of a regular file preserves its contents")]
 fn rename_preserves_content() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let src = create_empty(&mut tmp, b"src")?;
@@ -119,7 +119,7 @@ fn rename_preserves_content() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "rename of a directory into an empty parent succeeds")]
 fn rename_dir_into_empty_parent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let parent = create_dir(&mut tmp, b"parent", 0o755)?;
@@ -135,7 +135,7 @@ fn rename_dir_into_empty_parent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of a file between two directories succeeds")]
 fn rename_file_cross_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let d1 = create_dir(&mut tmp, b"d1", 0o755)?;
@@ -162,7 +162,7 @@ fn rename_file_cross_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "renameat2 with flags 0 moves a file to a new name")]
 fn renameat2_basic() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let src = create_empty(&mut tmp, b"src2")?;
@@ -176,7 +176,7 @@ fn renameat2_basic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "renameat2 with RENAME_NOREPLACE over an existing path returns EEXIST")]
 fn renameat2_noreplace_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -203,7 +203,7 @@ fn renameat2_noreplace_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "renameat2 with RENAME_NOREPLACE onto a missing path succeeds")]
 fn renameat2_noreplace_success() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let src = create_empty(&mut tmp, b"src")?;
@@ -223,7 +223,7 @@ fn renameat2_noreplace_success() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "renameat2 of a regular file preserves its contents")]
 fn renameat2_preserves_content() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let src = create_empty(&mut tmp, b"src")?;
@@ -239,7 +239,7 @@ fn renameat2_preserves_content() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "renameat2 with RENAME_EXCHANGE swaps the contents of two files")]
 fn renameat2_exchange() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"ex_a")?;
@@ -264,7 +264,7 @@ fn renameat2_exchange() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "renameat2 with RENAME_EXCHANGE swaps two directories")]
 fn renameat2_exchange_dirs() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let d1 = create_dir(&mut tmp, b"d1", 0o755)?;
@@ -307,7 +307,7 @@ fn renameat2_exchange_dirs() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "renameat2 with RENAME_WHITEOUT succeeds when the filesystem supports it")]
 fn renameat2_whiteout_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let src = create_empty(&mut tmp, b"wo_src")?;
@@ -333,7 +333,7 @@ fn renameat2_whiteout_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of a file onto itself succeeds and the path remains")]
 fn rename_to_self() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"self")?;
@@ -343,7 +343,7 @@ fn rename_to_self() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rename into a missing destination directory returns ENOENT")]
 fn rename_empty_dst_component_enoent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let src = create_empty(&mut tmp, b"src")?;
@@ -361,7 +361,7 @@ fn rename_empty_dst_component_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "rename over an existing file replaces it with the source contents")]
 fn rename_replace_same_content() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"ra")?;
@@ -375,7 +375,7 @@ fn rename_replace_same_content() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rename of a directory into its own subdirectory returns EINVAL, ENOTEMPTY, or EBUSY")]
 fn rename_into_self_subdir_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let outer = create_dir(&mut tmp, b"outer", 0o755)?;
@@ -396,7 +396,7 @@ fn rename_into_self_subdir_fails() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rename of a file onto a directory returns EISDIR or ENOTDIR")]
 fn rename_file_over_dir_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -410,7 +410,7 @@ fn rename_file_over_dir_fails() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rename of a directory onto a file returns ENOTDIR or EISDIR")]
 fn rename_dir_over_file_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -424,7 +424,7 @@ fn rename_dir_over_file_fails() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rename of a directory onto a nonempty directory returns ENOTEMPTY")]
 fn rename_dir_over_nonempty_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_dir(&mut tmp, b"a", 0o755)?;
@@ -446,7 +446,7 @@ fn rename_dir_over_nonempty_fails() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of a directory onto an empty directory succeeds")]
 fn rename_replace_empty_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_dir(&mut tmp, b"a", 0o755)?;
@@ -458,7 +458,7 @@ fn rename_replace_empty_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of a symlink moves the link and lstat still reports a symlink")]
 fn rename_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"l")?;
@@ -470,7 +470,7 @@ fn rename_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rename out of a directory without write permission returns EACCES")]
 fn rename_parent_src_no_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let d1 = create_dir(&mut tmp, b"d1", 0o755)?;
@@ -503,7 +503,7 @@ fn rename_parent_src_no_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of one hard-link name leaves nlink at 2")]
 fn rename_hardlink_preserves_nlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -515,7 +515,7 @@ fn rename_hardlink_preserves_nlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of a FIFO succeeds and the new path is a FIFO")]
 fn rename_fifo() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let src = copy_child(&mut tmp, b"fifo")?;
@@ -530,7 +530,7 @@ fn rename_fifo() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rename through a non-directory destination component returns ENOTDIR")]
 fn rename_enotdir_dst_component() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let src = create_empty(&mut tmp, b"src")?;
@@ -548,7 +548,7 @@ fn rename_enotdir_dst_component() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of a looping symlink moves the symlink itself")]
 fn rename_loop_symlink_src() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = copy_child(&mut tmp, b"a")?;

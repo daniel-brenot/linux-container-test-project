@@ -7,7 +7,7 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, oflag, AF_UNIX, SOCK_STREAM, Errno};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pipe2 transfers written bytes from the write end to the read end")]
 fn pipe2_roundtrip() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     let msg = b"pipe-data";
@@ -20,7 +20,7 @@ fn pipe2_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pipe2 with O_CLOEXEC creates a pipe pair")]
 fn pipe2_cloexec() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(oflag::O_CLOEXEC), "pipe2 cloexec");
     check_ok!(syscall::close(r), "close r");
@@ -28,7 +28,7 @@ fn pipe2_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pipe2 with O_NONBLOCK sets O_NONBLOCK and an empty read returns EAGAIN")]
 fn pipe2_nonblock() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(oflag::O_NONBLOCK), "pipe2 nonblock");
     let fl = check_ok!(syscall::fcntl(r, crate::syscall::fcntl_cmd::F_GETFL, 0), "getfl");
@@ -41,7 +41,7 @@ fn pipe2_nonblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a two-byte pipe write is delivered as two successive one-byte reads")]
 fn pipe2_partial_write() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     check_ok!(syscall::write(w, b"AB"), "write");
@@ -55,7 +55,7 @@ fn pipe2_partial_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "AF_UNIX SOCK_STREAM socketpair send and recv round-trip a payload")]
 fn socketpair_stream() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "socketpair");
     check_ok!(syscall::send(a, b"ping", 0), "send");
@@ -68,7 +68,7 @@ fn socketpair_stream() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "socketpair with SOCK_STREAM|O_CLOEXEC creates a connected pair")]
 fn socketpair_cloexec() -> TestResult {
     let (a, b) = check_ok!(
         syscall::socketpair(AF_UNIX, SOCK_STREAM | oflag::O_CLOEXEC, 0),
@@ -79,7 +79,7 @@ fn socketpair_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "eventfd write of 42 is read back as 42")]
 fn eventfd_write_read() -> TestResult {
     let efd = check_ok!(syscall::eventfd(0, 0), "eventfd");
     let val: u64 = 42;
@@ -92,7 +92,7 @@ fn eventfd_write_read() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "eventfd initialized to 5 reads as 6 after a write of 1")]
 fn eventfd_increment() -> TestResult {
     let efd = check_ok!(syscall::eventfd(5, 0), "eventfd init 5");
     let one = 1u64.to_le_bytes();
@@ -104,14 +104,14 @@ fn eventfd_increment() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "eventfd with O_CLOEXEC creates a counter fd")]
 fn eventfd_cloexec() -> TestResult {
     let efd = check_ok!(syscall::eventfd(0, oflag::O_CLOEXEC), "eventfd cloexec");
     check_ok!(syscall::close(efd), "close");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "two eventfd writes of 1 accumulate so a later read returns 2")]
 fn eventfd_write_twice_accumulates() -> TestResult {
     let efd = check_ok!(syscall::eventfd(0, 0), "eventfd");
     let one = 1u64.to_le_bytes();
@@ -124,7 +124,7 @@ fn eventfd_write_twice_accumulates() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "EFD_SEMAPHORE eventfd decrements by one on each read")]
 fn eventfd_semaphore_style() -> TestResult {
     let efd = check_ok!(
         syscall::eventfd(0, crate::syscall::EFD_SEMAPHORE),
@@ -142,7 +142,7 @@ fn eventfd_semaphore_style() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = failure, case = "nonblocking EFD_SEMAPHORE eventfd read of an empty counter returns EAGAIN")]
 fn eventfd_semaphore_nonblock_eagain() -> TestResult {
     let efd = check_ok!(
         syscall::eventfd(

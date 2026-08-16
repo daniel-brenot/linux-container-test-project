@@ -23,7 +23,7 @@ fn ts_pair(sec: i64) -> [Timespec; 2] {
     ]
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "utimensat with UTIME_NOW sets a positive mtime")]
 fn utimensat_now() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -46,7 +46,7 @@ fn utimensat_now() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "utimensat with UTIME_OMIT leaves mtime unchanged")]
 fn utimensat_omit() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -70,7 +70,7 @@ fn utimensat_omit() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "utimensat sets mtime to an explicit timestamp")]
 fn utimensat_explicit() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -84,7 +84,7 @@ fn utimensat_explicit() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "utimensat with AT_SYMLINK_NOFOLLOW sets the symlink mtime")]
 fn utimensat_symlink_nofollow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"target")?;
@@ -105,7 +105,7 @@ fn utimensat_symlink_nofollow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "futimens with UTIME_NOW sets a positive mtime")]
 fn futimens_now_via_fd() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -127,7 +127,7 @@ fn futimens_now_via_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "futimens sets mtime to an explicit timestamp")]
 fn futimens_explicit() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -140,7 +140,7 @@ fn futimens_explicit() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "utimensat sets distinct atime and mtime values")]
 fn utimensat_atime_mtime_different() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -164,7 +164,7 @@ fn utimensat_atime_mtime_different() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "utimensat with UTIME_OMIT for atime sets only mtime")]
 fn utimensat_omit_atime_set_mtime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -189,7 +189,7 @@ fn utimensat_omit_atime_set_mtime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "utimensat with UTIME_OMIT for mtime sets only atime")]
 fn utimensat_set_atime_omit_mtime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -214,7 +214,7 @@ fn utimensat_set_atime_omit_mtime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "utimensat on a missing path returns ENOENT")]
 fn utimensat_enoent() -> TestResult {
     let times = ts_pair(1_000_000);
     check_err!(
@@ -225,7 +225,7 @@ fn utimensat_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "utimensat sets mtime on a directory")]
 fn utimensat_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -239,7 +239,7 @@ fn utimensat_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "utimensat without AT_SYMLINK_NOFOLLOW sets the target file mtime")]
 fn utimensat_follow_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -254,7 +254,7 @@ fn utimensat_follow_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "utimensat advances ctime")]
 fn utimensat_updates_ctime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -277,7 +277,7 @@ fn utimensat_updates_ctime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "futimens on fd -1 returns EBADF")]
 fn futimens_bad_fd() -> TestResult {
     let times = [
         Timespec {
@@ -293,7 +293,7 @@ fn futimens_bad_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "utimensat sets nonzero nanosecond atime and mtime")]
 fn utimensat_nsec_nonzero() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -318,7 +318,7 @@ fn utimensat_nsec_nonzero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "utimensat with UTIME_NOW advances mtime after a sleep")]
 fn utimensat_both_now_after_sleep() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -346,7 +346,7 @@ fn utimensat_both_now_after_sleep() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "utimensat sets mtime on a file that already has data")]
 fn utimensat_on_written_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;

@@ -8,7 +8,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_dir, create_empty, write_file};
 use crate::syscall::{self, oflag, Errno, S_IFIFO};
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a regular file reports a regular file type")]
 fn stat_regular_type() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -20,7 +20,7 @@ fn stat_regular_type() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a directory reports a directory type")]
 fn stat_dir_type() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -31,7 +31,7 @@ fn stat_dir_type() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a FIFO reports a FIFO type")]
 fn stat_fifo_type() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -45,7 +45,7 @@ fn stat_fifo_type() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat follows a symlink to a regular file and lstat reports a symlink")]
 fn stat_symlink_type_follow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"t")?;
@@ -56,7 +56,7 @@ fn stat_symlink_type_follow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of an empty regular file reports size 0")]
 fn stat_size_empty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -64,7 +64,7 @@ fn stat_size_empty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a file reports the written size")]
 fn stat_size_written() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -73,7 +73,7 @@ fn stat_size_written() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a newly created regular file reports nlink 1")]
 fn stat_nlink_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -81,7 +81,7 @@ fn stat_nlink_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat reports nlink 2 after creating a hard link")]
 fn stat_nlink_hardlinks() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -91,7 +91,7 @@ fn stat_nlink_hardlinks() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of an empty directory reports nlink at least 2")]
 fn stat_nlink_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -101,7 +101,7 @@ fn stat_nlink_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fstat and stat report the same inode and size")]
 fn fstat_matches_stat() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -115,7 +115,7 @@ fn fstat_matches_stat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "stat of a missing path returns ENOENT")]
 fn stat_enoent() -> TestResult {
     check_err!(
         syscall::stat(b"/tmp/lctp-stat-missing\0"),
@@ -125,7 +125,7 @@ fn stat_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "lstat of a missing path returns ENOENT")]
 fn lstat_enoent() -> TestResult {
     check_err!(
         syscall::lstat(b"/tmp/lctp-lstat-missing\0"),
@@ -135,13 +135,13 @@ fn lstat_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "fstat on fd -1 returns EBADF")]
 fn fstat_bad_fd() -> TestResult {
     check_err!(syscall::fstat(-1), Errno::EBADF, "ebadf");
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a created file reports the caller's uid and gid")]
 fn stat_uid_gid_self() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -151,7 +151,7 @@ fn stat_uid_gid_self() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat reports mode 0644 after chmod 0644")]
 fn stat_mode_bits_644() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -164,7 +164,7 @@ fn stat_mode_bits_644() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a regular file reports a positive st_blksize")]
 fn stat_blksize_positive() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -172,7 +172,7 @@ fn stat_blksize_positive() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a regular file reports a nonzero st_dev")]
 fn stat_dev_nonzero() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -180,7 +180,7 @@ fn stat_dev_nonzero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a regular file reports a nonzero inode")]
 fn stat_ino_nonzero() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -188,7 +188,7 @@ fn stat_ino_nonzero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of two distinct files reports different inodes")]
 fn stat_two_files_different_ino() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -200,7 +200,7 @@ fn stat_two_files_different_ino() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "lstat of a symlink reports st_size equal to the target length")]
 fn lstat_symlink_size_is_target_len() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"l")?;
@@ -209,7 +209,7 @@ fn lstat_symlink_size_is_target_len() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat after truncate reports the truncated size")]
 fn stat_after_truncate() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -219,7 +219,7 @@ fn stat_after_truncate() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fstatat with AT_FDCWD reports a regular file")]
 fn fstatat_cwd() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -228,7 +228,7 @@ fn fstatat_cwd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fstatat with AT_SYMLINK_NOFOLLOW reports a symlink")]
 fn fstatat_nofollow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"t")?;
@@ -242,7 +242,7 @@ fn fstatat_nofollow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a new file reports non-negative atime, mtime, and ctime")]
 fn stat_timestamps_nonneg() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -253,7 +253,7 @@ fn stat_timestamps_nonneg() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a directory reports mode 0700")]
 fn stat_dir_mode_bits() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o700)?;
@@ -266,7 +266,7 @@ fn stat_dir_mode_bits() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of two files in the same directory reports the same st_dev")]
 fn stat_same_dev_tmpdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -279,7 +279,7 @@ fn stat_same_dev_tmpdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "lstat of a dangling symlink reports a symlink")]
 fn lstat_dangling_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"dangle")?;
@@ -288,7 +288,7 @@ fn lstat_dangling_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a written file reports non-negative st_blocks")]
 fn stat_blocks_nonneg() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -297,7 +297,7 @@ fn stat_blocks_nonneg() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fstat after write reports the written size")]
 fn fstat_after_write_size() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -308,7 +308,7 @@ fn fstat_after_write_size() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "stat through a symlink loop returns ELOOP")]
 fn stat_loop_eloop() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = copy_child(&mut tmp, b"a")?;
@@ -319,7 +319,7 @@ fn stat_loop_eloop() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat after a 1024-byte write reports size 1024")]
 fn stat_size_large_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;

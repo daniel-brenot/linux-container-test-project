@@ -1,4 +1,4 @@
-//! Extra LTP-ish edge cases across file/process/mem/net/signal/misc.
+//! Extra edge cases across file, process, memory, net, signal, and miscellaneous syscalls.
 
 use crate::check;
 use crate::check_eq;
@@ -21,7 +21,7 @@ fn soft(e: Errno) -> bool {
     )
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fcntl F_DUPFD_CLOEXEC duplicates a fd with a minimum fd of 0")]
 fn edge_fcntl_dupfd_cloexec_min_0() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -31,7 +31,7 @@ fn edge_fcntl_dupfd_cloexec_min_0() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fcntl F_GETFL on a newly created file reports O_RDWR")]
 fn edge_fcntl_getfl_rdwr() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -41,7 +41,7 @@ fn edge_fcntl_getfl_rdwr() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fcntl F_SETLK takes a whole-file F_RDLCK and F_UNLCK releases it")]
 fn edge_fcntl_setlk_read_whole() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -60,7 +60,7 @@ fn edge_fcntl_setlk_read_whole() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fcntl F_SETLKW takes a one-byte F_RDLCK and F_SETLK unlocks it")]
 fn edge_fcntl_setlkw_read() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -78,7 +78,7 @@ fn edge_fcntl_setlkw_read() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "lseek SEEK_DATA on an empty file returns a position or ENXIO/EINVAL/ENOSYS")]
 fn edge_lseek_data_empty_file_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -93,7 +93,7 @@ fn edge_lseek_data_empty_file_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "lseek SEEK_HOLE on an empty file returns a position or ENXIO/EINVAL/ENOSYS")]
 fn edge_lseek_hole_empty_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -109,7 +109,7 @@ fn edge_lseek_hole_empty_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "preadv with two iovecs reads four bytes as two two-byte buffers")]
 fn edge_preadv_two_then_stat() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -133,7 +133,7 @@ fn edge_preadv_two_then_stat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pwritev of four one-byte iovecs writes abcd at offset 0")]
 fn edge_pwritev_scatter_4() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -164,7 +164,7 @@ fn edge_pwritev_scatter_4() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sync_file_range with SYNC_FILE_RANGE_WRITE on a mid-file range succeeds")]
 fn edge_sync_file_range_mid() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -177,7 +177,7 @@ fn edge_sync_file_range_mid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "fallocate with mode 0 extends a file to 1024 bytes")]
 fn edge_fallocate_1k_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -196,7 +196,7 @@ fn edge_fallocate_1k_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "copy_file_range copies one byte between two files")]
 fn edge_copy_file_range_one_byte() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = create_empty(&mut tmp, b"in")?;
@@ -225,7 +225,7 @@ fn edge_copy_file_range_one_byte() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sendfile from offset 1 copies two bytes BC into a pipe")]
 fn edge_sendfile_count_2() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = create_empty(&mut tmp, b"sf")?;
@@ -249,7 +249,7 @@ fn edge_sendfile_count_2() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "tee copies 8 bytes from one pipe to another")]
 fn edge_tee_size_8() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -262,7 +262,7 @@ fn edge_tee_size_8() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "splice moves 4 bytes from one pipe to another")]
 fn edge_splice_size_4() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -279,7 +279,7 @@ fn edge_splice_size_4() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "waitpid reports wexitstatus matching child exits of 0, 3, and 100")]
 fn edge_waitpid_exit_status_matrix_small() -> TestResult {
     for code in [0i32, 3, 100] {
         let pid = check_ok!(syscall::fork(), "f");
@@ -293,7 +293,7 @@ fn edge_waitpid_exit_status_matrix_small() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 with WNOHANG on a still-running child returns 0, the pid, or ECHILD")]
 fn edge_wait4_wnohang_running() -> TestResult {
     let pid = check_ok!(syscall::fork(), "f");
     if pid == 0 {
@@ -318,7 +318,7 @@ fn edge_wait4_wnohang_running() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a child setpgid to its pid makes getpgid return that pid")]
 fn edge_getpgid_after_setpgid_child() -> TestResult {
     let pid = check_ok!(syscall::fork(), "f");
     if pid == 0 {
@@ -336,7 +336,7 @@ fn edge_getpgid_after_setpgid_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "prctl PR_SET_DUMPABLE toggles dumpable then restores the prior value")]
 fn edge_prctl_dumpable_toggle() -> TestResult {
     let old = check_ok!(
         syscall::prctl(syscall::PR_GET_DUMPABLE, 0, 0, 0, 0),
@@ -348,7 +348,7 @@ fn edge_prctl_dumpable_toggle() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "two prlimit64 RLIMIT_NOFILE queries return the same cur and max")]
 fn edge_rlimit_nofile_get_twice() -> TestResult {
     let mut a = Rlimit::default();
     let mut b = Rlimit::default();
@@ -365,14 +365,14 @@ fn edge_rlimit_nofile_get_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getrusage RUSAGE_SELF returns a non-negative ru_nvcsw")]
 fn edge_getrusage_self_nvcsw() -> TestResult {
     let ru = check_ok!(syscall::getrusage(RUSAGE_SELF), "ru");
     check!(ru.ru_nvcsw >= 0, "nvcsw");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "mmap PROT_WRITE anonymous private mapping can be created and munmap'd")]
 fn edge_mmap_prot_write_only_soft() -> TestResult {
     match syscall::mmap(
         0,
@@ -389,7 +389,7 @@ fn edge_mmap_prot_write_only_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "madvise accepts NORMAL, RANDOM, SEQUENTIAL, WILLNEED, and DONTNEED on a page")]
 fn edge_madvise_all_common() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -415,7 +415,7 @@ fn edge_madvise_all_common() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mremap MREMAP_MAYMOVE grows a 4096-byte mapping to 8192 bytes")]
 fn edge_mremap_grow_4_to_8() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -436,7 +436,7 @@ fn edge_mremap_grow_4_to_8() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mincore reports the page resident after it is written")]
 fn edge_mincore_after_touch() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -459,7 +459,7 @@ fn edge_mincore_after_touch() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "brk can grow the heap by one page and then restore the prior break")]
 fn edge_brk_grow_one_page_soft() -> TestResult {
     let cur = check_ok!(syscall::brk(0), "q");
     match syscall::brk(cur + 4096) {
@@ -472,7 +472,7 @@ fn edge_brk_grow_one_page_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "clock_gettime CLOCK_BOOTTIME returns a non-negative tv_sec")]
 fn edge_clock_gettime_boottime() -> TestResult {
     match syscall::clock_gettime(clock::CLOCK_BOOTTIME) {
         Ok(t) => check!(t.tv_sec >= 0, "sec"),
@@ -482,14 +482,14 @@ fn edge_clock_gettime_boottime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "clock_getres CLOCK_MONOTONIC returns a non-zero resolution")]
 fn edge_clock_getres_monotonic() -> TestResult {
     let r = check_ok!(syscall::clock_getres(clock::CLOCK_MONOTONIC), "r");
     check!(r.tv_nsec > 0 || r.tv_sec > 0, "nz");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "nanosleep of 100000 ns returns success")]
 fn edge_nanosleep_100us() -> TestResult {
     let req = Timespec {
         tv_sec: 0,
@@ -499,7 +499,7 @@ fn edge_nanosleep_100us() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "timerfd_settime with TFD_TIMER_ABSTIME arms a future CLOCK_MONOTONIC expiry")]
 fn edge_timerfd_abstime_future() -> TestResult {
     let fd = check_ok!(
         syscall::timerfd_create(clock::CLOCK_MONOTONIC, syscall::TFD_CLOEXEC),
@@ -528,7 +528,7 @@ fn edge_timerfd_abstime_future() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "nonblocking UDP recv with MSG_DONTWAIT on an empty socket returns EAGAIN")]
 fn edge_udp_dontwait() -> TestResult {
     let fd = check_ok!(
         syscall::socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0),
@@ -545,7 +545,7 @@ fn edge_udp_dontwait() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "shutdown SHUT_RDWR succeeds on a connected TCP client")]
 fn edge_tcp_shutdown_rdwr_pair() -> TestResult {
     let srv = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "s");
     let one = 1i32.to_ne_bytes();
@@ -566,7 +566,7 @@ fn edge_tcp_shutdown_rdwr_pair() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getsockopt SO_TYPE on an AF_INET SOCK_STREAM socket returns SOCK_STREAM")]
 fn edge_so_type_stream() -> TestResult {
     let fd = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "s");
     let mut val = [0u8; 4];
@@ -576,13 +576,13 @@ fn edge_so_type_stream() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kill of the current pid with signal 0 succeeds")]
 fn edge_kill_zero_self() -> TestResult {
     check_ok!(syscall::kill(syscall::getpid(), 0), "k");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "rt_sigaction sets SIGUSR1 to SIG_IGN then restores SIG_DFL")]
 fn edge_sigaction_ign_usr1() -> TestResult {
     let mut old = Sigaction::default();
     let mut neu = Sigaction {
@@ -598,7 +598,7 @@ fn edge_sigaction_ign_usr1() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "rt_sigprocmask SIG_BLOCK adds SIGUSR1 then restores the old mask")]
 fn edge_sigprocmask_block_usr1() -> TestResult {
     let bit = 1u64 << (SIGUSR1 - 1);
     let mut old = 0u64;
@@ -610,7 +610,7 @@ fn edge_sigprocmask_block_usr1() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "poll with timeout 0 on an empty pipe returns 0")]
 fn edge_poll_pipe_timeout_0() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "p");
     let mut fds = [poll::PollFd {
@@ -624,7 +624,7 @@ fn edge_poll_pipe_timeout_0() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "nonblocking eventfd read of an empty counter returns EAGAIN")]
 fn edge_eventfd_nonblock() -> TestResult {
     let efd = check_ok!(
         syscall::eventfd(0, syscall::EFD_NONBLOCK | syscall::EFD_CLOEXEC),
@@ -636,7 +636,7 @@ fn edge_eventfd_nonblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "uname machine field is a non-empty C string")]
 fn edge_uname_machine_nonempty() -> TestResult {
     let u = check_ok!(syscall::uname(), "u");
     let end = u.machine.iter().position(|&b| b == 0).unwrap_or(0);
@@ -644,7 +644,7 @@ fn edge_uname_machine_nonempty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "getrandom with GRND_NONBLOCK fills bytes or returns EAGAIN/ENOSYS/EINVAL")]
 fn edge_getrandom_nonblock() -> TestResult {
     let mut b = [0u8; 4];
     match syscall::getrandom(&mut b, syscall::GRND_NONBLOCK) {
@@ -655,7 +655,7 @@ fn edge_getrandom_nonblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "ioctl TIOCGWINSZ on a regular file returns ENOTTY or EINVAL")]
 fn edge_ioctl_enotty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -672,7 +672,7 @@ fn edge_ioctl_enotty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "dup3 with O_CLOEXEC sets FD_CLOEXEC on the new fd")]
 fn edge_dup3_cloexec_flag() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -684,7 +684,7 @@ fn edge_dup3_cloexec_flag() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "flock LOCK_EX|LOCK_NB then LOCK_UN succeeds on a file")]
 fn edge_flock_ex_nb_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -694,7 +694,7 @@ fn edge_flock_ex_nb_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "membarrier MEMBARRIER_CMD_QUERY succeeds")]
 fn edge_membarrier_query() -> TestResult {
     check_ok!(
         syscall::membarrier(syscall::MEMBARRIER_CMD_QUERY, 0),
@@ -703,14 +703,14 @@ fn edge_membarrier_query() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "personality with 0xffffffff returns the current personality")]
 fn edge_personality_query() -> TestResult {
     let p = check_ok!(syscall::personality(0xffff_ffff), "p");
     let _ = p;
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "capget with LINUX_CAPABILITY_VERSION_3 fills the capability set")]
 fn edge_capget() -> TestResult {
     let mut hdr = syscall::CapUserHeader {
         version: syscall::LINUX_CAPABILITY_VERSION_3,
@@ -721,13 +721,13 @@ fn edge_capget() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sched_yield returns success")]
 fn edge_sched_yield() -> TestResult {
     check_ok!(syscall::sched_yield(), "y");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getcpu writes a cpu index below 4096")]
 fn edge_getcpu() -> TestResult {
     let mut cpu = 0u32;
     check_ok!(syscall::getcpu(Some(&mut cpu), None), "g");
@@ -735,7 +735,7 @@ fn edge_getcpu() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "kcmp KCMP_FILE comparing a fd with itself returns 0")]
 fn edge_kcmp_self_fd() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -756,7 +756,7 @@ fn edge_kcmp_self_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "lseek SEEK_END on a 2-byte file returns 2")]
 fn edge_lseek_end_zero() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -766,7 +766,7 @@ fn edge_lseek_end_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "lseek SEEK_CUR by 2 from the start returns position 2")]
 fn edge_lseek_cur_forward() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -777,7 +777,7 @@ fn edge_lseek_cur_forward() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fcntl F_SETFL with O_APPEND sets O_APPEND on F_GETFL")]
 fn edge_fcntl_setfl_append() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -796,7 +796,7 @@ fn edge_fcntl_setfl_append() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fcntl F_SETFL O_NONBLOCK on a pipe makes empty read return EAGAIN")]
 fn edge_fcntl_setfl_nonblock_pipe() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "p");
     let fl = check_ok!(syscall::fcntl(r, fcntl_cmd::F_GETFL, 0), "g");
@@ -815,7 +815,7 @@ fn edge_fcntl_setfl_nonblock_pipe() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "sendfile copies 64 bytes from a file into a pipe")]
 fn edge_sendfile_64() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let data = [b'X'; 64];
@@ -837,7 +837,7 @@ fn edge_sendfile_64() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "mmap anonymous 16384 bytes is writable at both ends then munmap succeeds")]
 fn edge_mmap_16k() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -858,7 +858,7 @@ fn edge_mmap_16k() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "waitid P_PID WEXITED reaps a child that exited 15")]
 fn edge_waitid_exited_status() -> TestResult {
     let pid = check_ok!(syscall::fork(), "f");
     if pid == 0 {
@@ -872,7 +872,7 @@ fn edge_waitid_exited_status() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "setsid in a child returns the child's pid as session id")]
 fn edge_setsid_child_leader() -> TestResult {
     let pid = check_ok!(syscall::fork(), "f");
     if pid == 0 {
@@ -887,7 +887,7 @@ fn edge_setsid_child_leader() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "prctl PR_SET_NO_NEW_PRIVS 1 is visible via PR_GET_NO_NEW_PRIVS")]
 fn edge_prctl_no_new_privs() -> TestResult {
     check_ok!(
         syscall::prctl(syscall::PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0),
@@ -901,7 +901,7 @@ fn edge_prctl_no_new_privs() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "mlock of one anonymous page succeeds or is rejected as unsupported")]
 fn edge_mlock_soft() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -928,14 +928,14 @@ fn edge_mlock_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "setitimer ITIMER_REAL with a zero value disarms the timer")]
 fn edge_itimer_disarm() -> TestResult {
     let zero = syscall::Itimerval::default();
     check_ok!(syscall::setitimer(syscall::ITIMER_REAL, &zero, None), "clr");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "close_range closes a duplicated fd or is rejected as ENOSYS/EINVAL")]
 fn edge_close_range_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -953,7 +953,7 @@ fn edge_close_range_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fcntl F_GETFD on a newly opened file has FD_CLOEXEC clear")]
 fn edge_fcntl_getfd_zero() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -963,7 +963,7 @@ fn edge_fcntl_getfd_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fcntl F_SETFD FD_CLOEXEC sets FD_CLOEXEC on F_GETFD")]
 fn edge_fcntl_setfd_cloexec() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -974,7 +974,7 @@ fn edge_fcntl_setfd_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pread at offset 1 reads BC from ABCD")]
 fn edge_pread_offset_1() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -986,7 +986,7 @@ fn edge_pread_offset_1() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pwrite of ZZ at offset 2 is visible via pread")]
 fn edge_pwrite_offset_2() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -998,7 +998,7 @@ fn edge_pwrite_offset_2() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "ftruncate to 0 sets st_size to 0 after a write")]
 fn edge_ftruncate_zero() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -1010,7 +1010,7 @@ fn edge_ftruncate_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fsync succeeds on an empty newly created file")]
 fn edge_fsync_empty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -1019,7 +1019,7 @@ fn edge_fsync_empty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fdatasync succeeds after writing one byte")]
 fn edge_fdatasync_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -1029,7 +1029,7 @@ fn edge_fdatasync_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pipe2 with O_CLOEXEC sets FD_CLOEXEC on the read end")]
 fn edge_pipe2_cloexec() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(oflag::O_CLOEXEC), "p");
     let fl = check_ok!(syscall::fcntl(r, fcntl_cmd::F_GETFD, 0), "g");
@@ -1039,7 +1039,7 @@ fn edge_pipe2_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "AF_UNIX SOCK_STREAM socketpair send and recv transfer one byte")]
 fn edge_socketpair_stream() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(syscall::AF_UNIX, SOCK_STREAM, 0), "sp");
     check_ok!(syscall::send(a, b"z", 0), "s");
@@ -1050,7 +1050,7 @@ fn edge_socketpair_stream() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_ctl ADD then DEL succeeds on a pipe fd")]
 fn edge_epoll_create_add_del() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "p");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -1063,7 +1063,7 @@ fn edge_epoll_create_add_del() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "clock_gettime CLOCK_THREAD_CPUTIME_ID returns a non-negative tv_sec")]
 fn edge_clock_thread_cputime() -> TestResult {
     match syscall::clock_gettime(clock::CLOCK_THREAD_CPUTIME_ID) {
         Ok(t) => check!(t.tv_sec >= 0, "sec"),
@@ -1073,7 +1073,7 @@ fn edge_clock_thread_cputime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "clock_gettime CLOCK_REALTIME_COARSE returns a positive tv_sec")]
 fn edge_clock_realtime_coarse() -> TestResult {
     match syscall::clock_gettime(clock::CLOCK_REALTIME_COARSE) {
         Ok(t) => check!(t.tv_sec > 0, "sec"),
@@ -1083,14 +1083,14 @@ fn edge_clock_realtime_coarse() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "gettimeofday returns a tv_sec after 1600000000")]
 fn edge_gettimeofday_positive() -> TestResult {
     let tv = check_ok!(syscall::gettimeofday(), "g");
     check!(tv.tv_sec > 1_600_000_000, "sec");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "sched_getaffinity for pid 0 returns a mask with at least one bit set")]
 fn edge_sched_getaffinity_mask() -> TestResult {
     let mut mask = [0u8; 64];
     match syscall::sched_getaffinity(0, &mut mask) {
@@ -1101,14 +1101,14 @@ fn edge_sched_getaffinity_mask() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getpriority PRIO_PROCESS for pid 0 is in -20..19")]
 fn edge_getpriority_self() -> TestResult {
     let p = check_ok!(syscall::getpriority(syscall::PRIO_PROCESS, 0), "p");
     check!(p >= -20 && p <= 19, "rng");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "write through dup is visible via pread on the original fd")]
 fn edge_dup_then_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -1122,7 +1122,7 @@ fn edge_dup_then_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mprotect PROT_READ succeeds on an anonymous RW mapping")]
 fn edge_mprotect_read_only() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(0, 4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE | map::MAP_ANONYMOUS, -1, 0),
@@ -1133,7 +1133,7 @@ fn edge_mprotect_read_only() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "msync MS_ASYNC succeeds on a shared file mapping after a store")]
 fn edge_msync_async_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -1149,7 +1149,7 @@ fn edge_msync_async_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 reports wexitstatus 1 for a child that exits 1")]
 fn edge_fork_exit_1() -> TestResult {
     let pid = check_ok!(syscall::fork(), "f");
     if pid == 0 { syscall::exit(1); }
@@ -1159,26 +1159,26 @@ fn edge_fork_exit_1() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "gettid returns a positive tid")]
 fn edge_gettid_positive() -> TestResult {
     check!(syscall::gettid() > 0, "tid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getppid returns a non-negative ppid")]
 fn edge_getppid_nonneg() -> TestResult {
     check!(syscall::getppid() >= 0, "ppid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getuid equals geteuid and getgid equals getegid")]
 fn edge_uid_gid_match() -> TestResult {
     check_eq!(syscall::getuid(), syscall::geteuid(), "uid");
     check_eq!(syscall::getgid(), syscall::getegid(), "gid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "openat with O_CREAT|O_EXCL creates a file in a directory fd")]
 fn edge_openat_creat() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let dirfd = check_ok!(syscall::open(tmp.path(), oflag::O_RDONLY | oflag::O_DIRECTORY, 0), "d");
@@ -1188,7 +1188,7 @@ fn edge_openat_creat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "access F_OK succeeds on an existing empty file")]
 fn edge_access_f_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = create_empty(&mut tmp, b"a")?;
@@ -1196,7 +1196,7 @@ fn edge_access_f_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "stat st_size is 5 after writing five bytes")]
 fn edge_stat_size_after_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = create_empty(&mut tmp, b"s")?;

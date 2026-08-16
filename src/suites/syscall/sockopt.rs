@@ -8,7 +8,7 @@ use crate::syscall::{
     self, AF_UNIX, SOCK_DGRAM, SOCK_STREAM, SOL_SOCKET, SO_RCVBUF, SO_REUSEADDR, SO_TYPE,
 };
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getsockopt SO_TYPE on a unix stream socketpair reports SOCK_STREAM")]
 fn socketpair_so_type_stream() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "socketpair");
     let mut val = [0u8; 4];
@@ -21,7 +21,7 @@ fn socketpair_so_type_stream() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getsockopt SO_TYPE on both ends of a unix stream socketpair reports SOCK_STREAM")]
 fn socketpair_so_type_both_ends() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "socketpair");
     for fd in [a, b] {
@@ -35,7 +35,7 @@ fn socketpair_so_type_both_ends() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "send and recv on a unix dgram socketpair transfer a datagram payload")]
 fn unix_dgram_socketpair_send_recv() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_DGRAM, 0), "socketpair");
     let msg = b"dgram-msg";
@@ -48,7 +48,7 @@ fn unix_dgram_socketpair_send_recv() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "setsockopt SO_RCVBUF raises the receive buffer to at least half the requested size")]
 fn setsockopt_so_rcvbuf() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "socketpair");
     let newbuf = 64_000i32;
@@ -63,7 +63,7 @@ fn setsockopt_so_rcvbuf() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "setsockopt SO_REUSEADDR on a unix stream socket succeeds")]
 fn setsockopt_so_reuseaddr() -> TestResult {
     let fd = check_ok!(syscall::socket(AF_UNIX, SOCK_STREAM, 0), "socket");
     let one = 1i32.to_ne_bytes();
@@ -72,7 +72,7 @@ fn setsockopt_so_reuseaddr() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getsockname on a unix socketpair writes a nonzero address length")]
 fn getsockname_socketpair() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "socketpair");
     let mut addr = [0u8; 128];
@@ -84,7 +84,7 @@ fn getsockname_socketpair() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getpeername on a unix socketpair writes a nonzero address length")]
 fn getpeername_socketpair() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "socketpair");
     let mut addr = [0u8; 128];
@@ -96,7 +96,7 @@ fn getpeername_socketpair() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "unix dgram socketpair send and recv work in both directions")]
 fn dgram_socketpair_bidirectional() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_DGRAM, 0), "socketpair");
     check_ok!(syscall::send(a, b"a->b", 0), "send ab");
@@ -111,7 +111,7 @@ fn dgram_socketpair_bidirectional() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getsockopt SO_TYPE on a unix dgram socket reports SOCK_DGRAM")]
 fn socket_dgram_so_type() -> TestResult {
     let fd = check_ok!(syscall::socket(AF_UNIX, SOCK_DGRAM, 0), "socket");
     let mut val = [0u8; 4];
@@ -122,7 +122,7 @@ fn socket_dgram_so_type() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "send and recv of 1024 bytes on a unix stream socketpair transfer the payload")]
 fn stream_socketpair_large_send() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "socketpair");
     let msg = [0x5Cu8; 1024];
@@ -135,7 +135,7 @@ fn stream_socketpair_large_send() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getsockopt SO_RCVBUF on a unix stream socketpair reports a positive buffer size")]
 fn getsockopt_so_rcvbuf_default() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "socketpair");
     let mut val = [0u8; 4];

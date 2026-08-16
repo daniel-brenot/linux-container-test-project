@@ -8,7 +8,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_empty, read_file, write_file};
 use crate::syscall::{self, fcntl_cmd, oflag, Errno, FD_CLOEXEC, IoVec};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "open/read/write/close of a regular file succeed")]
 fn open_read_write_close() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -22,7 +22,7 @@ fn open_read_write_close() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "write on O_RDONLY and read on O_WRONLY return EBADF")]
 fn open_rdonly_wronly() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -36,7 +36,7 @@ fn open_rdonly_wronly() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "write of an empty buffer and read at EOF both return 0")]
 fn read_write_zero_len() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -47,13 +47,13 @@ fn read_write_zero_len() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "close of fd -1 returns EBADF")]
 fn close_ebadf() -> TestResult {
     check_err!(syscall::close(-1), Errno::EBADF, "close(-1)");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "closing a file descriptor twice returns EBADF")]
 fn close_twice_ebadf() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -62,7 +62,7 @@ fn close_twice_ebadf() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "lseek with SEEK_SET, SEEK_CUR, and SEEK_END returns the expected offsets")]
 fn lseek_set_cur_end() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -74,7 +74,7 @@ fn lseek_set_cur_end() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "lseek with a negative offset from SEEK_END lands at the expected position")]
 fn lseek_negative_from_end() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -85,7 +85,7 @@ fn lseek_negative_from_end() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pwrite and pread at explicit offsets assemble the expected file contents")]
 fn pread_pwrite_offset() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -98,7 +98,7 @@ fn pread_pwrite_offset() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pread past EOF returns 0")]
 fn pread_beyond_eof() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -110,7 +110,7 @@ fn pread_beyond_eof() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pwrite does not change the file offset")]
 fn pwrite_no_offset_change() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -121,7 +121,7 @@ fn pwrite_no_offset_change() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "writev and readv scatter-gather the expected bytes")]
 fn readv_writev() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -148,7 +148,7 @@ fn readv_writev() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "dup returns a new fd and dup3 with O_CLOEXEC sets FD_CLOEXEC")]
 fn dup_dup3_cloexec() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -164,7 +164,7 @@ fn dup_dup3_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "dup2 to a new fd copies the file and dup2 onto itself is a no-op")]
 fn dup2_same_and_new() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -184,7 +184,7 @@ fn dup2_same_and_new() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "dup2 onto an open target replaces that descriptor with the source file")]
 fn dup2_overwrites_target() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = check_ok!(tmp.create_file(b"a", 0o644), "a");
@@ -202,7 +202,7 @@ fn dup2_overwrites_target() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "F_GETFL reports O_RDWR and F_SETFL can add O_APPEND")]
 fn fcntl_getfl_setfl() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -218,7 +218,7 @@ fn fcntl_getfl_setfl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "F_SETFD and F_GETFD round-trip FD_CLOEXEC")]
 fn fcntl_getfd_cloexec() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -229,7 +229,7 @@ fn fcntl_getfd_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fsync on a regular file after write succeeds")]
 fn fsync_regular_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -239,7 +239,7 @@ fn fsync_regular_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fdatasync on a regular file after write succeeds")]
 fn fdatasync_regular_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -249,7 +249,7 @@ fn fdatasync_regular_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "ftruncate grows and then shrinks a regular file to the requested sizes")]
 fn ftruncate_grow_shrink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -265,7 +265,7 @@ fn ftruncate_grow_shrink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "truncate by path shrinks a file to 5 bytes and then to 0")]
 fn truncate_path() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -279,7 +279,7 @@ fn truncate_path() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "getdents64 on a directory with a created file returns a nonempty listing")]
 fn getdents64_lists_entries() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = check_ok!(tmp.create_file(b"entry", 0o644), "create");
@@ -291,7 +291,7 @@ fn getdents64_lists_entries() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "rename moves a file so the old path is gone and the new path exists")]
 fn rename_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let src = create_empty(&mut tmp, b"src")?;
@@ -302,7 +302,7 @@ fn rename_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "link raises nlink to 2 and unlink of the new name restores nlink to 1")]
 fn link_nlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -316,7 +316,7 @@ fn link_nlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "link of a missing source path returns ENOENT")]
 fn link_missing_enoent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dst = copy_child(&mut tmp, b"dst")?;
@@ -328,7 +328,7 @@ fn link_missing_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "symlink and readlink round-trip the target name")]
 fn symlink_readlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"target")?;
@@ -340,7 +340,7 @@ fn symlink_readlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "access with F_OK, R_OK, and W_OK succeeds on a writable file")]
 fn access_f_ok_r_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -350,7 +350,7 @@ fn access_f_ok_r_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "stat reports a regular file of the written size with nlink 1")]
 fn stat_regular_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -362,7 +362,7 @@ fn stat_regular_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "lstat reports a symlink while stat follows it to a regular file")]
 fn lstat_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"t")?;
@@ -375,7 +375,7 @@ fn lstat_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "openat with a directory fd creates a relative file that can be written")]
 fn openat_relative() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dirfd = check_ok!(syscall::open(tmp.path(), oflag::O_RDONLY | oflag::O_DIRECTORY, 0), "opendir");
@@ -389,7 +389,7 @@ fn openat_relative() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "openat with an invalid dirfd returns EBADF")]
 fn openat_bad_fd() -> TestResult {
     check_err!(
         syscall::openat(0x7fff_fffe_u32 as i32, b"x\0", oflag::O_RDONLY, 0),
@@ -399,7 +399,7 @@ fn openat_bad_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "read into a buffer shorter than the file returns a partial result")]
 fn read_short_buffer() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -413,7 +413,7 @@ fn read_short_buffer() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "F_SETFL O_APPEND makes a subsequent write append rather than overwrite")]
 fn write_append_via_fcntl() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -433,7 +433,7 @@ fn write_append_via_fcntl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "unlink of a missing path returns ENOENT")]
 fn unlink_enoent() -> TestResult {
     check_err!(
         syscall::unlink(b"/tmp/lctp-missing-unlink\0"),
@@ -443,7 +443,7 @@ fn unlink_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "open with O_TRUNC zeros an existing regular file")]
 fn open_creat_trunc() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -455,7 +455,7 @@ fn open_creat_trunc() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pwritev and preadv at an offset round-trip scatter-gather data")]
 fn pwritev_preadv_offset() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -493,7 +493,7 @@ fn pwritev_preadv_offset() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pwritev does not change the file offset")]
 fn pwritev_no_offset_change() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -513,7 +513,7 @@ fn pwritev_no_offset_change() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "preadv past EOF returns 0")]
 fn preadv_beyond_eof() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -529,7 +529,7 @@ fn preadv_beyond_eof() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "pwritev at a nonzero offset leaves a hole that preadv can read")]
 fn pwritev_gap_then_preadv() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -551,7 +551,7 @@ fn pwritev_gap_then_preadv() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "dup3 with oldfd equal to newfd returns EINVAL")]
 fn dup3_same_fd_einval() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -561,7 +561,7 @@ fn dup3_same_fd_einval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "dup3 without O_CLOEXEC leaves FD_CLOEXEC clear")]
 fn dup3_no_cloexec() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -574,7 +574,7 @@ fn dup3_no_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "dup3 onto an open target replaces that descriptor with the source file")]
 fn dup3_overwrite_target() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = check_ok!(tmp.create_file(b"a", 0o644), "a");
@@ -592,7 +592,7 @@ fn dup3_overwrite_target() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "dup3 with oldfd -1 returns EBADF")]
 fn dup3_bad_old_ebadf() -> TestResult {
     check_err!(syscall::dup3(-1, 10, 0), Errno::EBADF, "bad old");
     Ok(())

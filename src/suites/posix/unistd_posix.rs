@@ -8,43 +8,43 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{create_empty, write_file};
 use crate::syscall::{self, oflag, Errno};
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getpid() returns a positive process ID")]
 fn unistd_getpid_positive() -> TestResult {
     check!(syscall::getpid() > 0, "pid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getppid() returns a non-negative parent process ID")]
 fn unistd_getppid_nonneg() -> TestResult {
     check!(syscall::getppid() >= 0, "ppid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two successive getpid() calls return the same value")]
 fn unistd_getpid_stable() -> TestResult {
     check_eq!(syscall::getpid(), syscall::getpid(), "stable");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two successive getppid() calls return the same value")]
 fn unistd_getppid_stable() -> TestResult {
     check_eq!(syscall::getppid(), syscall::getppid(), "stable");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getuid() equals geteuid() for this process")]
 fn unistd_getuid_matches_geteuid() -> TestResult {
     check_eq!(syscall::getuid(), syscall::geteuid(), "uid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getgid() equals getegid() for this process")]
 fn unistd_getgid_matches_getegid() -> TestResult {
     check_eq!(syscall::getgid(), syscall::getegid(), "gid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getresuid() real, effective, and saved UIDs match getuid() and geteuid()")]
 fn unistd_getresuid_matches_getuid() -> TestResult {
     let (r, e, s) = check_ok!(syscall::getresuid(), "getresuid");
     check_eq!(r, syscall::getuid(), "r");
@@ -54,7 +54,7 @@ fn unistd_getresuid_matches_getuid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getresgid() real, effective, and saved GIDs match getgid() and getegid()")]
 fn unistd_getresgid_matches_getgid() -> TestResult {
     let (r, e, s) = check_ok!(syscall::getresgid(), "getresgid");
     check_eq!(r, syscall::getgid(), "r");
@@ -64,7 +64,7 @@ fn unistd_getresgid_matches_getgid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getcwd() returns an absolute NUL-terminated path that starts with /")]
 fn unistd_getcwd_startswith_slash() -> TestResult {
     let mut buf = [0u8; 256];
     let n = check_ok!(syscall::getcwd(&mut buf), "getcwd");
@@ -74,7 +74,7 @@ fn unistd_getcwd_startswith_slash() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two successive getcwd() calls return the same path")]
 fn unistd_getcwd_stable() -> TestResult {
     let mut a = [0u8; 256];
     let mut b = [0u8; 256];
@@ -85,7 +85,7 @@ fn unistd_getcwd_stable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "chdir(/tmp) succeeds and getcwd() reports a path under /tmp")]
 fn unistd_chdir_tmp_and_back() -> TestResult {
     let mut saved = [0u8; 256];
     let n = check_ok!(syscall::getcwd(&mut saved), "save");
@@ -98,7 +98,7 @@ fn unistd_chdir_tmp_and_back() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "chdir() into a newly created directory makes getcwd() report that path")]
 fn unistd_chdir_tempdir() -> TestResult {
     let mut saved = [0u8; 256];
     let n = check_ok!(syscall::getcwd(&mut saved), "save");
@@ -113,7 +113,7 @@ fn unistd_chdir_tempdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "chdir() to a path that does not exist returns ENOENT")]
 fn unistd_chdir_missing_enoent() -> TestResult {
     check_err!(
         syscall::chdir(b"/tmp/lctp-no-chdir-dir\0"),
@@ -123,7 +123,7 @@ fn unistd_chdir_missing_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "chdir() to a regular file returns ENOTDIR")]
 fn unistd_chdir_file_enotdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -131,7 +131,7 @@ fn unistd_chdir_file_enotdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "dup() returns a distinct file descriptor from the original")]
 fn unistd_dup_distinct_fd() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"d", 0o644), "create");
@@ -142,7 +142,7 @@ fn unistd_dup_distinct_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "dup() shares the file offset so read() on the duplicate advances the original")]
 fn unistd_dup_shares_offset() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"off", 0o644), "create");
@@ -159,7 +159,7 @@ fn unistd_dup_shares_offset() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "dup2() to a new descriptor number returns that number")]
 fn unistd_dup2_to_new() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"d2", 0o644), "create");
@@ -171,7 +171,7 @@ fn unistd_dup2_to_new() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "dup2() with the same old and new fd succeeds and returns that fd")]
 fn unistd_dup2_same_fd() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"same", 0o644), "create");
@@ -181,7 +181,7 @@ fn unistd_dup2_same_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "dup3() with O_CLOEXEC sets FD_CLOEXEC on the new file descriptor")]
 fn unistd_dup3_cloexec() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"d3", 0o644), "create");
@@ -195,19 +195,19 @@ fn unistd_dup3_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "dup() on file descriptor -1 returns EBADF")]
 fn unistd_dup_bad_fd_ebadf() -> TestResult {
     check_err!(syscall::dup(-1), Errno::EBADF, "dup");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "dup2() from file descriptor -1 returns EBADF")]
 fn unistd_dup2_bad_old_ebadf() -> TestResult {
     check_err!(syscall::dup2(-1, 20), Errno::EBADF, "dup2");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getppid() in a fork() child returns the parent's process ID")]
 fn unistd_child_getppid_is_parent() -> TestResult {
     let parent = syscall::getpid();
     let pid = check_ok!(syscall::fork(), "fork");
@@ -223,7 +223,7 @@ fn unistd_child_getppid_is_parent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getpid() in a fork() child differs from the parent's process ID")]
 fn unistd_child_getpid_differs() -> TestResult {
     let parent = syscall::getpid();
     let pid = check_ok!(syscall::fork(), "fork");
@@ -240,7 +240,7 @@ fn unistd_child_getpid_differs() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "getcwd() with a 2-byte buffer returns ERANGE or EINVAL")]
 fn unistd_getcwd_small_buf_erange_soft() -> TestResult {
     let mut tiny = [0u8; 2];
     match syscall::getcwd(&mut tiny) {
@@ -250,7 +250,7 @@ fn unistd_getcwd_small_buf_erange_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "chdir(.) leaves getcwd() unchanged")]
 fn unistd_chdir_dot() -> TestResult {
     let mut saved = [0u8; 256];
     let n = check_ok!(syscall::getcwd(&mut saved), "save");
@@ -261,7 +261,7 @@ fn unistd_chdir_dot() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "chdir(..) from a subdirectory makes getcwd() report the parent directory")]
 fn unistd_chdir_dotdot_from_temp() -> TestResult {
     let mut saved = [0u8; 256];
     let n = check_ok!(syscall::getcwd(&mut saved), "save");
@@ -278,7 +278,7 @@ fn unistd_chdir_dotdot_from_temp() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "write() through a dup() descriptor is visible in the underlying file")]
 fn unistd_dup_write_visible() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"vis")?;
@@ -293,31 +293,31 @@ fn unistd_dup_write_visible() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two successive getuid() calls return the same value")]
 fn unistd_getuid_stable() -> TestResult {
     check_eq!(syscall::getuid(), syscall::getuid(), "uid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two successive getgid() calls return the same value")]
 fn unistd_getgid_stable() -> TestResult {
     check_eq!(syscall::getgid(), syscall::getgid(), "gid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two successive geteuid() calls return the same value")]
 fn unistd_geteuid_stable() -> TestResult {
     check_eq!(syscall::geteuid(), syscall::geteuid(), "euid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two successive getegid() calls return the same value")]
 fn unistd_getegid_stable() -> TestResult {
     check_eq!(syscall::getegid(), syscall::getegid(), "egid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "read() through a dup() descriptor still works after close() of the original")]
 fn unistd_dup_close_original_still_works() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"keep", 0o644), "create");
@@ -332,7 +332,7 @@ fn unistd_dup_close_original_still_works() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "STDIN_FILENO, STDOUT_FILENO, and STDERR_FILENO are 0, 1, and 2")]
 fn unistd_stdin_stdout_stderr_fds() -> TestResult {
     check_eq!(syscall::STDIN_FILENO, 0, "stdin");
     check_eq!(syscall::STDOUT_FILENO, 1, "stdout");
@@ -340,7 +340,7 @@ fn unistd_stdin_stdout_stderr_fds() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "open() of a relative filename succeeds after chdir() to that directory")]
 fn unistd_chdir_relative_via_cwd() -> TestResult {
     let mut saved = [0u8; 256];
     let n = check_ok!(syscall::getcwd(&mut saved), "save");
@@ -353,13 +353,13 @@ fn unistd_chdir_relative_via_cwd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "dup3() with the same old and new fd returns EINVAL")]
 fn unistd_dup3_same_einval() -> TestResult {
     check_err!(syscall::dup3(1, 1, 0), Errno::EINVAL, "same");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getpid() returns a positive id and getppid() returns a non-negative id")]
 fn unistd_getpid_ne_getppid_soft() -> TestResult {
     // Soft: pid1 container may have ppid==0 or equal edge cases; just call both.
     let pid = syscall::getpid();
@@ -370,7 +370,7 @@ fn unistd_getpid_ne_getppid_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "write() through a dup2() descriptor is visible in the underlying file")]
 fn unistd_write_file_via_dup2() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"d2w")?;
@@ -387,7 +387,7 @@ fn unistd_write_file_via_dup2() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getcwd() writes a NUL terminator into the output buffer")]
 fn unistd_getcwd_nul_terminated() -> TestResult {
     let mut buf = [0u8; 128];
     let n = check_ok!(syscall::getcwd(&mut buf), "getcwd");
@@ -395,7 +395,7 @@ fn unistd_getcwd_nul_terminated() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "getuid() in a fork() child equals the parent's user ID")]
 fn unistd_fork_child_uid_same() -> TestResult {
     let uid = syscall::getuid();
     let pid = check_ok!(syscall::fork(), "fork");

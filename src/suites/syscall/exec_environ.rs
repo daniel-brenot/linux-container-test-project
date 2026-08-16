@@ -73,7 +73,7 @@ fn buf_has(hay: &[u8], needle: &[u8]) -> bool {
     false
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "execve of /bin/sh with LCTP_MARK set prints that value on stdout")]
 fn exec_environ_var_roundtrip() -> TestResult {
     check_ok!(syscall::access(b"/bin/sh\0", F_OK), "sh");
     let (out_r, out_w) = check_ok!(syscall::pipe2(0), "pipe");
@@ -150,7 +150,7 @@ fn exec_environ_var_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "execve of /bin/sh with a large environ prints the middle LCTP_E42 value")]
 fn exec_environ_many_entries() -> TestResult {
     // Large environ exercises guest reinstall / allocation of the env block.
     check_ok!(syscall::access(b"/bin/sh\0", F_OK), "sh");
@@ -234,7 +234,7 @@ fn exec_environ_many_entries() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "after a failed execve, a later /bin/sh spawn still receives a usable environ")]
 fn exec_fail_then_environ_ok() -> TestResult {
     // A failed spawn must not leave subsequent execve environ unusable.
     check_ok!(syscall::access(b"/bin/sh\0", F_OK), "sh");
@@ -282,7 +282,7 @@ fn exec_fail_then_environ_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a shell inheriting CHANNEL_FD=3 echoes a line back on that socket")]
 fn exec_channel_fd_socketpair_shell() -> TestResult {
     // Publish an inherited IPC fd via environ (`CHANNEL_FD=3`) and speak on it.
     check_ok!(syscall::access(b"/bin/sh\0", F_OK), "sh");
@@ -329,7 +329,7 @@ fn exec_channel_fd_socketpair_shell() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a nested exec of this image with CHANNEL_FD=3 echoes the payload on the socket")]
 fn exec_nested_same_image_channel_fd() -> TestResult {
     // Nested exec of *this* ET_EXEC with an IPC socket on fd 3 — same shape as
     // a helper process sharing the parent's load address with a channel fd.
@@ -399,7 +399,7 @@ fn exec_nested_same_image_channel_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "after a nested channel helper exits, the parent still execs /bin/sh with a fresh environ")]
 fn exec_nested_channel_then_parent_environ_spawn() -> TestResult {
     // After a nested same-image IPC helper returns, parent must still be able
     // to spawn a child with a fresh environ (getenv / env block still valid).
@@ -472,7 +472,7 @@ fn exec_nested_channel_then_parent_environ_spawn() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "execve of true with an empty environ exits 0, or true is absent")]
 fn exec_empty_environ_ok() -> TestResult {
     let true_path: &[u8] = if syscall::access(b"/bin/true\0", F_OK).is_ok() {
         b"/bin/true\0"
@@ -494,7 +494,7 @@ fn exec_empty_environ_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "eight sequential /bin/sh spawns each print their distinct LCTP_SEQ value")]
 fn exec_repeated_spawns_environ_stable() -> TestResult {
     check_ok!(syscall::access(b"/bin/sh\0", F_OK), "sh");
     for i in 0u32..8 {

@@ -10,7 +10,7 @@ use crate::syscall::{self, oflag, Errno, S_IFIFO};
 
 macro_rules! mkfifo_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("mknodat creates a FIFO with mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "tempdir");
             let path = copy_child(&mut tmp, b"fifo")?;
@@ -28,7 +28,7 @@ macro_rules! mkfifo_mode {
     };
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "mknodat with S_IFIFO creates a FIFO")]
 fn mkfifo_create() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -42,7 +42,7 @@ fn mkfifo_create() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "lstat of a newly created FIFO reports a FIFO type")]
 fn mkfifo_is_fifo() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -56,7 +56,7 @@ fn mkfifo_is_fifo() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = failure, case = "open of a FIFO O_WRONLY|O_NONBLOCK with no reader returns ENXIO")]
 fn mkfifo_open_nonblock_enxio() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -78,7 +78,7 @@ fn mkfifo_open_nonblock_enxio() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a FIFO sets mode 0620")]
 fn mkfifo_mode_bits() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -109,7 +109,7 @@ mkfifo_mode!(mkfifo_mode_100, 0o100);
 mkfifo_mode!(mkfifo_mode_001, 0o001);
 mkfifo_mode!(mkfifo_mode_010, 0o010);
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mknodat of an existing FIFO returns EEXIST")]
 fn mkfifo_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -126,7 +126,7 @@ fn mkfifo_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mknodat FIFO onto an existing regular file returns EEXIST")]
 fn mkfifo_eexist_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -138,7 +138,7 @@ fn mkfifo_eexist_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mknodat FIFO onto an existing directory returns EEXIST")]
 fn mkfifo_eexist_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -151,7 +151,7 @@ fn mkfifo_eexist_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "mknodat creates a FIFO inside a subdirectory")]
 fn mkfifo_in_subdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -167,7 +167,7 @@ fn mkfifo_in_subdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mknodat FIFO with a missing parent returns ENOENT")]
 fn mkfifo_parent_missing() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let mut path = [0u8; 160];
@@ -189,7 +189,7 @@ fn mkfifo_parent_missing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mknodat FIFO in a directory without write permission returns EACCES")]
 fn mkfifo_parent_no_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -206,7 +206,7 @@ fn mkfifo_parent_no_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "write and read through a FIFO opened O_RDWR|O_NONBLOCK succeed")]
 fn mkfifo_rdwr_write_read() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -227,7 +227,7 @@ fn mkfifo_rdwr_write_read() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a FIFO reports it is not a regular file, directory, or symlink")]
 fn mkfifo_not_reg_not_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -243,7 +243,7 @@ fn mkfifo_not_reg_not_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mknodat FIFO through a non-directory path component returns ENOTDIR")]
 fn mkfifo_enotdir_component() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;

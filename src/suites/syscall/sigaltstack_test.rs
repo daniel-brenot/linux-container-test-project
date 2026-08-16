@@ -8,7 +8,7 @@ use crate::syscall::{self, map, prot, Stack, SS_DISABLE};
 
 const ALT_SIZE: usize = 16 * 1024;
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sigaltstack query reports SS_DISABLE or a configured stack of at least 2048 bytes")]
 fn sigaltstack_query_default() -> TestResult {
     let mut old = Stack::default();
     check_ok!(syscall::sigaltstack(None, Some(&mut old)), "query");
@@ -22,7 +22,7 @@ fn sigaltstack_query_default() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sigaltstack can install an alternate stack, read it back, then disable it")]
 fn sigaltstack_set_and_query() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -61,7 +61,7 @@ fn sigaltstack_set_and_query() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "replacing a sigaltstack returns the previous stack pointer and size")]
 fn sigaltstack_replace_returns_old() -> TestResult {
     let a1 = check_ok!(
         syscall::mmap(

@@ -5,7 +5,7 @@ use crate::check_ok;
 use crate::harness::{TempDir, TestResult};
 use crate::syscall::{self, oflag, Errno, Winsize, TIOCGWINSZ};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "TIOCGWINSZ on a pipe returns ENOTTY")]
 fn ioctl_tiocgwinsz_on_pipe_enotty() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     let mut ws = Winsize::default();
@@ -19,7 +19,7 @@ fn ioctl_tiocgwinsz_on_pipe_enotty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "TIOCGWINSZ on a regular file returns ENOTTY")]
 fn ioctl_tiocgwinsz_on_file_enotty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -33,7 +33,7 @@ fn ioctl_tiocgwinsz_on_file_enotty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "TIOCGWINSZ on a unix socket returns ENOTTY")]
 fn ioctl_tiocgwinsz_on_socket_enotty() -> TestResult {
     let (a, b) = check_ok!(
         syscall::socketpair(syscall::AF_UNIX, syscall::SOCK_STREAM, 0),
@@ -50,7 +50,7 @@ fn ioctl_tiocgwinsz_on_socket_enotty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "TIOCGWINSZ on fd -1 returns EBADF")]
 fn ioctl_ebadf() -> TestResult {
     let mut ws = Winsize::default();
     check_err!(
@@ -61,7 +61,7 @@ fn ioctl_ebadf() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "TIOCGWINSZ on a read-only regular file returns ENOTTY")]
 fn ioctl_tiocgwinsz_rdonly_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = crate::suites::common::create_empty(&mut tmp, b"ro")?;

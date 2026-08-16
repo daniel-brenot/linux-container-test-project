@@ -5,7 +5,7 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, Errno, UFFD_CLOEXEC};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "userfaultfd with UFFD_CLOEXEC returns a fd, or is rejected as unsupported or unprivileged")]
 fn userfaultfd_probe_soft() -> TestResult {
     match syscall::userfaultfd(UFFD_CLOEXEC) {
         Ok(fd) => {
@@ -20,7 +20,7 @@ fn userfaultfd_probe_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "userfaultfd with UFFD_CLOEXEC|UFFD_NONBLOCK returns a fd, or is rejected as unsupported or unprivileged")]
 fn userfaultfd_nonblock_soft() -> TestResult {
     match syscall::userfaultfd(UFFD_CLOEXEC | crate::syscall::UFFD_NONBLOCK) {
         Ok(fd) => {

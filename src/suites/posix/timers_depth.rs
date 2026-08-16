@@ -18,7 +18,7 @@ fn mono_le(a: &Timespec, b: &Timespec) -> bool {
 
 macro_rules! clock_get {
     ($name:ident, $clk:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = "clock_gettime returns a timespec with non-negative seconds and valid nsec")]
         fn $name() -> TestResult {
             let t = check_ok!(syscall::clock_gettime($clk), "get");
             check!(valid_nsec(&t), "nsec");
@@ -38,7 +38,7 @@ clock_get!(tmr_d_tcpu, clock::CLOCK_THREAD_CPUTIME_ID);
 
 macro_rules! clock_res {
     ($name:ident, $clk:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = "clock_getres returns a positive resolution")]
         fn $name() -> TestResult {
             let r = check_ok!(syscall::clock_getres($clk), "res");
             check!(r.tv_nsec > 0 || r.tv_sec > 0, "pos");
@@ -55,7 +55,7 @@ clock_res!(tmr_d_res_boot, clock::CLOCK_BOOTTIME);
 
 macro_rules! nanosleep_ns {
     ($name:ident, $ns:expr) => {
-        #[crate::lctp_test(suite = posix, full)]
+        #[crate::lctp_test(suite = posix, full, expect = success, case = "nanosleep of a short relative timespec succeeds")]
         fn $name() -> TestResult {
             let req = Timespec {
                 tv_sec: 0,
@@ -73,7 +73,7 @@ nanosleep_ns!(tmr_d_ns_1ms, 1_000_000);
 nanosleep_ns!(tmr_d_ns_2ms, 2_000_000);
 nanosleep_ns!(tmr_d_ns_5ms, 5_000_000);
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "nanosleep of a zero timespec succeeds")]
 fn tmr_d_nanosleep_zero() -> TestResult {
     check_ok!(
         syscall::nanosleep(&Timespec {
@@ -85,7 +85,7 @@ fn tmr_d_nanosleep_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "clock_nanosleep absolute on CLOCK_MONOTONIC a short time ahead succeeds or returns EINVAL")]
 fn tmr_d_clock_nanosleep_abs_mono() -> TestResult {
     let now = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "now");
     let abs = Timespec {
@@ -101,7 +101,7 @@ fn tmr_d_clock_nanosleep_abs_mono() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "clock_nanosleep relative on CLOCK_REALTIME for 1 ms succeeds")]
 fn tmr_d_clock_nanosleep_rel_rt() -> TestResult {
     let req = Timespec {
         tv_sec: 0,
@@ -114,7 +114,7 @@ fn tmr_d_clock_nanosleep_rel_rt() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "timer_create on CLOCK_MONOTONIC with SIGEV_NONE can be deleted or rejected as unsupported")]
 fn tmr_d_timer_create_delete() -> TestResult {
     let sev = Sigevent {
         sigev_notify: SIGEV_NONE,
@@ -131,7 +131,7 @@ fn tmr_d_timer_create_delete() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "timer_settime can arm a monotonic timer and timer_gettime reports it remaining, or create is unsupported")]
 fn tmr_d_timer_set_get() -> TestResult {
     let sev = Sigevent {
         sigev_notify: SIGEV_NONE,
@@ -164,7 +164,7 @@ fn tmr_d_timer_set_get() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "timer_settime with TIMER_ABSTIME can arm a CLOCK_REALTIME timer or be rejected as unsupported")]
 fn tmr_d_timer_abstime_soft() -> TestResult {
     let sev = Sigevent {
         sigev_notify: SIGEV_NONE,
@@ -197,7 +197,7 @@ fn tmr_d_timer_abstime_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "timerfd_create on CLOCK_MONOTONIC returns a closable file descriptor")]
 fn tmr_d_timerfd_create() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "tfd");
     check!(fd >= 0, "fd");
@@ -205,7 +205,7 @@ fn tmr_d_timerfd_create() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "timerfd_create on CLOCK_MONOTONIC with TFD_CLOEXEC returns a closable file descriptor")]
 fn tmr_d_timerfd_cloexec() -> TestResult {
     let fd = check_ok!(
         syscall::timerfd_create(clock::CLOCK_MONOTONIC, TFD_CLOEXEC),
@@ -215,7 +215,7 @@ fn tmr_d_timerfd_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "timerfd_create on CLOCK_MONOTONIC with TFD_NONBLOCK returns a closable file descriptor")]
 fn tmr_d_timerfd_nonblock() -> TestResult {
     let fd = check_ok!(
         syscall::timerfd_create(clock::CLOCK_MONOTONIC, TFD_NONBLOCK),
@@ -225,7 +225,7 @@ fn tmr_d_timerfd_nonblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "timerfd_settime can arm a monotonic timerfd and timerfd_gettime reports it remaining")]
 fn tmr_d_timerfd_set_get() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "tfd");
     let new = Itimerspec {
@@ -247,7 +247,7 @@ fn tmr_d_timerfd_set_get() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "timerfd_settime with TFD_TIMER_ABSTIME can arm a CLOCK_MONOTONIC timerfd")]
 fn tmr_d_timerfd_abstime() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "tfd");
     let now = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "now");
@@ -273,14 +273,14 @@ fn tmr_d_timerfd_abstime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getitimer on ITIMER_REAL succeeds")]
 fn tmr_d_itimer_get() -> TestResult {
     let mut cur = syscall::Itimerval::default();
     check_ok!(syscall::getitimer(ITIMER_REAL, &mut cur), "get");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "setitimer can arm ITIMER_REAL and then clear it")]
 fn tmr_d_itimer_set_clear() -> TestResult {
     let new = syscall::Itimerval {
         it_interval: syscall::Timeval {
@@ -298,7 +298,7 @@ fn tmr_d_itimer_set_clear() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two CLOCK_MONOTONIC samples are non-decreasing")]
 fn tmr_d_mono_nondec() -> TestResult {
     let a = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "a");
     let b = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "b");
@@ -306,7 +306,7 @@ fn tmr_d_mono_nondec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two CLOCK_BOOTTIME samples are non-decreasing")]
 fn tmr_d_boot_nondec() -> TestResult {
     let a = check_ok!(syscall::clock_gettime(clock::CLOCK_BOOTTIME), "a");
     let b = check_ok!(syscall::clock_gettime(clock::CLOCK_BOOTTIME), "b");
@@ -314,19 +314,19 @@ fn tmr_d_boot_nondec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "clock_gettime on an invalid clock id returns EINVAL")]
 fn tmr_d_bad_clock_einval() -> TestResult {
     check_err!(syscall::clock_gettime(99999), Errno::EINVAL, "bad");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "clock_getres on an invalid clock id returns EINVAL")]
 fn tmr_d_bad_res_einval() -> TestResult {
     check_err!(syscall::clock_getres(99999), Errno::EINVAL, "bad");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "nanosleep with tv_nsec equal to 1e9 returns EINVAL")]
 fn tmr_d_nanosleep_bad_nsec() -> TestResult {
     check_err!(
         syscall::nanosleep(&Timespec {
@@ -339,14 +339,14 @@ fn tmr_d_nanosleep_bad_nsec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "timerfd_create on CLOCK_REALTIME returns a closable file descriptor")]
 fn tmr_d_timerfd_realtime() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_REALTIME, 0), "tfd");
     check_ok!(syscall::close(fd), "c");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "timer_create on CLOCK_REALTIME with SIGEV_NONE succeeds or is rejected as unsupported")]
 fn tmr_d_timer_create_rt() -> TestResult {
     let sev = Sigevent {
         sigev_notify: SIGEV_NONE,
@@ -362,14 +362,14 @@ fn tmr_d_timer_create_rt() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "gettimeofday returns a time after 2020")]
 fn tmr_d_gettimeofday() -> TestResult {
     let tv = check_ok!(syscall::gettimeofday(), "gtod");
     check!(tv.tv_sec > 1_600_000_000, "sec");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "a CLOCK_MONOTONIC sample after a 2 ms nanosleep is greater than or equal to the earlier sample")]
 fn tmr_d_mono_after_ns() -> TestResult {
     let a = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "a");
     check_ok!(
@@ -384,7 +384,7 @@ fn tmr_d_mono_after_ns() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two clock_getres samples on CLOCK_MONOTONIC are identical")]
 fn tmr_d_res_stable() -> TestResult {
     let a = check_ok!(syscall::clock_getres(clock::CLOCK_MONOTONIC), "a");
     let b = check_ok!(syscall::clock_getres(clock::CLOCK_MONOTONIC), "b");
@@ -393,7 +393,7 @@ fn tmr_d_res_stable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "timerfd_settime can arm a repeating CLOCK_MONOTONIC interval and gettime reports the interval")]
 fn tmr_d_timerfd_interval_soft() -> TestResult {
     let fd = check_ok!(
         syscall::timerfd_create(clock::CLOCK_MONOTONIC, TFD_NONBLOCK),
@@ -420,7 +420,7 @@ fn tmr_d_timerfd_interval_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "setitimer can clear ITIMER_REAL twice")]
 fn tmr_d_itimer_clear_idempotent() -> TestResult {
     let zero = syscall::Itimerval::default();
     check_ok!(syscall::setitimer(ITIMER_REAL, &zero, None), "c1");
@@ -428,7 +428,7 @@ fn tmr_d_itimer_clear_idempotent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "clock_nanosleep relative on CLOCK_BOOTTIME succeeds or returns EINVAL")]
 fn tmr_d_clock_nanosleep_boot() -> TestResult {
     let req = Timespec {
         tv_sec: 0,
@@ -442,7 +442,7 @@ fn tmr_d_clock_nanosleep_boot() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "three CLOCK_MONOTONIC samples are non-decreasing in order")]
 fn tmr_d_triple_samples() -> TestResult {
     let a = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "a");
     let b = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "b");
@@ -451,7 +451,7 @@ fn tmr_d_triple_samples() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "timer_delete of timer id 0 is rejected with EINVAL or ENOSYS or otherwise ignored")]
 fn tmr_d_timer_delete_bad_soft() -> TestResult {
     match syscall::timer_delete(0) {
         Err(Errno::EINVAL) | Err(Errno::ENOSYS) => Ok(()),
@@ -460,7 +460,7 @@ fn tmr_d_timer_delete_bad_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "timerfd_create with an invalid clock id returns EINVAL or another rejection")]
 fn tmr_d_timerfd_bad_clock_soft() -> TestResult {
     match syscall::timerfd_create(99999, 0) {
         Err(Errno::EINVAL) => Ok(()),
@@ -472,7 +472,7 @@ fn tmr_d_timerfd_bad_clock_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "setitimer replacing an armed ITIMER_REAL returns the previous remaining value")]
 fn tmr_d_setitimer_returns_old() -> TestResult {
     let first = syscall::Itimerval {
         it_interval: syscall::Timeval {
@@ -492,7 +492,7 @@ fn tmr_d_setitimer_returns_old() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two CLOCK_PROCESS_CPUTIME_ID samples are non-decreasing")]
 fn tmr_d_cputime_nondec() -> TestResult {
     let a = check_ok!(
         syscall::clock_gettime(clock::CLOCK_PROCESS_CPUTIME_ID),
@@ -506,7 +506,7 @@ fn tmr_d_cputime_nondec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "five successive 200 us nanosleeps succeed")]
 fn tmr_d_many_nanosleeps() -> TestResult {
     for _ in 0..5 {
         check_ok!(
@@ -520,7 +520,7 @@ fn tmr_d_many_nanosleeps() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two timerfd_create calls on CLOCK_MONOTONIC return distinct file descriptors")]
 fn tmr_d_timerfd_create_twice() -> TestResult {
     let a = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "a");
     let b = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "b");
@@ -530,7 +530,7 @@ fn tmr_d_timerfd_create_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "clock_nanosleep absolute on CLOCK_REALTIME for a past time returns immediately or EINVAL")]
 fn tmr_d_abs_past_returns() -> TestResult {
     let past = Timespec {
         tv_sec: 1,
@@ -544,7 +544,7 @@ fn tmr_d_abs_past_returns() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two CLOCK_MONOTONIC_RAW samples are non-decreasing")]
 fn tmr_d_raw_nondec() -> TestResult {
     let a = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC_RAW), "a");
     let b = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC_RAW), "b");
@@ -552,7 +552,7 @@ fn tmr_d_raw_nondec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "timer_create on CLOCK_MONOTONIC with a null sigevent succeeds or is rejected as unsupported")]
 fn tmr_d_timer_create_null_sev_soft() -> TestResult {
     let mut tid = 0usize;
     match syscall::timer_create(clock::CLOCK_MONOTONIC, None, &mut tid) {
@@ -564,7 +564,7 @@ fn tmr_d_timer_create_null_sev_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getitimer on ITIMER_REAL succeeds twice")]
 fn tmr_d_itimer_get_twice() -> TestResult {
     let mut a = syscall::Itimerval::default();
     let mut b = syscall::Itimerval::default();
@@ -573,7 +573,7 @@ fn tmr_d_itimer_get_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = failure, case = "clock_nanosleep with tv_nsec of 2e9 returns EINVAL")]
 fn tmr_d_clock_nanosleep_bad_nsec() -> TestResult {
     check_err!(
         syscall::clock_nanosleep(
@@ -590,14 +590,14 @@ fn tmr_d_clock_nanosleep_bad_nsec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_gettime on CLOCK_REALTIME returns nsec in range 0 to 1e9")]
 fn tmr_d_realtime_nsec_range() -> TestResult {
     let t = check_ok!(syscall::clock_gettime(clock::CLOCK_REALTIME), "rt");
     check!(valid_nsec(&t), "nsec");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "timerfd_gettime on a newly created CLOCK_MONOTONIC timerfd reports a zero it_value")]
 fn tmr_d_timerfd_get_disarmed() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "tfd");
     let cur = check_ok!(syscall::timerfd_gettime(fd), "get");
@@ -607,7 +607,7 @@ fn tmr_d_timerfd_get_disarmed() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "nanosleep with a negative tv_sec returns EINVAL")]
 fn tmr_d_nanosleep_neg_sec() -> TestResult {
     check_err!(
         syscall::nanosleep(&Timespec {
@@ -620,7 +620,7 @@ fn tmr_d_nanosleep_neg_sec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "four timerfd_create calls on CLOCK_MONOTONIC each return a closable file descriptor")]
 fn tmr_d_many_timerfd() -> TestResult {
     let mut fds = [-1i32; 4];
     for f in fds.iter_mut() {
@@ -632,14 +632,14 @@ fn tmr_d_many_timerfd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_getres on CLOCK_BOOTTIME returns a positive resolution")]
 fn tmr_d_boot_res() -> TestResult {
     let r = check_ok!(syscall::clock_getres(clock::CLOCK_BOOTTIME), "res");
     check!(r.tv_nsec > 0 || r.tv_sec > 0, "pos");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "setitimer can arm ITIMER_REAL for 500 ms, getitimer reads it, and it can be cleared")]
 fn tmr_d_itimer_arm_short() -> TestResult {
     let new = syscall::Itimerval {
         it_interval: syscall::Timeval {

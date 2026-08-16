@@ -7,7 +7,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::copy_child;
 use crate::syscall::{self, madvise, map, oflag, prot};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "anonymous mmap is readable and writable then munmap succeeds")]
 fn mmap_anonymous_rw() -> TestResult {
     let len = 4096usize;
     let addr = check_ok!(
@@ -26,7 +26,7 @@ fn mmap_anonymous_rw() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a shared file mmap write is visible after munmap")]
 fn mmap_file_shared() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"mmapf", 0o644), "create");
@@ -49,7 +49,7 @@ fn mmap_file_shared() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "munmap can unmap each half of a two-page mapping")]
 fn munmap_partial() -> TestResult {
     let len = 8192usize;
     let addr = check_ok!(
@@ -61,7 +61,7 @@ fn munmap_partial() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mprotect can switch a mapping from write to read-only and back")]
 fn mprotect_none_roundtrip() -> TestResult {
     let len = 4096usize;
     let addr = check_ok!(
@@ -74,7 +74,7 @@ fn mprotect_none_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "mprotect can change protection independently on adjacent pages")]
 fn mprotect_split_pages() -> TestResult {
     let len = 8192usize;
     let addr = check_ok!(
@@ -87,7 +87,7 @@ fn mprotect_split_pages() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "madvise MADV_DONTNEED succeeds on an anonymous mapping")]
 fn madvise_dontneed() -> TestResult {
     let len = 4096usize;
     let addr = check_ok!(
@@ -99,14 +99,14 @@ fn madvise_dontneed() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "brk(0) returns a nonzero program break")]
 fn brk_query() -> TestResult {
     let cur = check_ok!(syscall::brk(0), "brk(0)");
     check!(cur != 0, "brk returned null");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "fallocate grows a file to 4096 bytes")]
 fn fallocate_punch_hole() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"falloc", 0o644), "create");
@@ -118,7 +118,7 @@ fn fallocate_punch_hole() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "anonymous mmap without MAP_FIXED succeeds at an arbitrary address")]
 fn mmap_fixed_not_used() -> TestResult {
     // Anonymous mmap without MAP_FIXED should succeed at arbitrary address.
     let addr = check_ok!(
@@ -129,7 +129,7 @@ fn mmap_fixed_not_used() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "MAP_POPULATE anonymous mmap is writable")]
 fn mmap_populate_anon() -> TestResult {
     let len = 4096usize;
     let addr = check_ok!(
@@ -151,7 +151,7 @@ fn mmap_populate_anon() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "mlock/munlock succeed or are rejected with EPERM/ENOMEM/EAGAIN/EINVAL/ENOSYS")]
 fn mlock_munlock_soft() -> TestResult {
     let len = 4096usize;
     let addr = check_ok!(

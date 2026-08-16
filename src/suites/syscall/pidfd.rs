@@ -6,7 +6,7 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, SIGKILL, SIGTERM};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pidfd_open of the calling process returns a valid fd")]
 fn pidfd_open_self() -> TestResult {
     let pid = syscall::getpid();
     let fd = check_ok!(syscall::pidfd_open(pid, 0), "pidfd_open");
@@ -15,7 +15,7 @@ fn pidfd_open_self() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pidfd_send_signal SIGKILL terminates a child so wait reports SIGKILL")]
 fn pidfd_send_signal_sigkill_child() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -39,7 +39,7 @@ fn pidfd_send_signal_sigkill_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "pidfd_send_signal SIGTERM terminates a child so wait reports SIGTERM")]
 fn pidfd_send_signal_sigterm_child() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -63,7 +63,7 @@ fn pidfd_send_signal_sigterm_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pidfd_open of a child then pidfd_send_signal SIGKILL reaps a signaled child")]
 fn pidfd_open_child_then_kill() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -89,7 +89,7 @@ fn pidfd_open_child_then_kill() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pidfd_send_signal with signal 0 against self succeeds without delivering a signal")]
 fn pidfd_send_signal_zero_probe() -> TestResult {
     let pid = syscall::getpid();
     let pfd = check_ok!(syscall::pidfd_open(pid, 0), "pidfd_open");
@@ -99,7 +99,7 @@ fn pidfd_send_signal_zero_probe() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "pidfd_getfd duplicates a child's socket fd, or is rejected as unsupported or unprivileged")]
 fn pidfd_getfd_from_child_soft() -> TestResult {
     use crate::syscall::{Errno, AF_UNIX, SOCK_STREAM};
 
@@ -141,7 +141,7 @@ fn pidfd_getfd_from_child_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "waitid with P_PIDFD reaps a child, or falls back when P_PIDFD is unsupported")]
 fn pidfd_waitid_p_pidfd() -> TestResult {
     use crate::syscall::{wait, Errno, P_PIDFD, Siginfo};
 

@@ -8,7 +8,7 @@ use crate::syscall::{self, map, madvise, MS_ASYNC, MS_SYNC, MREMAP_MAYMOVE, prot
 
 const PAGE: usize = 4096;
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mremap with MREMAP_MAYMOVE grows a mapping and preserves the first byte")]
 fn mremap_grow_maymove() -> TestResult {
     let old_len = PAGE;
     let new_len = PAGE * 2;
@@ -33,7 +33,7 @@ fn mremap_grow_maymove() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mremap to the same size keeps the original address")]
 fn mremap_same_size() -> TestResult {
     let len = PAGE;
     let addr = check_ok!(
@@ -46,7 +46,7 @@ fn mremap_same_size() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "msync with MS_ASYNC succeeds on an anonymous mapping")]
 fn msync_async_anon() -> TestResult {
     let len = PAGE;
     let addr = check_ok!(
@@ -61,7 +61,7 @@ fn msync_async_anon() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "msync with MS_SYNC succeeds on a shared file mapping")]
 fn msync_sync_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"ms", 0o644), "create");
@@ -79,7 +79,7 @@ fn msync_sync_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mincore succeeds on a touched anonymous page")]
 fn mincore_anon_page() -> TestResult {
     let len = PAGE;
     let addr = check_ok!(
@@ -96,7 +96,7 @@ fn mincore_anon_page() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "mincore succeeds on a two-page anonymous mapping")]
 fn mincore_two_pages() -> TestResult {
     let len = PAGE * 2;
     let addr = check_ok!(
@@ -112,7 +112,7 @@ fn mincore_two_pages() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mremap with MREMAP_MAYMOVE can shrink a two-page mapping to one page")]
 fn mremap_shrink() -> TestResult {
     let old_len = PAGE * 2;
     let new_len = PAGE;
@@ -131,7 +131,7 @@ fn mremap_shrink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "msync of the first page of a two-page shared mapping succeeds")]
 fn msync_partial_page() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"msp", 0o644), "create");
@@ -146,7 +146,7 @@ fn msync_partial_page() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mremap growth preserves the original page contents")]
 fn mremap_grow_preserves_data() -> TestResult {
     let old_len = PAGE;
     let new_len = PAGE * 4;
@@ -175,7 +175,7 @@ fn mremap_grow_preserves_data() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "mincore succeeds after madvise MADV_WILLNEED")]
 fn mincore_after_madvise() -> TestResult {
     let len = PAGE;
     let addr = check_ok!(
@@ -189,7 +189,7 @@ fn mincore_after_madvise() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "clock_getres CLOCK_MONOTONIC returns a positive nanosecond resolution")]
 fn clock_getres_monotonic() -> TestResult {
     let res = check_ok!(syscall::clock_getres(crate::syscall::clock::CLOCK_MONOTONIC), "getres");
     check!(res.tv_sec >= 0, "sec");

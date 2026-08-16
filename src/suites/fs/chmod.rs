@@ -25,7 +25,7 @@ fn assert_mode7777(path: &[u8], mode: u32) -> TestResult {
 
 macro_rules! chmod_reg_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("chmod on a regular file sets mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "tempdir");
             let path = create_empty(&mut tmp, b"f")?;
@@ -37,7 +37,7 @@ macro_rules! chmod_reg_mode {
 
 macro_rules! chmod_dir_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("chmod on a directory sets mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "tempdir");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -52,7 +52,7 @@ macro_rules! chmod_dir_mode {
 
 macro_rules! fchmod_reg_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("fchmod on a regular file sets mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "tempdir");
             let path = create_empty(&mut tmp, b"f")?;
@@ -64,7 +64,7 @@ macro_rules! fchmod_reg_mode {
     };
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a regular file sets mode 0644")]
 fn chmod_file_644() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -72,7 +72,7 @@ fn chmod_file_644() -> TestResult {
     assert_mode(&path, 0o644)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a regular file sets mode 0600")]
 fn chmod_file_600() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -80,7 +80,7 @@ fn chmod_file_600() -> TestResult {
     assert_mode(&path, 0o600)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a regular file sets mode 0755")]
 fn chmod_file_755() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -88,7 +88,7 @@ fn chmod_file_755() -> TestResult {
     assert_mode(&path, 0o755)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a regular file sets mode 0444")]
 fn chmod_file_444() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -96,7 +96,7 @@ fn chmod_file_444() -> TestResult {
     assert_mode(&path, 0o444)
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "chmod on a regular file sets mode 0777")]
 fn chmod_file_777() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -104,7 +104,7 @@ fn chmod_file_777() -> TestResult {
     assert_mode(&path, 0o777)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a directory sets mode 0700")]
 fn chmod_dir_700() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -116,7 +116,7 @@ fn chmod_dir_700() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a directory sets mode 0755")]
 fn chmod_dir_755() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o700)?;
@@ -126,7 +126,7 @@ fn chmod_dir_755() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fchmod sets the same mode bits that chmod would")]
 fn fchmod_matches_chmod() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -136,7 +136,7 @@ fn fchmod_matches_chmod() -> TestResult {
     assert_mode(&path, 0o640)
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "chmod on a symlink follows it and sets the target file mode")]
 fn chmod_symlink_follow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"target")?;
@@ -149,7 +149,7 @@ fn chmod_symlink_follow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = soft, case = "fchmodat with AT_SYMLINK_NOFOLLOW succeeds or returns EOPNOTSUPP")]
 fn fchmodat_symlink_nofollow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _file = create_empty(&mut tmp, b"target")?;
@@ -166,7 +166,7 @@ fn fchmodat_symlink_nofollow() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod from 0777 to 0600 clears group and other bits")]
 fn chmod_clear_group_other() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -175,7 +175,7 @@ fn chmod_clear_group_other() -> TestResult {
     assert_mode(&path, 0o600)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod 0755 sets execute bits on a regular file")]
 fn chmod_set_executable() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -185,7 +185,7 @@ fn chmod_set_executable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a regular file sets mode 0640")]
 fn chmod_file_640() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -193,7 +193,7 @@ fn chmod_file_640() -> TestResult {
     assert_mode(&path, 0o640)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a regular file sets mode 0400")]
 fn chmod_file_400() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -201,7 +201,7 @@ fn chmod_file_400() -> TestResult {
     assert_mode(&path, 0o400)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a regular file sets mode 0200")]
 fn chmod_file_200() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -209,7 +209,7 @@ fn chmod_file_200() -> TestResult {
     assert_mode(&path, 0o200)
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "chmod on a regular file sets mode 0711")]
 fn chmod_file_711() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -217,7 +217,7 @@ fn chmod_file_711() -> TestResult {
     assert_mode(&path, 0o711)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a directory sets mode 0555")]
 fn chmod_dir_555() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -229,7 +229,7 @@ fn chmod_dir_555() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fchmod on a regular file sets mode 0700")]
 fn fchmod_0700() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -239,7 +239,7 @@ fn fchmod_0700() -> TestResult {
     assert_mode(&path, 0o700)
 }
 
-// ---- mode matrix (pjdfstest key bits) ----
+// ---- mode matrix (permission key bits) ----
 
 chmod_reg_mode!(chmod_reg_000, 0o000);
 chmod_reg_mode!(chmod_reg_001, 0o001);
@@ -309,7 +309,7 @@ fchmod_reg_mode!(fchmod_reg_200, 0o200);
 fchmod_reg_mode!(fchmod_reg_100, 0o100);
 fchmod_reg_mode!(fchmod_reg_001, 0o001);
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod sets the setuid bit on a regular file")]
 fn chmod_setuid_bit() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -317,7 +317,7 @@ fn chmod_setuid_bit() -> TestResult {
     assert_mode7777(&path, 0o4644)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod sets the setgid bit on a regular file")]
 fn chmod_setgid_bit() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -325,7 +325,7 @@ fn chmod_setgid_bit() -> TestResult {
     assert_mode7777(&path, 0o2644)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod sets the sticky bit on a regular file")]
 fn chmod_sticky_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -333,7 +333,7 @@ fn chmod_sticky_file() -> TestResult {
     assert_mode7777(&path, 0o1644)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod sets the sticky bit on a directory")]
 fn chmod_sticky_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -344,7 +344,7 @@ fn chmod_sticky_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod 07777 sets setuid, setgid, and sticky bits")]
 fn chmod_setuid_setgid_sticky() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -352,7 +352,7 @@ fn chmod_setuid_setgid_sticky() -> TestResult {
     assert_mode7777(&path, 0o7777)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod clears the setuid bit on a regular file")]
 fn chmod_clear_setuid() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -361,7 +361,7 @@ fn chmod_clear_setuid() -> TestResult {
     assert_mode7777(&path, 0o644)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod clears the setgid bit on a regular file")]
 fn chmod_clear_setgid() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -370,7 +370,7 @@ fn chmod_clear_setgid() -> TestResult {
     assert_mode7777(&path, 0o644)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod clears the sticky bit on a regular file")]
 fn chmod_clear_sticky() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -379,7 +379,7 @@ fn chmod_clear_sticky() -> TestResult {
     assert_mode7777(&path, 0o644)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a FIFO sets mode 0600")]
 fn chmod_fifo_mode() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -393,7 +393,7 @@ fn chmod_fifo_mode() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a FIFO sets mode 0555")]
 fn chmod_fifo_555() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -407,7 +407,7 @@ fn chmod_fifo_555() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a FIFO sets mode 0000")]
 fn chmod_fifo_000() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -422,7 +422,7 @@ fn chmod_fifo_000() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fchmod on a FIFO sets mode 0640")]
 fn fchmod_fifo() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -441,7 +441,7 @@ fn fchmod_fifo() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "chmod on a missing path returns ENOENT")]
 fn chmod_enoent() -> TestResult {
     check_err!(
         syscall::chmod(b"/tmp/lctp-chmod-missing\0", 0o644),
@@ -451,7 +451,7 @@ fn chmod_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "chmod through a non-directory path component returns ENOTDIR")]
 fn chmod_enotdir_component() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"notdir")?;
@@ -461,13 +461,13 @@ fn chmod_enotdir_component() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "fchmod on a closed fd returns EBADF")]
 fn fchmod_bad_fd() -> TestResult {
     check_err!(syscall::fchmod(-1, 0o644), Errno::EBADF, "bad fd");
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "chmod advances ctime on a regular file")]
 fn chmod_updates_ctime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -487,7 +487,7 @@ fn chmod_updates_ctime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "fchmod advances ctime on a regular file")]
 fn fchmod_updates_ctime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -509,7 +509,7 @@ fn fchmod_updates_ctime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open after chmod 0000 returns EACCES")]
 fn chmod_then_open_denied() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -524,7 +524,7 @@ fn chmod_then_open_denied() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a child after chmod 0000 on the parent returns EACCES")]
 fn chmod_parent_denies_lookup() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -547,7 +547,7 @@ fn chmod_parent_denies_lookup() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod with the same mode twice leaves mode 0640")]
 fn chmod_idempotent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -556,7 +556,7 @@ fn chmod_idempotent() -> TestResult {
     assert_mode(&path, 0o640)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod through a sequence of modes sets each requested mode")]
 fn chmod_cycle_modes() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -567,7 +567,7 @@ fn chmod_cycle_modes() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "chmod on a symlink leaves the link mode unchanged and sets the target mode")]
 fn chmod_symlink_does_not_change_link_mode() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"t")?;
@@ -584,7 +584,7 @@ fn chmod_symlink_does_not_change_link_mode() -> TestResult {
     assert_mode(&file, 0o600)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fchmodat with AT_FDCWD sets mode 0611")]
 fn fchmodat_cwd_path() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -595,7 +595,7 @@ fn fchmodat_cwd_path() -> TestResult {
     assert_mode(&path, 0o611)
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod on a directory sets sticky and setgid bits")]
 fn chmod_dir_sticky_setgid() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -606,7 +606,7 @@ fn chmod_dir_sticky_setgid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "chmod on an empty path returns ENOENT or EINVAL")]
 fn chmod_empty_path_enoent() -> TestResult {
     // Empty path is invalid / ENOENT depending on kernel path.
     match syscall::chmod(b"\0", 0o644) {

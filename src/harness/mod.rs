@@ -7,5 +7,5 @@ mod temp;
 
 pub use assert::{AssertFail, TestResult};
 pub use cli::{parse_args, Suite};
-pub use runner::{run, TestCase, ALL_TESTS};
+pub use runner::{run, Expect, TestCase, ALL_TESTS};
 pub use temp::TempDir;

@@ -13,7 +13,7 @@ use crate::syscall::{self, oflag, Errno, S_IFIFO};
 
 macro_rules! open_creat_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("open O_CREAT creates a regular file with mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "tempdir");
             let path = copy_child(&mut tmp, b"m")?;
@@ -35,7 +35,7 @@ macro_rules! open_creat_mode {
     };
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_CREAT|O_EXCL creates a regular file")]
 fn open_creat_new() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"new")?;
@@ -49,7 +49,7 @@ fn open_creat_new() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open with O_CREAT|O_EXCL on an existing file returns EEXIST")]
 fn open_excl_fails_if_exists() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -61,7 +61,7 @@ fn open_excl_fails_if_exists() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_TRUNC sets the file size to 0")]
 fn open_trunc_zeroes() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -73,7 +73,7 @@ fn open_trunc_zeroes() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_APPEND writes after existing data")]
 fn open_append_mode() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -89,7 +89,7 @@ fn open_append_mode() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open of a directory with O_DIRECTORY succeeds")]
 fn open_directory_on_dir() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(
@@ -100,7 +100,7 @@ fn open_directory_on_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a regular file with O_DIRECTORY returns ENOTDIR")]
 fn open_directory_on_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -112,7 +112,7 @@ fn open_directory_on_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "write on a file opened O_RDONLY returns EBADF")]
 fn open_readonly_no_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -122,7 +122,7 @@ fn open_readonly_no_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "read on a file opened O_WRONLY returns EBADF")]
 fn open_wronly_no_read() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -132,7 +132,7 @@ fn open_wronly_no_read() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_CREAT|O_EXCL creates a file in a subdirectory")]
 fn creat_in_subdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"sub", 0o755)?;
@@ -148,7 +148,7 @@ fn creat_in_subdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open without O_TRUNC leaves existing file contents")]
 fn open_existing_no_trunc() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -161,7 +161,7 @@ fn open_existing_no_trunc() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_PATH allows fstat and rejects read and write with EBADF")]
 fn open_opath_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -175,7 +175,7 @@ fn open_opath_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open of a directory with O_PATH reports a directory via fstat")]
 fn open_opath_directory() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(
@@ -188,7 +188,7 @@ fn open_opath_directory() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "open with O_PATH|O_NOFOLLOW on a symlink reports a symlink via fstat")]
 fn open_opath_symlink_nofollow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"tgt")?;
@@ -204,7 +204,7 @@ fn open_opath_symlink_nofollow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "open with O_TMPFILE succeeds when the filesystem supports it")]
 fn open_tmpfile_soft() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     match syscall::open(tmp.path(), oflag::O_TMPFILE | oflag::O_RDWR, 0o600) {
@@ -223,7 +223,7 @@ fn open_tmpfile_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_CREAT creates a file with mode 0600")]
 fn open_creat_mode_bits() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"mode")?;
@@ -237,7 +237,7 @@ fn open_creat_mode_bits() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_NONBLOCK sets O_NONBLOCK in F_GETFL")]
 fn open_nonblock_regular() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"nb")?;
@@ -251,7 +251,7 @@ fn open_nonblock_regular() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_CLOEXEC sets FD_CLOEXEC in F_GETFD")]
 fn open_cloexec_flag() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"ce")?;
@@ -265,7 +265,7 @@ fn open_cloexec_flag() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = failure, case = "open of a nested missing path returns ENOENT")]
 fn open_enoent_nested() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let mut path = [0u8; 160];
@@ -310,7 +310,7 @@ open_creat_mode!(open_creat_mode_070, 0o070);
 open_creat_mode!(open_creat_mode_007, 0o007);
 open_creat_mode!(open_creat_mode_505, 0o505);
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open with O_CREAT|O_EXCL on a directory returns EEXIST")]
 fn open_excl_dir_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -323,7 +323,7 @@ fn open_excl_dir_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_CREAT without O_EXCL on an existing file preserves contents")]
 fn open_creat_without_excl_existing() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -338,7 +338,7 @@ fn open_creat_without_excl_existing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "open with O_TRUNC sets size 0 and advances mtime")]
 fn open_trunc_updates_mtime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -361,7 +361,7 @@ fn open_trunc_updates_mtime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "multiple writes on an O_APPEND fd append in order")]
 fn open_append_multiple() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -379,7 +379,7 @@ fn open_append_multiple() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "write on an O_APPEND fd appends even after lseek to 0")]
 fn open_append_ignores_seek() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -397,7 +397,7 @@ fn open_append_ignores_seek() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a symlink with O_NOFOLLOW returns ELOOP")]
 fn open_nofollow_symlink_eloop() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"t")?;
@@ -411,7 +411,7 @@ fn open_nofollow_symlink_eloop() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a directory O_WRONLY returns EISDIR")]
 fn open_directory_wronly_eisdir() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     check_err!(
@@ -422,7 +422,7 @@ fn open_directory_wronly_eisdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a directory O_RDWR returns EISDIR")]
 fn open_directory_rdwr_eisdir() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     check_err!(
@@ -433,7 +433,7 @@ fn open_directory_rdwr_eisdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open through a non-directory path component returns ENOTDIR")]
 fn open_enotdir_trailing() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -447,7 +447,7 @@ fn open_enotdir_trailing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a missing path returns ENOENT")]
 fn open_enoent_plain() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"missing")?;
@@ -459,7 +459,7 @@ fn open_enoent_plain() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_CREAT through a dangling symlink creates the target")]
 fn open_creat_through_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let target = copy_child(&mut tmp, b"target")?;
@@ -477,7 +477,7 @@ fn open_creat_through_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "write on an O_RDONLY fd returns EBADF")]
 fn open_rdonly_then_write_ebadf() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -487,7 +487,7 @@ fn open_rdonly_then_write_ebadf() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open through a parent with mode 0000 returns EACCES")]
 fn open_parent_chmod0_eacces() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -510,7 +510,7 @@ fn open_parent_chmod0_eacces() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a mode 0000 file returns EACCES")]
 fn open_file_chmod0_eacces() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -524,7 +524,7 @@ fn open_file_chmod0_eacces() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "open of a FIFO O_RDONLY|O_NONBLOCK succeeds")]
 fn open_fifo_nonblock_rdonly() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -541,7 +541,7 @@ fn open_fifo_nonblock_rdonly() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = failure, case = "open of a FIFO O_WRONLY|O_NONBLOCK with no reader returns ENXIO")]
 fn open_fifo_nonblock_wronly_enxio() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -558,7 +558,7 @@ fn open_fifo_nonblock_wronly_enxio() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fcntl F_SETFD sets FD_CLOEXEC on an open fd")]
 fn open_cloexec_via_fcntl_setfd() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -579,7 +579,7 @@ fn open_cloexec_via_fcntl_setfd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "write then read on an O_RDWR fd round-trips the bytes")]
 fn open_rdwr_roundtrip() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -593,7 +593,7 @@ fn open_rdwr_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "a second open with O_CREAT|O_EXCL returns EEXIST")]
 fn open_creat_eexist_twice() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"x")?;
@@ -610,7 +610,7 @@ fn open_creat_eexist_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_TRUNC preserves the inode")]
 fn open_trunc_preserves_inode() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -622,7 +622,7 @@ fn open_trunc_preserves_inode() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_DIRECTORY follows a symlink to a directory")]
 fn open_directory_on_symlink_to_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -637,7 +637,7 @@ fn open_directory_on_symlink_to_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "fchmod on an O_PATH fd returns EBADF")]
 fn open_opath_fchmod_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -647,7 +647,7 @@ fn open_opath_fchmod_fails() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "write on an O_WRONLY fd succeeds")]
 fn open_wronly_write_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -657,7 +657,7 @@ fn open_wronly_write_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_CREAT|O_TRUNC on an existing file sets size 0")]
 fn open_creat_trunc_combo() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -676,7 +676,7 @@ fn open_creat_trunc_combo() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_EXCL and without O_CREAT opens an existing file")]
 fn open_excl_without_creat_ignored() -> TestResult {
     // O_EXCL without O_CREAT is ignored on Linux.
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
@@ -689,7 +689,7 @@ fn open_excl_without_creat_ignored() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "write on an O_APPEND fd of an empty file stores the bytes")]
 fn open_append_empty_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -705,7 +705,7 @@ fn open_append_empty_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open of a directory with O_CLOEXEC sets FD_CLOEXEC")]
 fn open_directory_cloexec() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(
@@ -722,7 +722,7 @@ fn open_directory_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_CREAT creates a previously missing file")]
 fn open_missing_creat_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fresh")?;
@@ -736,7 +736,7 @@ fn open_missing_creat_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_RDONLY|O_TRUNC succeeds and leaves size 0 or unchanged")]
 fn open_trunc_readonly_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -752,7 +752,7 @@ fn open_trunc_readonly_fails() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "openat with a directory fd creates a relative child file")]
 fn openat_relative() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -771,7 +771,7 @@ fn openat_relative() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open through a symlink loop returns ELOOP")]
 fn open_symlink_loop_eloop() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = copy_child(&mut tmp, b"a")?;
@@ -786,7 +786,7 @@ fn open_symlink_loop_eloop() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open with O_CREAT|O_EXCL on a FIFO returns EEXIST")]
 fn open_creat_excl_fifo_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -803,7 +803,7 @@ fn open_creat_excl_fifo_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_TRUNC on an empty file leaves size 0")]
 fn open_trunc_empty_stays_empty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -813,7 +813,7 @@ fn open_trunc_empty_stays_empty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_APPEND sets O_APPEND in F_GETFL")]
 fn open_append_getfl() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -827,7 +827,7 @@ fn open_append_getfl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open of a directory with O_DIRECTORY|O_NONBLOCK succeeds")]
 fn open_directory_nonblock() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(
@@ -842,7 +842,7 @@ fn open_directory_nonblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open with O_CREAT|O_EXCL on a symlink returns EEXIST")]
 fn open_creat_then_excl_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"l")?;
@@ -855,7 +855,7 @@ fn open_creat_then_excl_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open O_WRONLY of a mode 0000 file returns EACCES")]
 fn open_wronly_chmod0_eacces() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -869,7 +869,7 @@ fn open_wronly_chmod0_eacces() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open O_RDWR of a mode 0400 file returns EACCES")]
 fn open_rdwr_chmod400_eacces() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -883,7 +883,7 @@ fn open_rdwr_chmod400_eacces() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open with O_CREAT through a non-directory component returns ENOTDIR")]
 fn open_path_component_file_enotdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -897,7 +897,7 @@ fn open_path_component_file_enotdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_CLOEXEC|O_NONBLOCK sets both flags")]
 fn open_cloexec_and_nonblock() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -917,7 +917,7 @@ fn open_cloexec_and_nonblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_TRUNC after a large write sets size 0")]
 fn open_large_write_then_trunc() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -933,7 +933,7 @@ fn open_large_write_then_trunc() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "openat of a missing relative name returns ENOENT")]
 fn openat_enoent() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let dirfd = check_ok!(
@@ -949,7 +949,7 @@ fn openat_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "close of an O_PATH fd succeeds")]
 fn open_opath_close() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -958,7 +958,7 @@ fn open_opath_close() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open O_RDONLY of a mode 0200 file returns EACCES")]
 fn open_rdonly_chmod200_eacces() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -972,7 +972,7 @@ fn open_rdonly_chmod200_eacces() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a FIFO with O_DIRECTORY returns ENOTDIR")]
 fn open_directory_on_fifo() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;

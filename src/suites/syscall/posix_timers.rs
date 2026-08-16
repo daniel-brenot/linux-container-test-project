@@ -18,7 +18,7 @@ fn make_sigev_none() -> Sigevent {
     sev
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "timer_create with SIGEV_NONE succeeds or is rejected with ENOSYS/EPERM/EINVAL")]
 fn timer_create_monotonic_sigev_none() -> TestResult {
     let sev = make_sigev_none();
     let mut tid = 0usize;
@@ -32,7 +32,7 @@ fn timer_create_monotonic_sigev_none() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "timer_settime arms a POSIX timer that timer_gettime still shows as armed")]
 fn timer_settime_gettime_roundtrip() -> TestResult {
     let sev = make_sigev_none();
     let mut tid = 0usize;
@@ -81,7 +81,7 @@ fn timer_settime_gettime_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "timer_settime can shorten the remaining time of a POSIX timer")]
 fn timer_rearm_updates_remaining() -> TestResult {
     let sev = make_sigev_none();
     let mut tid = 0usize;
@@ -116,7 +116,7 @@ fn timer_rearm_updates_remaining() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "a second timer_delete returns EINVAL/EPERM or is otherwise unsupported")]
 fn timer_delete_twice_soft() -> TestResult {
     let sev = make_sigev_none();
     let mut tid = 0usize;

@@ -51,7 +51,7 @@ fn cleanup(fd: i32, name: &[u8]) {
     let _ = syscall::mq_unlink(name);
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_1() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 1);
@@ -60,7 +60,7 @@ fn mqc_open_rdwr_1() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_2() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 2);
@@ -69,7 +69,7 @@ fn mqc_open_rdwr_2() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_3() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 3);
@@ -78,7 +78,7 @@ fn mqc_open_rdwr_3() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_4() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 4);
@@ -87,7 +87,7 @@ fn mqc_open_rdwr_4() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_5() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 5);
@@ -96,7 +96,7 @@ fn mqc_open_rdwr_5() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_6() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 6);
@@ -105,7 +105,7 @@ fn mqc_open_rdwr_6() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_7() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 7);
@@ -114,7 +114,7 @@ fn mqc_open_rdwr_7() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_8() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 8);
@@ -123,7 +123,7 @@ fn mqc_open_rdwr_8() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_9() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 9);
@@ -132,7 +132,7 @@ fn mqc_open_rdwr_9() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_10() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 10);
@@ -141,7 +141,7 @@ fn mqc_open_rdwr_10() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_11() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 11);
@@ -150,7 +150,7 @@ fn mqc_open_rdwr_11() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_12() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 12);
@@ -159,7 +159,7 @@ fn mqc_open_rdwr_12() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_13() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 13);
@@ -168,7 +168,7 @@ fn mqc_open_rdwr_13() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_14() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 14);
@@ -177,7 +177,7 @@ fn mqc_open_rdwr_14() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_15() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 15);
@@ -186,7 +186,7 @@ fn mqc_open_rdwr_15() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_16() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 16);
@@ -195,7 +195,7 @@ fn mqc_open_rdwr_16() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_17() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 17);
@@ -204,7 +204,7 @@ fn mqc_open_rdwr_17() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_18() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 18);
@@ -213,7 +213,7 @@ fn mqc_open_rdwr_18() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_19() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 19);
@@ -222,7 +222,7 @@ fn mqc_open_rdwr_19() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue for reading and writing")]
 fn mqc_open_rdwr_20() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 20);
@@ -231,7 +231,7 @@ fn mqc_open_rdwr_20() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr reports positive maxmsg and msgsize")]
 fn mqc_getattr_21() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 21);
@@ -248,7 +248,7 @@ fn mqc_getattr_21() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr reports positive maxmsg and msgsize")]
 fn mqc_getattr_22() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 22);
@@ -265,7 +265,7 @@ fn mqc_getattr_22() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr reports positive maxmsg and msgsize")]
 fn mqc_getattr_23() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 23);
@@ -282,7 +282,7 @@ fn mqc_getattr_23() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr reports positive maxmsg and msgsize")]
 fn mqc_getattr_24() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 24);
@@ -299,7 +299,7 @@ fn mqc_getattr_24() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr reports positive maxmsg and msgsize")]
 fn mqc_getattr_25() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 25);
@@ -316,7 +316,7 @@ fn mqc_getattr_25() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr reports positive maxmsg and msgsize")]
 fn mqc_getattr_26() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 26);
@@ -333,7 +333,7 @@ fn mqc_getattr_26() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr reports positive maxmsg and msgsize")]
 fn mqc_getattr_27() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 27);
@@ -350,7 +350,7 @@ fn mqc_getattr_27() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr reports positive maxmsg and msgsize")]
 fn mqc_getattr_28() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 28);
@@ -367,7 +367,7 @@ fn mqc_getattr_28() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr reports positive maxmsg and msgsize")]
 fn mqc_getattr_29() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 29);
@@ -384,7 +384,7 @@ fn mqc_getattr_29() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr reports positive maxmsg and msgsize")]
 fn mqc_getattr_30() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 30);
@@ -401,7 +401,7 @@ fn mqc_getattr_30() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr reports positive maxmsg and msgsize")]
 fn mqc_getattr_31() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 31);
@@ -418,7 +418,7 @@ fn mqc_getattr_31() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr reports positive maxmsg and msgsize")]
 fn mqc_getattr_32() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 32);
@@ -435,7 +435,7 @@ fn mqc_getattr_32() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_41() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 41);
@@ -461,7 +461,7 @@ fn mqc_send_recv_41() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_42() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 42);
@@ -487,7 +487,7 @@ fn mqc_send_recv_42() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_43() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 43);
@@ -513,7 +513,7 @@ fn mqc_send_recv_43() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_44() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 44);
@@ -539,7 +539,7 @@ fn mqc_send_recv_44() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_45() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 45);
@@ -565,7 +565,7 @@ fn mqc_send_recv_45() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_46() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 46);
@@ -591,7 +591,7 @@ fn mqc_send_recv_46() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_47() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 47);
@@ -617,7 +617,7 @@ fn mqc_send_recv_47() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_48() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 48);
@@ -643,7 +643,7 @@ fn mqc_send_recv_48() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_49() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 49);
@@ -669,7 +669,7 @@ fn mqc_send_recv_49() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_50() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 50);
@@ -695,7 +695,7 @@ fn mqc_send_recv_50() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_51() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 51);
@@ -721,7 +721,7 @@ fn mqc_send_recv_51() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_52() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 52);
@@ -747,7 +747,7 @@ fn mqc_send_recv_52() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_53() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 53);
@@ -773,7 +773,7 @@ fn mqc_send_recv_53() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_54() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 54);
@@ -799,7 +799,7 @@ fn mqc_send_recv_54() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload and priority")]
 fn mqc_send_recv_55() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 55);
@@ -825,7 +825,7 @@ fn mqc_send_recv_55() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_timedsend with a past timeout succeeds or returns ETIMEDOUT")]
 fn mqc_timedsend_61() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 61);
@@ -841,7 +841,7 @@ fn mqc_timedsend_61() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_timedsend with a past timeout succeeds or returns ETIMEDOUT")]
 fn mqc_timedsend_62() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 62);
@@ -857,7 +857,7 @@ fn mqc_timedsend_62() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_timedsend with a past timeout succeeds or returns ETIMEDOUT")]
 fn mqc_timedsend_63() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 63);
@@ -873,7 +873,7 @@ fn mqc_timedsend_63() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_timedsend with a past timeout succeeds or returns ETIMEDOUT")]
 fn mqc_timedsend_64() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 64);
@@ -889,7 +889,7 @@ fn mqc_timedsend_64() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_timedsend with a past timeout succeeds or returns ETIMEDOUT")]
 fn mqc_timedsend_65() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 65);
@@ -905,7 +905,7 @@ fn mqc_timedsend_65() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_timedsend with a past timeout succeeds or returns ETIMEDOUT")]
 fn mqc_timedsend_66() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 66);
@@ -921,7 +921,7 @@ fn mqc_timedsend_66() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_timedsend with a past timeout succeeds or returns ETIMEDOUT")]
 fn mqc_timedsend_67() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 67);
@@ -937,7 +937,7 @@ fn mqc_timedsend_67() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_timedsend with a past timeout succeeds or returns ETIMEDOUT")]
 fn mqc_timedsend_68() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 68);
@@ -953,7 +953,7 @@ fn mqc_timedsend_68() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_timedsend with a past timeout succeeds or returns ETIMEDOUT")]
 fn mqc_timedsend_69() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 69);
@@ -969,7 +969,7 @@ fn mqc_timedsend_69() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_timedsend with a past timeout succeeds or returns ETIMEDOUT")]
 fn mqc_timedsend_70() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 70);
@@ -985,7 +985,7 @@ fn mqc_timedsend_70() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_unlink of a missing name returns ENOENT or is unsupported")]
 fn mqc_unlink_missing_81() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 81);
@@ -998,7 +998,7 @@ fn mqc_unlink_missing_81() -> TestResult {
     }
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_unlink of a missing name returns ENOENT or is unsupported")]
 fn mqc_unlink_missing_82() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 82);
@@ -1011,7 +1011,7 @@ fn mqc_unlink_missing_82() -> TestResult {
     }
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_unlink of a missing name returns ENOENT or is unsupported")]
 fn mqc_unlink_missing_83() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 83);
@@ -1024,7 +1024,7 @@ fn mqc_unlink_missing_83() -> TestResult {
     }
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_unlink of a missing name returns ENOENT or is unsupported")]
 fn mqc_unlink_missing_84() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 84);
@@ -1037,7 +1037,7 @@ fn mqc_unlink_missing_84() -> TestResult {
     }
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_unlink of a missing name returns ENOENT or is unsupported")]
 fn mqc_unlink_missing_85() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 85);
@@ -1050,7 +1050,7 @@ fn mqc_unlink_missing_85() -> TestResult {
     }
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_unlink of a missing name returns ENOENT or is unsupported")]
 fn mqc_unlink_missing_86() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 86);
@@ -1063,7 +1063,7 @@ fn mqc_unlink_missing_86() -> TestResult {
     }
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_unlink of a missing name returns ENOENT or is unsupported")]
 fn mqc_unlink_missing_87() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 87);
@@ -1076,7 +1076,7 @@ fn mqc_unlink_missing_87() -> TestResult {
     }
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_unlink of a missing name returns ENOENT or is unsupported")]
 fn mqc_unlink_missing_88() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 88);
@@ -1089,7 +1089,7 @@ fn mqc_unlink_missing_88() -> TestResult {
     }
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_unlink of a missing name returns ENOENT or is unsupported")]
 fn mqc_unlink_missing_89() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 89);
@@ -1102,7 +1102,7 @@ fn mqc_unlink_missing_89() -> TestResult {
     }
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_unlink of a missing name returns ENOENT or is unsupported")]
 fn mqc_unlink_missing_90() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 90);
@@ -1115,7 +1115,7 @@ fn mqc_unlink_missing_90() -> TestResult {
     }
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_setattr can set O_NONBLOCK on a queue")]
 fn mqc_setattr_nonblock_101() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 101);
@@ -1130,7 +1130,7 @@ fn mqc_setattr_nonblock_101() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_setattr can set O_NONBLOCK on a queue")]
 fn mqc_setattr_nonblock_102() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 102);
@@ -1145,7 +1145,7 @@ fn mqc_setattr_nonblock_102() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_setattr can set O_NONBLOCK on a queue")]
 fn mqc_setattr_nonblock_103() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 103);
@@ -1160,7 +1160,7 @@ fn mqc_setattr_nonblock_103() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_setattr can set O_NONBLOCK on a queue")]
 fn mqc_setattr_nonblock_104() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 104);
@@ -1175,7 +1175,7 @@ fn mqc_setattr_nonblock_104() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_setattr can set O_NONBLOCK on a queue")]
 fn mqc_setattr_nonblock_105() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 105);
@@ -1190,7 +1190,7 @@ fn mqc_setattr_nonblock_105() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_setattr can set O_NONBLOCK on a queue")]
 fn mqc_setattr_nonblock_106() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 106);
@@ -1205,7 +1205,7 @@ fn mqc_setattr_nonblock_106() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_setattr can set O_NONBLOCK on a queue")]
 fn mqc_setattr_nonblock_107() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 107);
@@ -1220,7 +1220,7 @@ fn mqc_setattr_nonblock_107() -> TestResult {
     cleanup(fd, name);
     Ok(())
 }
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_setattr can set O_NONBLOCK on a queue")]
 fn mqc_setattr_nonblock_108() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 108);

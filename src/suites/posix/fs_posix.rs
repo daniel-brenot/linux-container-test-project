@@ -12,7 +12,7 @@ fn mode_subset(actual: u32, requested: u32) -> bool {
     (actual & 0o777) & !(requested & 0o777) == 0
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_CREAT creates a regular file whose mode is a subset of 0644")]
 fn fs_creat_via_open_644() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"c644")?;
@@ -28,7 +28,7 @@ fn fs_creat_via_open_644() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_CREAT creates a regular file whose mode is a subset of 0666")]
 fn fs_creat_via_open_666() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"c666")?;
@@ -43,7 +43,7 @@ fn fs_creat_via_open_666() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_CREAT|O_EXCL creates a regular file whose mode is a subset of 0600")]
 fn fs_creat_via_open_600() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"c600")?;
@@ -58,7 +58,7 @@ fn fs_creat_via_open_600() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_CREAT|O_EXCL creates a regular file whose mode is a subset of 0755")]
 fn fs_creat_via_open_755() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"c755")?;
@@ -73,7 +73,7 @@ fn fs_creat_via_open_755() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_CREAT|O_EXCL does not set permission bits beyond the requested 0640")]
 fn fs_creat_mode_no_extra_bits() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"extra")?;
@@ -87,7 +87,7 @@ fn fs_creat_mode_no_extra_bits() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "access(F_OK) succeeds on an existing regular file")]
 fn fs_access_f_ok_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"af")?;
@@ -95,7 +95,7 @@ fn fs_access_f_ok_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "access(R_OK) succeeds on a readable regular file")]
 fn fs_access_r_ok_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"ar")?;
@@ -103,7 +103,7 @@ fn fs_access_r_ok_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "access(W_OK) succeeds on a writable regular file")]
 fn fs_access_w_ok_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"aw")?;
@@ -111,7 +111,7 @@ fn fs_access_w_ok_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "access(R_OK|W_OK) succeeds on a readable and writable regular file")]
 fn fs_access_rw_ok_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"arw")?;
@@ -119,7 +119,7 @@ fn fs_access_rw_ok_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "access(F_OK) of a path that does not exist returns ENOENT")]
 fn fs_access_f_ok_missing() -> TestResult {
     check_err!(
         syscall::access(b"/tmp/lctp-no-access-xyz\0", F_OK),
@@ -129,7 +129,7 @@ fn fs_access_f_ok_missing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "access(R_OK) of a path that does not exist returns ENOENT")]
 fn fs_access_r_ok_missing() -> TestResult {
     check_err!(
         syscall::access(b"/tmp/lctp-no-access-r\0", R_OK),
@@ -139,21 +139,21 @@ fn fs_access_r_ok_missing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "access(F_OK) succeeds on an existing directory")]
 fn fs_access_dir_f_ok() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     check_ok!(syscall::access(tmp.path(), F_OK), "dir F_OK");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "access(X_OK) succeeds on a searchable directory")]
 fn fs_access_dir_x_ok() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     check_ok!(syscall::access(tmp.path(), X_OK), "dir X_OK");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "mkdir() creates a directory that stat() reports as a directory")]
 fn fs_mkdir_basic() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = copy_child(&mut tmp, b"md")?;
@@ -164,7 +164,7 @@ fn fs_mkdir_basic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "mkdir() with mode 0755 creates a directory whose mode is a subset of 0755")]
 fn fs_mkdir_mode_755_subset() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = copy_child(&mut tmp, b"md755")?;
@@ -175,7 +175,7 @@ fn fs_mkdir_mode_755_subset() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "mkdir() with mode 0700 creates a directory whose mode is a subset of 0700")]
 fn fs_mkdir_mode_700_subset() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = copy_child(&mut tmp, b"md700")?;
@@ -187,7 +187,7 @@ fn fs_mkdir_mode_700_subset() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "mkdir() of a directory that already exists returns EEXIST")]
 fn fs_mkdir_exists_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"ex", 0o755)?;
@@ -196,7 +196,7 @@ fn fs_mkdir_exists_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rmdir() removes an empty directory so a later stat() returns ENOENT")]
 fn fs_rmdir_empty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"empty", 0o755)?;
@@ -205,7 +205,7 @@ fn fs_rmdir_empty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "rmdir() of a directory that still contains a file returns ENOTEMPTY")]
 fn fs_rmdir_nonempty_enotempty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"ne", 0o755)?;
@@ -226,7 +226,7 @@ fn fs_rmdir_nonempty_enotempty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "rmdir() of a regular file returns ENOTDIR")]
 fn fs_rmdir_file_enotdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"notdir")?;
@@ -234,7 +234,7 @@ fn fs_rmdir_file_enotdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "rmdir() of a path that does not exist returns ENOENT")]
 fn fs_rmdir_missing_enoent() -> TestResult {
     check_err!(
         syscall::rmdir(b"/tmp/lctp-no-rmdir\0"),
@@ -244,7 +244,7 @@ fn fs_rmdir_missing_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "mkdir() whose parent directory does not exist returns ENOENT")]
 fn fs_mkdir_missing_parent_enoent() -> TestResult {
     check_err!(
         syscall::mkdir(b"/tmp/lctp-no-parent/child\0", 0o755),
@@ -254,7 +254,7 @@ fn fs_mkdir_missing_parent_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_CREAT|O_EXCL creates a new file and a second call returns EEXIST")]
 fn fs_open_creat_excl_twice() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"excl")?;
@@ -271,7 +271,7 @@ fn fs_open_creat_excl_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_TRUNC of an existing file sets the file size to 0")]
 fn fs_open_trunc_existing() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"tr")?;
@@ -283,7 +283,7 @@ fn fs_open_trunc_existing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_APPEND writes after existing file contents")]
 fn fs_open_append_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"ap")?;
@@ -298,7 +298,7 @@ fn fs_open_append_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "mkdir() creates a nested subdirectory that rmdir() can remove")]
 fn fs_mkdir_nested() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_dir(&mut tmp, b"a", 0o755)?;
@@ -311,7 +311,7 @@ fn fs_mkdir_nested() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "access(F_OK) after unlink() of the path returns ENOENT")]
 fn fs_access_after_unlink_enoent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"gone")?;
@@ -320,7 +320,7 @@ fn fs_access_after_unlink_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "chmod() to 0400 leaves access(R_OK) successful")]
 fn fs_chmod_then_access_r() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"ch")?;
@@ -330,7 +330,7 @@ fn fs_chmod_then_access_r() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "open() with O_CREAT|O_EXCL creates a file whose mode is a subset of 0444")]
 fn fs_creat_mode_444_subset() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"c444")?;
@@ -344,7 +344,7 @@ fn fs_creat_mode_444_subset() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "mkdirat() creates a subdirectory relative to a directory fd")]
 fn fs_mkdirat_via_openat_dir() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let dirfd = check_ok!(
@@ -357,7 +357,7 @@ fn fs_mkdirat_via_openat_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "openat() with O_CREAT|O_EXCL creates a file relative to a directory fd")]
 fn fs_openat_creat_relative() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let dirfd = check_ok!(
@@ -374,7 +374,7 @@ fn fs_openat_creat_relative() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat() after creating and writing a file reports a regular file of the written size")]
 fn fs_stat_regular_after_creat() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"st")?;
@@ -390,7 +390,7 @@ fn fs_stat_regular_after_creat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a path after unlink() returns ENOENT")]
 fn fs_unlink_then_open_enoent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"u")?;
@@ -403,7 +403,7 @@ fn fs_unlink_then_open_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "access(X_OK) on a file created with mode 0755 succeeds or returns EACCES")]
 fn fs_access_x_ok_on_755_file_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"xfile")?;
@@ -419,7 +419,7 @@ fn fs_access_x_ok_on_755_file_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "repeated mkdir() and rmdir() of distinct empty directories succeed")]
 fn fs_mkdir_rmdir_many() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     for i in 0u8..8 {
@@ -432,7 +432,7 @@ fn fs_mkdir_rmdir_many() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "write() on a file opened O_RDONLY returns EBADF")]
 fn fs_open_rdonly_write_ebadf() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"ro")?;
@@ -442,7 +442,7 @@ fn fs_open_rdonly_write_ebadf() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "read() on a file opened O_WRONLY returns EBADF")]
 fn fs_open_wronly_read_ebadf() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"wo")?;
@@ -453,7 +453,7 @@ fn fs_open_wronly_read_ebadf() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat() of a newly created regular file reports a link count of at least 1")]
 fn fs_creat_then_stat_nlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"nl")?;
@@ -462,7 +462,7 @@ fn fs_creat_then_stat_nlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "mkdir() of the . entry in a directory returns EEXIST, EINVAL, or ENOENT")]
 fn fs_mkdir_dot_einval_or_eexist() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let mut dot = [0u8; 160];
@@ -477,13 +477,13 @@ fn fs_mkdir_dot_einval_or_eexist() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "access(F_OK) succeeds on /tmp")]
 fn fs_access_f_ok_tmp() -> TestResult {
     check_ok!(syscall::access(b"/tmp\0", F_OK), "/tmp");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "open() with O_CREAT|O_EXCL and mode 0777 creates a file whose mode is a subset of 0777")]
 fn fs_creat_umask_soft_777() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"u777")?;
@@ -498,7 +498,7 @@ fn fs_creat_umask_soft_777() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rmdir() removes an empty subdirectory")]
 fn fs_rmdir_cwd_component() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"leaf", 0o755)?;
@@ -506,7 +506,7 @@ fn fs_rmdir_cwd_component() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_CLOEXEC sets FD_CLOEXEC on the new file descriptor")]
 fn fs_open_creat_cloexec() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"cx")?;

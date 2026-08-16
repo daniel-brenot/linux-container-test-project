@@ -18,7 +18,7 @@ fn discard_pending(sig: i32) -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "signalfd4 with SFD_CLOEXEC returns a fd with FD_CLOEXEC set")]
 fn signalfd_create_cloexec() -> TestResult {
     let mask = sigmask(SIGUSR1);
     let fd = check_ok!(syscall::signalfd(-1, mask, SFD_CLOEXEC), "signalfd");
@@ -28,7 +28,7 @@ fn signalfd_create_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "reading a signalfd after a blocked SIGUSR1 yields that signal and the sender pid")]
 fn signalfd_read_sigusr1() -> TestResult {
     check_ok!(
         syscall::rt_sigprocmask(SIG_BLOCK, Some(sigmask(SIGUSR1)), None),
@@ -61,7 +61,7 @@ fn signalfd_read_sigusr1() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a signalfd watching SIGUSR1 and SIGUSR2 delivers both queued signals")]
 fn signalfd_two_signals() -> TestResult {
     let mask = sigmask(SIGUSR1) | sigmask(SIGUSR2);
     check_ok!(syscall::rt_sigprocmask(SIG_BLOCK, Some(mask), None), "block");
@@ -90,7 +90,7 @@ fn signalfd_two_signals() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "signalfd on an existing fd replaces the mask so a later SIGUSR2 is readable")]
 fn signalfd_replace_mask() -> TestResult {
     check_ok!(
         syscall::rt_sigprocmask(SIG_BLOCK, Some(sigmask(SIGUSR1) | sigmask(SIGUSR2)), None),

@@ -8,7 +8,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_dir, create_empty, join_path, write_file};
 use crate::syscall::{self, oflag, Errno, S_IFIFO};
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink of a regular file succeeds and the path is gone")]
 fn unlink_regular_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -17,7 +17,7 @@ fn unlink_regular_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink of a symlink removes the link and leaves the target")]
 fn unlink_symlink_only() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"t")?;
@@ -29,7 +29,7 @@ fn unlink_symlink_only() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink of a symlink leaves the target regular file")]
 fn unlink_symlink_keeps_target() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"file")?;
@@ -41,7 +41,7 @@ fn unlink_symlink_keeps_target() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "unlink of a directory returns EISDIR or EPERM")]
 fn unlink_directory_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -54,7 +54,7 @@ fn unlink_directory_fails() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "unlink of a missing path returns ENOENT")]
 fn unlink_enoent() -> TestResult {
     check_err!(
         syscall::unlink(b"/tmp/lctp-fs-missing\0"),
@@ -64,7 +64,7 @@ fn unlink_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "unlink of one hard-link name decrements nlink to 1")]
 fn unlink_hardlink_decrements() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -76,7 +76,7 @@ fn unlink_hardlink_decrements() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink of the last name makes the path disappear")]
 fn unlink_last_link_gone() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"x")?;
@@ -85,7 +85,7 @@ fn unlink_last_link_gone() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "read of an fd remains valid after unlink of the path")]
 fn unlink_open_file_still_accessible() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -99,7 +99,7 @@ fn unlink_open_file_still_accessible() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink of a FIFO succeeds and the path is gone")]
 fn unlink_fifo() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -112,7 +112,7 @@ fn unlink_fifo() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "unlink of an already-removed path returns ENOENT")]
 fn unlink_twice_enoent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -121,7 +121,7 @@ fn unlink_twice_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "unlink through a non-directory path component returns ENOTDIR")]
 fn unlink_enotdir_component() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -131,7 +131,7 @@ fn unlink_enotdir_component() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink of a file in a subdirectory succeeds")]
 fn unlink_in_subdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -147,7 +147,7 @@ fn unlink_in_subdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "unlink in a directory without write permission returns EACCES")]
 fn unlink_parent_no_write_eacces() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -166,7 +166,7 @@ fn unlink_parent_no_write_eacces() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "unlink through a parent without search permission returns EACCES")]
 fn unlink_parent_no_search_eacces() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -185,7 +185,7 @@ fn unlink_parent_no_search_eacces() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlinkat removes a file created via a directory fd")]
 fn unlinkat_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -204,7 +204,7 @@ fn unlinkat_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink of one of three hard-link names leaves nlink 2")]
 fn unlink_nlink_three_to_two() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -217,7 +217,7 @@ fn unlink_nlink_three_to_two() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink of a dangling symlink succeeds and the link is gone")]
 fn unlink_symlink_to_missing() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"dangling")?;
@@ -227,7 +227,7 @@ fn unlink_symlink_to_missing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink of a renamed file succeeds and the new path is gone")]
 fn unlink_after_rename() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -238,7 +238,7 @@ fn unlink_after_rename() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink of an empty regular file succeeds")]
 fn unlink_empty_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"empty")?;
@@ -246,7 +246,7 @@ fn unlink_empty_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink of a non-empty regular file succeeds and the path is gone")]
 fn unlink_nonzero_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"nz")?;
@@ -256,7 +256,7 @@ fn unlink_nonzero_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "unlink of '.' returns EISDIR, EINVAL, or EPERM")]
 fn unlink_dot_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -271,7 +271,7 @@ fn unlink_dot_fails() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "unlinkat of a missing name returns ENOENT")]
 fn unlinkat_enoent() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let dirfd = check_ok!(
@@ -287,7 +287,7 @@ fn unlinkat_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "creating and unlinking several files in sequence succeeds")]
 fn unlink_many_sequential() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     for name in [b"u0\0".as_slice(), b"u1\0", b"u2\0", b"u3\0", b"u4\0"] {
@@ -302,7 +302,7 @@ fn unlink_many_sequential() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "recreating a name after unlink does not change an already-open fd")]
 fn unlink_open_then_recreate_name() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;

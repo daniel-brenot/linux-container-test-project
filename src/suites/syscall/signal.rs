@@ -6,13 +6,13 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, SIGKILL, SIGTERM};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kill of self with signal 0 succeeds")]
 fn kill_self_zero() -> TestResult {
     check_ok!(syscall::kill(syscall::getpid(), 0), "kill(self,0)");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kill of a child with SIGTERM makes wait4 report a SIGTERM death")]
 fn kill_child_sigterm() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -29,7 +29,7 @@ fn kill_child_sigterm() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kill of a child with SIGKILL makes wait4 report a SIGKILL death")]
 fn kill_child_sigkill() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -45,7 +45,7 @@ fn kill_child_sigkill() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kill of a likely unused pid with signal 0 returns ESRCH or succeeds")]
 fn kill_invalid_pid() -> TestResult {
     match syscall::kill(999_999_999, 0) {
         Ok(()) => {}
@@ -55,7 +55,7 @@ fn kill_invalid_pid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 reports WIFSIGNALED after a child is sent SIGTERM")]
 fn wait_signaled_sigterm() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -70,7 +70,7 @@ fn wait_signaled_sigterm() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "wait4 reports termination by SIGKILL after kill")]
 fn wait_signaled_sigkill() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {

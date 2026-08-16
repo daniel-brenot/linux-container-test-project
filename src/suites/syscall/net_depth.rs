@@ -29,35 +29,35 @@ fn tcp_pair() -> Result<(i32, i32, i32), crate::harness::AssertFail> {
     Ok((srv, cli, acc))
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "listen with backlog 0 succeeds on a bound TCP socket")]
 fn net_listen_backlog_0() -> TestResult {
     let (fd, _) = listen_ephemeral(0)?;
     check_ok!(syscall::close(fd), "c");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "listen with backlog 1 succeeds on a bound TCP socket")]
 fn net_listen_backlog_1() -> TestResult {
     let (fd, _) = listen_ephemeral(1)?;
     check_ok!(syscall::close(fd), "c");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "listen with backlog 5 succeeds on a bound TCP socket")]
 fn net_listen_backlog_5() -> TestResult {
     let (fd, _) = listen_ephemeral(5)?;
     check_ok!(syscall::close(fd), "c");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "listen with backlog 128 succeeds on a bound TCP socket")]
 fn net_listen_backlog_128() -> TestResult {
     let (fd, _) = listen_ephemeral(128)?;
     check_ok!(syscall::close(fd), "c");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "shutdown SHUT_WR on a TCP client makes the peer recv return 0")]
 fn net_tcp_shutdown_wr() -> TestResult {
     let (srv, cli, acc) = tcp_pair()?;
     check_ok!(syscall::shutdown(cli, SHUT_WR), "shut");
@@ -69,7 +69,7 @@ fn net_tcp_shutdown_wr() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "shutdown SHUT_RD succeeds on an accepted TCP socket")]
 fn net_tcp_shutdown_rd() -> TestResult {
     let (srv, cli, acc) = tcp_pair()?;
     check_ok!(syscall::shutdown(acc, SHUT_RD), "shut");
@@ -79,7 +79,7 @@ fn net_tcp_shutdown_rd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "shutdown SHUT_RDWR succeeds on a connected TCP client")]
 fn net_tcp_shutdown_rdwr() -> TestResult {
     let (srv, cli, acc) = tcp_pair()?;
     check_ok!(syscall::shutdown(cli, SHUT_RDWR), "shut");
@@ -89,7 +89,7 @@ fn net_tcp_shutdown_rdwr() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getpeername still reports the peer after SHUT_WR")]
 fn net_getpeername_after_shutdown() -> TestResult {
     let (srv, cli, acc) = tcp_pair()?;
     check_ok!(syscall::shutdown(cli, SHUT_WR), "shut");
@@ -102,7 +102,7 @@ fn net_getpeername_after_shutdown() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "nonblocking UDP recv with MSG_DONTWAIT on an empty socket returns EAGAIN")]
 fn net_msg_dontwait_eagain() -> TestResult {
     let (srv, bound) = listen_ephemeral(1)?;
     let cli = check_ok!(
@@ -133,7 +133,7 @@ fn net_msg_dontwait_eagain() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "nonblocking TCP recv with MSG_DONTWAIT on an idle socket returns EAGAIN")]
 fn net_tcp_msg_dontwait_empty() -> TestResult {
     let (srv, cli, acc) = tcp_pair()?;
     // Set nonblock on acc
@@ -154,7 +154,7 @@ fn net_tcp_msg_dontwait_empty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "SO_KEEPALIVE can be set and read back or is rejected with ENOPROTOOPT/EINVAL/ENOSYS")]
 fn net_so_keepalive_set_get() -> TestResult {
     let fd = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "s");
     let one = 1i32.to_ne_bytes();
@@ -175,7 +175,7 @@ fn net_so_keepalive_set_get() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "SO_LINGER can be set or is rejected with EINVAL/ENOSYS/ENOPROTOOPT")]
 fn net_so_linger_soft() -> TestResult {
     let fd = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "s");
     // struct linger { l_onoff, l_linger }
@@ -194,7 +194,7 @@ fn net_so_linger_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "SO_SNDBUF can be set and getsockopt reports a positive value")]
 fn net_so_sndbuf_set() -> TestResult {
     let fd = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "s");
     let sz = 64_000i32.to_ne_bytes();
@@ -206,7 +206,7 @@ fn net_so_sndbuf_set() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a two-byte TCP send/recv on loopback delivers the payload")]
 fn net_tcp_small_payload() -> TestResult {
     let (srv, cli, acc) = tcp_pair()?;
     check_ok!(syscall::send(cli, b"xy", 0), "send");
@@ -219,7 +219,7 @@ fn net_tcp_small_payload() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a 1024-byte TCP send/recv on loopback delivers the payload")]
 fn net_tcp_large_payload_1k() -> TestResult {
     let (srv, cli, acc) = tcp_pair()?;
     let msg = [0xA5u8; 1024];
@@ -243,7 +243,7 @@ fn net_tcp_large_payload_1k() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a 4096-byte TCP send/recv on loopback completes")]
 fn net_tcp_large_payload_4k() -> TestResult {
     let (srv, cli, acc) = tcp_pair()?;
     let msg = [0x3Cu8; 4096];
@@ -265,7 +265,7 @@ fn net_tcp_large_payload_4k() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "UDP sendto/recv on loopback delivers a short datagram")]
 fn net_udp_send_recv() -> TestResult {
     let srv = check_ok!(syscall::socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0), "srv");
     check_ok!(syscall::bind(srv, &SockAddrIn::loopback(0)), "bind");
@@ -285,7 +285,7 @@ fn net_udp_send_recv() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "nonblocking UDP recv with MSG_DONTWAIT on an empty socket returns EAGAIN")]
 fn net_udp_msg_dontwait() -> TestResult {
     let u = check_ok!(
         syscall::socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0),
@@ -298,7 +298,7 @@ fn net_udp_msg_dontwait() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "UDP sendto/recv on loopback delivers a 512-byte datagram")]
 fn net_udp_large_payload() -> TestResult {
     let srv = check_ok!(syscall::socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0), "srv");
     check_ok!(syscall::bind(srv, &SockAddrIn::loopback(0)), "bind");
@@ -317,7 +317,7 @@ fn net_udp_large_payload() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "send after SHUT_WR returns EPIPE/EINVAL/ECONNRESET or succeeds")]
 fn net_tcp_shutdown_then_send_fails_soft() -> TestResult {
     let (srv, cli, acc) = tcp_pair()?;
     check_ok!(syscall::shutdown(cli, SHUT_WR), "shut");
@@ -337,7 +337,7 @@ fn net_tcp_shutdown_then_send_fails_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "shutdown SHUT_RD on the accepted TCP socket succeeds after a send")]
 fn net_tcp_bidirectional_shutdown_rd_on_acc() -> TestResult {
     let (srv, cli, acc) = tcp_pair()?;
     check_ok!(syscall::send(cli, b"ping", 0), "send");
@@ -348,7 +348,7 @@ fn net_tcp_bidirectional_shutdown_rd_on_acc() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getsockname after listen reports the bound port")]
 fn net_getsockname_after_listen() -> TestResult {
     let (fd, bound) = listen_ephemeral(4)?;
     let again = check_ok!(syscall::getsockname_in(fd), "name");
@@ -357,7 +357,7 @@ fn net_getsockname_after_listen() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "accept4 with SOCK_CLOEXEC sets FD_CLOEXEC on the accepted fd")]
 fn net_tcp_accept_cloexec() -> TestResult {
     let (srv, bound) = listen_ephemeral(2)?;
     let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "cli");
@@ -371,7 +371,7 @@ fn net_tcp_accept_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a connected UDP socket can send to the peer")]
 fn net_udp_connect_send() -> TestResult {
     let srv = check_ok!(syscall::socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0), "srv");
     check_ok!(syscall::bind(srv, &SockAddrIn::loopback(0)), "bind");
@@ -386,7 +386,7 @@ fn net_udp_connect_send() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "setsockopt SO_KEEPALIVE to 0 is accepted on a TCP socket")]
 fn net_so_keepalive_off() -> TestResult {
     let fd = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "s");
     let zero = 0i32.to_ne_bytes();
@@ -395,7 +395,7 @@ fn net_so_keepalive_off() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "several sequential TCP send/recv pairs deliver each payload")]
 fn net_tcp_multi_send_recv() -> TestResult {
     let (srv, cli, acc) = tcp_pair()?;
     for msg in [b"a" as &[u8], b"bb", b"ccc"] {
@@ -410,7 +410,7 @@ fn net_tcp_multi_send_recv() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "shutdown on a listening TCP socket succeeds or returns ENOTCONN/EINVAL")]
 fn net_shutdown_listen_fd_soft() -> TestResult {
     let (fd, _) = listen_ephemeral(1)?;
     match syscall::shutdown(fd, SHUT_RD) {
@@ -424,7 +424,7 @@ fn net_shutdown_listen_fd_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a listening TCP socket can accept two connected clients")]
 fn net_tcp_backlog_two_clients_soft() -> TestResult {
     let (srv, bound) = listen_ephemeral(2)?;
     let c1 = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "c1");
@@ -441,7 +441,7 @@ fn net_tcp_backlog_two_clients_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "UDP sendto of a zero-length datagram is received as zero bytes")]
 fn net_udp_zero_len_sendto() -> TestResult {
     let srv = check_ok!(syscall::socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0), "srv");
     check_ok!(syscall::bind(srv, &SockAddrIn::loopback(0)), "bind");
@@ -455,7 +455,7 @@ fn net_udp_zero_len_sendto() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "getpeername on an unconnected TCP socket returns ENOTCONN/EINVAL or succeeds")]
 fn net_getpeername_unconnected_soft() -> TestResult {
     let fd = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "s");
     match syscall::getpeername_in(fd) {

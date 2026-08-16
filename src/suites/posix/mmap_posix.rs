@@ -10,7 +10,7 @@ use crate::syscall::{self, map, oflag, prot, Errno, MS_SYNC};
 
 const PAGE: usize = 4096;
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a MAP_SHARED file write is visible after msync and reopen")]
 fn mmap_shared_file_write_visible() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"shared", 0o644), "create");
@@ -41,7 +41,7 @@ fn mmap_shared_file_write_visible() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a MAP_PRIVATE write may copy-on-write without changing the file")]
 fn mmap_private_cow_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"priv")?;
@@ -74,7 +74,7 @@ fn mmap_private_cow_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "an anonymous private mapping can be written and read back")]
 fn mmap_anon_private_rw() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -95,7 +95,7 @@ fn mmap_anon_private_rw() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a fresh anonymous mapping reads as zeros")]
 fn mmap_anon_read_zero() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -115,7 +115,7 @@ fn mmap_anon_read_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "msync of a MAP_SHARED mapping succeeds after a write")]
 fn mmap_shared_msync_roundtrip() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"ms", 0o644), "create");
@@ -140,7 +140,7 @@ fn mmap_shared_msync_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "mmap with length zero returns EINVAL")]
 fn mmap_len_zero_einval() -> TestResult {
     check_err!(
         syscall::mmap(
@@ -157,7 +157,7 @@ fn mmap_len_zero_einval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "munmap of an anonymous mapping succeeds")]
 fn mmap_munmap_ok() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -174,7 +174,7 @@ fn mmap_munmap_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a read-only file mapping shows the file's first byte")]
 fn mmap_prot_read_only_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"ro")?;
@@ -195,7 +195,7 @@ fn mmap_prot_read_only_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two MAP_SHARED mappings of the same file see each other's writes")]
 fn mmap_shared_two_mappings_same_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"two", 0o644), "create");
@@ -232,7 +232,7 @@ fn mmap_shared_two_mappings_same_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "two MAP_PRIVATE mappings of a file may stay independent after a write")]
 fn mmap_private_two_mappings_independent_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"indep", 0o644), "create");
@@ -272,7 +272,7 @@ fn mmap_private_two_mappings_independent_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "a MAP_SHARED mapping at a page offset sees and updates that file page")]
 fn mmap_shared_offset_page() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"off", 0o644), "create");
@@ -302,7 +302,7 @@ fn mmap_shared_offset_page() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "mprotect can drop write then restore read-write on an anonymous map")]
 fn mmap_mprotect_read_then_write() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -327,7 +327,7 @@ fn mmap_mprotect_read_then_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "munmap of a non-mapped address is rejected or ignored")]
 fn mmap_munmap_bad_addr_soft() -> TestResult {
     match syscall::munmap(0x1000, PAGE) {
         Ok(()) | Err(Errno::EINVAL) | Err(Errno::ENOMEM) => Ok(()),
@@ -335,7 +335,7 @@ fn mmap_munmap_bad_addr_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a MAP_SHARED write in the middle of a page is visible via pread")]
 fn mmap_shared_write_middle() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"mid", 0o644), "create");
@@ -363,7 +363,7 @@ fn mmap_shared_write_middle() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a two-page anonymous mapping can be written at both page starts")]
 fn mmap_anon_multi_page() -> TestResult {
     let len = PAGE * 2;
     let addr = check_ok!(
@@ -387,7 +387,7 @@ fn mmap_anon_multi_page() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "a MAP_SHARED write remains visible after munmap, close, and remap")]
 fn mmap_shared_reopen_mapping() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"reopen")?;
@@ -426,7 +426,7 @@ fn mmap_shared_reopen_mapping() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "mprotect can raise PROT_NONE to read-write and then store a byte")]
 fn mmap_prot_none_then_read() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -450,7 +450,7 @@ fn mmap_prot_none_then_read() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a private file mapping of exact length shows the file bytes")]
 fn mmap_file_length_exact() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"ex")?;
@@ -468,7 +468,7 @@ fn mmap_file_length_exact() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "an anonymous mapping with MAP_POPULATE can be written")]
 fn mmap_populate_anon_posix() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -488,7 +488,7 @@ fn mmap_populate_anon_posix() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "filling a MAP_SHARED page is visible in the file after msync")]
 fn mmap_shared_fill_page() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"fill", 0o644), "create");
@@ -516,7 +516,7 @@ fn mmap_shared_fill_page() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a MAP_PRIVATE overwrite may leave the underlying file unchanged")]
 fn mmap_private_preserves_file_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"keep")?;
@@ -547,7 +547,7 @@ fn mmap_private_preserves_file_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "mmap MAP_SHARED with fd -1 returns EBADF")]
 fn mmap_bad_fd_ebadf() -> TestResult {
     check_err!(
         syscall::mmap(0, PAGE, prot::PROT_READ, map::MAP_SHARED, -1, 0),
@@ -557,7 +557,7 @@ fn mmap_bad_fd_ebadf() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "the last byte of an anonymous page can be written and read back")]
 fn mmap_anon_end_byte() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(

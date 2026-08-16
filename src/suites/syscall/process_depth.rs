@@ -9,7 +9,7 @@ use crate::syscall::{
     P_ALL, P_PID, PR_GET_DUMPABLE, PR_GET_NO_NEW_PRIVS, PR_SET_DUMPABLE, PR_SET_NO_NEW_PRIVS,
 };
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 reports a matrix of child exit codes including 0, 127, and 255")]
 fn wait4_exit_codes_matrix() -> TestResult {
     for code in [0i32, 1, 2, 127, 255] {
         let pid = check_ok!(syscall::fork(), "fork");
@@ -24,7 +24,7 @@ fn wait4_exit_codes_matrix() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "waitpid(-1) reaps the forked child")]
 fn waitpid_any_child() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -37,7 +37,7 @@ fn waitpid_any_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 with WNOHANG eventually reaps an exited child")]
 fn wait4_wnohang_loop() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -63,7 +63,7 @@ fn wait4_wnohang_loop() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "waitpid of pid 1 with WNOHANG returns 0, ECHILD, EPERM, or ESRCH")]
 fn waitpid_wnohang_echild_soft() -> TestResult {
     let mut st = 0;
     match syscall::waitpid(1, &mut st, wait::WNOHANG) {
@@ -74,7 +74,7 @@ fn waitpid_wnohang_echild_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "waitid with P_PID and WEXITED reaps a specific child")]
 fn waitid_p_pid_exited() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -88,7 +88,7 @@ fn waitid_p_pid_exited() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "waitid with P_ALL and WEXITED reaps an exited child")]
 fn waitid_p_all_exited() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -102,7 +102,7 @@ fn waitid_p_all_exited() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "waitid with WNOHANG returns success, EAGAIN, or ECHILD before the child exits")]
 fn waitid_wnohang() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -128,7 +128,7 @@ fn waitid_wnohang() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "waitid with WNOWAIT leaves the child waitable or is rejected with EINVAL/ENOSYS")]
 fn waitid_wnowait_soft() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -153,7 +153,7 @@ fn waitid_wnowait_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 with WUNTRACED reaps a child that exited with status 6")]
 fn wait4_wuntraced_exit() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -165,7 +165,7 @@ fn wait4_wuntraced_exit() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a child inherits the parent's process group")]
 fn getpgid_child() -> TestResult {
     let parent_pg = check_ok!(syscall::getpgid(0), "parent");
     let pid = check_ok!(syscall::fork(), "fork");
@@ -185,7 +185,7 @@ fn getpgid_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a child can setpgid itself into a new process group")]
 fn setpgid_child_new_group() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -204,7 +204,7 @@ fn setpgid_child_new_group() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a child inherits the parent's session id")]
 fn getsid_child_inherits() -> TestResult {
     let sid = check_ok!(syscall::getsid(0), "sid");
     let pid = check_ok!(syscall::fork(), "fork");
@@ -220,7 +220,7 @@ fn getsid_child_inherits() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "setsid succeeds or returns EPERM when the caller is already a process-group leader")]
 fn setsid_fails_if_leader_soft() -> TestResult {
     // Process group leaders typically get EPERM from setsid.
     match syscall::setsid() {
@@ -231,7 +231,7 @@ fn setsid_fails_if_leader_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getpgid of a likely unused pid returns ESRCH or EPERM")]
 fn getpgid_bad_pid() -> TestResult {
     match syscall::getpgid(999_999_999) {
         Err(Errno::ESRCH) | Err(Errno::EPERM) => {}
@@ -241,7 +241,7 @@ fn getpgid_bad_pid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getsid of a likely unused pid returns ESRCH or EPERM")]
 fn getsid_bad_pid() -> TestResult {
     match syscall::getsid(999_999_999) {
         Err(Errno::ESRCH) | Err(Errno::EPERM) => {}
@@ -251,14 +251,14 @@ fn getsid_bad_pid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "PR_GET_DUMPABLE returns 0, 1, or 2")]
 fn prctl_dumpable_get() -> TestResult {
     let d = check_ok!(syscall::prctl(PR_GET_DUMPABLE, 0, 0, 0, 0), "get");
     check!(d == 0 || d == 1 || d == 2, "range");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "PR_SET_DUMPABLE round-trips 0 and 1")]
 fn prctl_dumpable_set_roundtrip() -> TestResult {
     let old = check_ok!(syscall::prctl(PR_GET_DUMPABLE, 0, 0, 0, 0), "old");
     check_ok!(syscall::prctl(PR_SET_DUMPABLE, 0, 0, 0, 0), "set0");
@@ -271,14 +271,14 @@ fn prctl_dumpable_set_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "PR_GET_NO_NEW_PRIVS returns 0 or 1")]
 fn prctl_no_new_privs_get() -> TestResult {
     let v = check_ok!(syscall::prctl(PR_GET_NO_NEW_PRIVS, 0, 0, 0, 0), "get");
     check!(v == 0 || v == 1, "range");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "PR_SET_NO_NEW_PRIVS to 1 is visible via PR_GET_NO_NEW_PRIVS")]
 fn prctl_no_new_privs_set() -> TestResult {
     check_ok!(syscall::prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0), "set");
     let v = check_ok!(syscall::prctl(PR_GET_NO_NEW_PRIVS, 0, 0, 0, 0), "get");
@@ -286,7 +286,7 @@ fn prctl_no_new_privs_set() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "prctl set/get name round-trips a short comm string")]
 fn prctl_name_depth_short() -> TestResult {
     check_ok!(syscall::prctl_set_name(b"pd\0"), "set");
     let mut buf = [0u8; 16];
@@ -295,7 +295,7 @@ fn prctl_name_depth_short() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "prlimit64 can lower RLIMIT_NOFILE soft limit and restore it")]
 fn rlimit_nofile_lower_soft() -> TestResult {
     let mut old = Rlimit::default();
     check_ok!(
@@ -330,7 +330,7 @@ fn rlimit_nofile_lower_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "prlimit64 reports a positive RLIMIT_STACK soft limit")]
 fn rlimit_stack_get() -> TestResult {
     let mut lim = Rlimit::default();
     check_ok!(
@@ -341,7 +341,7 @@ fn rlimit_stack_get() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "prlimit64 reports a positive RLIMIT_AS hard limit")]
 fn rlimit_as_get() -> TestResult {
     let mut lim = Rlimit::default();
     check_ok!(syscall::prlimit64(0, RLIMIT_AS, None, Some(&mut lim)), "get");
@@ -349,7 +349,7 @@ fn rlimit_as_get() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "lowering RLIMIT_STACK succeeds or is rejected with EPERM/EINVAL")]
 fn rlimit_stack_lower_soft() -> TestResult {
     let mut old = Rlimit::default();
     check_ok!(
@@ -373,7 +373,7 @@ fn rlimit_stack_lower_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getrusage of self reports non-negative user and system time")]
 fn getrusage_self_basic() -> TestResult {
     let ru = check_ok!(syscall::getrusage(RUSAGE_SELF), "rusage");
     check!(ru.ru_utime.tv_sec >= 0, "utime");
@@ -381,7 +381,7 @@ fn getrusage_self_basic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getrusage of children after wait reports non-negative fields")]
 fn getrusage_children_after_wait() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -401,14 +401,14 @@ fn getrusage_children_after_wait() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getrusage of self reports a non-negative minflt")]
 fn getrusage_self_minflt() -> TestResult {
     let ru = check_ok!(syscall::getrusage(RUSAGE_SELF), "rusage");
     check!(ru.ru_minflt >= 0, "minflt");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getrusage of children after wait4 reports a non-negative nvcsw")]
 fn fork_wait4_rusage_filled() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -421,7 +421,7 @@ fn fork_wait4_rusage_filled() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "wait4 reaps eight children that each exited")]
 fn wait_many_children() -> TestResult {
     let mut pids = [0i32; 8];
     for (i, slot) in pids.iter_mut().enumerate() {
@@ -439,7 +439,7 @@ fn wait_many_children() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "waitpid can reap a chosen child while a sibling is still unreaped")]
 fn waitpid_specific_amid_siblings() -> TestResult {
     let a = check_ok!(syscall::fork(), "a");
     if a == 0 {
@@ -457,7 +457,7 @@ fn waitpid_specific_amid_siblings() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "setpgid of a likely unused pid returns ESRCH, EPERM, or EINVAL")]
 fn setpgid_bad_pid() -> TestResult {
     match syscall::setpgid(999_999_999, 999_999_999) {
         Err(Errno::ESRCH) | Err(Errno::EPERM) | Err(Errno::EINVAL) => {}
@@ -467,7 +467,7 @@ fn setpgid_bad_pid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a child can set and read PR_SET_DUMPABLE")]
 fn prctl_dumpable_in_child() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -484,7 +484,7 @@ fn prctl_dumpable_in_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "RLIMIT_NOFILE soft limit is less than or equal to the hard limit")]
 fn rlimit_nofile_cur_le_max() -> TestResult {
     let mut lim = Rlimit::default();
     check_ok!(
@@ -495,7 +495,7 @@ fn rlimit_nofile_cur_le_max() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a second waitid after reaping returns ECHILD or EAGAIN")]
 fn waitid_then_echild() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -514,7 +514,7 @@ fn waitid_then_echild() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getrusage of children reports non-negative minflt and context-switch counts")]
 fn getrusage_children_nonneg_fields() -> TestResult {
     let ru = check_ok!(syscall::getrusage(RUSAGE_CHILDREN), "ru");
     check!(ru.ru_minflt >= 0, "minflt");
@@ -523,7 +523,7 @@ fn getrusage_children_nonneg_fields() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a child getpid differs from the parent pid")]
 fn fork_getpid_differs() -> TestResult {
     let parent = syscall::getpid();
     let pid = check_ok!(syscall::fork(), "fork");
@@ -539,7 +539,7 @@ fn fork_getpid_differs() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 with options 0 reaps the forked child")]
 fn wait4_options_zero() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {

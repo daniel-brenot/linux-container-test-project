@@ -7,7 +7,7 @@ use crate::harness::TestResult;
 use crate::suites::common::cstr_prefix;
 use crate::syscall::{self, RLIMIT_NOFILE, Rlimit};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "uname sysname starts with Linux")]
 fn uname_linux() -> TestResult {
     let u = check_ok!(syscall::uname(), "uname");
     let sys = cstr_prefix(&u.sysname);
@@ -15,7 +15,7 @@ fn uname_linux() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "uname release and machine fields are nonempty")]
 fn uname_fields_nonempty() -> TestResult {
     let u = check_ok!(syscall::uname(), "uname");
     check!(!cstr_prefix(&u.release).is_empty(), "release empty");
@@ -23,7 +23,7 @@ fn uname_fields_nonempty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "two getrandom fills of 32 bytes differ")]
 fn getrandom_nonzero() -> TestResult {
     let mut a = [0u8; 32];
     let mut b = [0u8; 32];
@@ -33,20 +33,20 @@ fn getrandom_nonzero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "getrandom fills a 16-byte buffer")]
 fn getrandom_partial() -> TestResult {
     let mut buf = [0u8; 16];
     check_eq!(check_ok!(syscall::getrandom(&mut buf, 0), "getrandom"), 16, "len");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sched_yield succeeds")]
 fn sched_yield() -> TestResult {
     check_ok!(syscall::sched_yield(), "sched_yield");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "prlimit64 reports positive RLIMIT_NOFILE soft and hard limits")]
 fn prlimit_nofile_get() -> TestResult {
     let mut lim = Rlimit::default();
     check_ok!(
@@ -58,7 +58,7 @@ fn prlimit_nofile_get() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "RLIMIT_NOFILE soft limit is at least 32")]
 fn prlimit_nofile_positive() -> TestResult {
     let mut old = Rlimit::default();
     check_ok!(
@@ -69,7 +69,7 @@ fn prlimit_nofile_positive() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "membarrier MEMBARRIER_CMD_QUERY succeeds")]
 fn membarrier_query() -> TestResult {
     let mask = check_ok!(
         syscall::membarrier(syscall::MEMBARRIER_CMD_QUERY, 0),
@@ -80,7 +80,7 @@ fn membarrier_query() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "personality query returns a stable value")]
 fn personality_query() -> TestResult {
     // 0xffffffff asks for the current personality without changing it.
     let p = check_ok!(syscall::personality(0xffff_ffff), "personality");
@@ -90,7 +90,7 @@ fn personality_query() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "capget with LINUX_CAPABILITY_VERSION_3 succeeds")]
 fn capget_v3() -> TestResult {
     let mut hdr = syscall::CapUserHeader {
         version: syscall::LINUX_CAPABILITY_VERSION_3,
@@ -103,7 +103,7 @@ fn capget_v3() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "two membarrier queries return the same command mask")]
 fn membarrier_query_nonzero_or_zero() -> TestResult {
     let mask = check_ok!(syscall::membarrier(syscall::MEMBARRIER_CMD_QUERY, 0), "q");
     // Just ensure we can call it twice with a consistent result.

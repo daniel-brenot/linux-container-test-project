@@ -6,7 +6,7 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, poll, Timespec, POLLIN};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "ppoll reports POLLIN on a pipe that already has data")]
 fn ppoll_pipe_readable() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     check_ok!(syscall::write(w, b"x"), "write");
@@ -27,7 +27,7 @@ fn ppoll_pipe_readable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "ppoll of an empty pipe with a short timeout returns 0 and no revents")]
 fn ppoll_timeout_empty() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     let mut pfd = [poll::PollFd {
@@ -47,7 +47,7 @@ fn ppoll_timeout_empty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "ppoll with a NULL timeout returns immediately when the pipe is already readable")]
 fn ppoll_null_timeout_immediate() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     check_ok!(syscall::write(w, b"z"), "write");
@@ -64,7 +64,7 @@ fn ppoll_null_timeout_immediate() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "ppoll with a zero timespec on an empty pipe returns 0")]
 fn ppoll_zero_timespec() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     let mut pfd = [poll::PollFd {
@@ -83,7 +83,7 @@ fn ppoll_zero_timespec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "ppoll of two pipes reports POLLIN only on the pipe that has data")]
 fn ppoll_two_fds_one_ready() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "pipe1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "pipe2");

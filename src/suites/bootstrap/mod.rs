@@ -11,7 +11,11 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::cstr_prefix;
 use crate::syscall::{self, map, oflag, prot, Errno};
 
-#[crate::lctp_test(suite = bootstrap)]
+#[crate::lctp_test(
+    suite = bootstrap,
+    expect = success,
+    case = "write() of a zero-length buffer to stdout succeeds and returns 0"
+)]
 fn write_stdout() -> TestResult {
     // If we got here via the harness printer, write already works; still
     // exercise the syscall directly and check a non-zero return.
@@ -23,7 +27,11 @@ fn write_stdout() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = bootstrap)]
+#[crate::lctp_test(
+    suite = bootstrap,
+    expect = success,
+    case = "creating a file, writing, seeking, reading the same bytes, and closing all succeed"
+)]
 fn open_close_read_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "TempDir::create failed");
     let fd = check_ok!(tmp.create_file(b"file", 0o644), "create_file failed");
@@ -42,7 +50,11 @@ fn open_close_read_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = bootstrap)]
+#[crate::lctp_test(
+    suite = bootstrap,
+    expect = success,
+    case = "mkdir creates a directory and rmdir/unlink remove it so later stat() fails with ENOENT"
+)]
 fn mkdir_rmdir_unlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "TempDir::create failed");
     let dir = check_ok!(crate::suites::common::copy_child(&mut tmp, b"subdir"), "child path failed");
@@ -68,7 +80,11 @@ fn mkdir_rmdir_unlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = bootstrap)]
+#[crate::lctp_test(
+    suite = bootstrap,
+    expect = success,
+    case = "chdir() to a temporary directory is reflected by getcwd(), then the original directory is restored"
+)]
 fn getcwd_chdir() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "TempDir::create failed");
     let mut cwd = [0u8; 256];
@@ -91,7 +107,11 @@ fn getcwd_chdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = bootstrap)]
+#[crate::lctp_test(
+    suite = bootstrap,
+    expect = success,
+    case = "an anonymous writable mapping can be stored to and is released by munmap()"
+)]
 fn mmap_munmap() -> TestResult {
     let len = 4096usize;
     let addr = check_ok!(
@@ -118,7 +138,11 @@ fn mmap_munmap() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = bootstrap)]
+#[crate::lctp_test(
+    suite = bootstrap,
+    expect = success,
+    case = "pipe2() creates a pipe and bytes written to the write end are read from the read end"
+)]
 fn pipe2_roundtrip() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(oflag::O_CLOEXEC), "pipe2 failed");
     let msg = b"pipe-ok";
@@ -133,7 +157,11 @@ fn pipe2_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = bootstrap)]
+#[crate::lctp_test(
+    suite = bootstrap,
+    expect = success,
+    case = "fork() creates a child that exits 42 and wait4() reports that status"
+)]
 fn fork_wait_exit() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork failed");
     if pid == 0 {
@@ -151,7 +179,11 @@ fn fork_wait_exit() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = bootstrap)]
+#[crate::lctp_test(
+    suite = bootstrap,
+    expect = success,
+    case = "CLOCK_MONOTONIC returns a valid timespec and does not go backwards"
+)]
 fn clock_gettime_monotonic() -> TestResult {
     let t1 = check_ok!(
         syscall::clock_gettime(syscall::clock::CLOCK_MONOTONIC),
@@ -173,7 +205,11 @@ fn clock_gettime_monotonic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = bootstrap)]
+#[crate::lctp_test(
+    suite = bootstrap,
+    expect = success,
+    case = "getpid() is positive and stable, and equals gettid() in a single-threaded process"
+)]
 fn getpid_identity() -> TestResult {
     let a = syscall::getpid();
     let b = syscall::getpid();
@@ -183,7 +219,11 @@ fn getpid_identity() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = bootstrap)]
+#[crate::lctp_test(
+    suite = bootstrap,
+    expect = success,
+    case = "uname() succeeds and reports a Linux kernel"
+)]
 fn uname_linux() -> TestResult {
     let u = check_ok!(syscall::uname(), "uname failed");
     let sys = cstr_prefix(&u.sysname);

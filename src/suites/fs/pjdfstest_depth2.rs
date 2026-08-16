@@ -1,5 +1,5 @@
-//! pjdfstest-inspired depth2: EACCES matrices, rename/link/unlink edges,
-//! open flag combos, mknod fifo modes.
+//! Permission EACCES matrices, rename/link/unlink edges,
+//! open flag combos, and FIFO modes.
 
 use crate::check;
 use crate::check_eq;
@@ -13,7 +13,7 @@ use crate::syscall::{self, oflag, Errno, AT_FDCWD, F_OK, R_OK, S_IFIFO, W_OK, X_
 
 macro_rules! eacces_open_after_chmod {
     ($name:ident, $mode:expr, $flags:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "open after chmod without the required permission bits returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let path = create_empty(&mut tmp, b"f")?;
@@ -42,7 +42,7 @@ eacces_open_after_chmod!(d2_open_append_eacces_440, 0o440, oflag::O_RDWR | oflag
 
 macro_rules! eacces_access_mode {
     ($name:ident, $chmod:expr, $want:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "access with bits not granted by the file mode returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let path = create_empty(&mut tmp, b"f")?;
@@ -75,7 +75,7 @@ eacces_access_mode!(d2_acc_rwx_vs_000, 0o000, R_OK | W_OK | X_OK);
 
 macro_rules! eacces_dir_create {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "creating a file in a directory without write permission returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -101,7 +101,7 @@ eacces_dir_create!(d2_dir_creat_eacces_000, 0o000);
 
 macro_rules! eacces_dir_unlink {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "unlink in a directory without write permission returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -130,7 +130,7 @@ eacces_dir_unlink!(d2_dir_unlink_eacces_111, 0o111);
 
 macro_rules! eacces_dir_rename_into {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "rename into a directory without write permission returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -152,7 +152,7 @@ eacces_dir_rename_into!(d2_dir_rename_eacces_000, 0o000);
 
 macro_rules! eacces_dir_link_into {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "link into a directory without write permission returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -174,7 +174,7 @@ eacces_dir_link_into!(d2_dir_link_eacces_111, 0o111);
 
 macro_rules! eacces_dir_mkdir {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "mkdir in a directory without write permission returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -195,7 +195,7 @@ eacces_dir_mkdir!(d2_dir_mkdir_eacces_000, 0o000);
 
 macro_rules! rename_edge {
     ($name:ident, $src_name:expr, $dst_name:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "rename of a regular file to a new name succeeds and removes the old path")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let src = create_empty(&mut tmp, $src_name)?;
@@ -218,7 +218,7 @@ rename_edge!(d2_ren_num, b"n1", b"n2");
 rename_edge!(d2_ren_u_to_v, b"u", b"v");
 rename_edge!(d2_ren_p_to_q, b"p", b"q");
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename over an existing file replaces it with the source contents")]
 fn d2_rename_replace_same_content_check() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"ra")?;
@@ -234,7 +234,7 @@ fn d2_rename_replace_same_content_check() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of a directory onto an empty directory succeeds")]
 fn d2_rename_dir_over_empty_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_dir(&mut tmp, b"da", 0o755)?;
@@ -247,7 +247,7 @@ fn d2_rename_dir_over_empty_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rename of a missing source path returns ENOENT")]
 fn d2_rename_enoent_src() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let dst = copy_child(&mut tmp, b"dst")?;
@@ -259,7 +259,7 @@ fn d2_rename_enoent_src() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of a file onto itself succeeds and the path remains")]
 fn d2_rename_to_self() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"self")?;
@@ -271,7 +271,7 @@ fn d2_rename_to_self() -> TestResult {
 
 macro_rules! link_edge {
     ($name:ident, $old:expr, $new:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "link creates a second name that shares the source inode")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let src = create_empty(&mut tmp, $old)?;
@@ -297,7 +297,7 @@ link_edge!(d2_link_m_n, b"m", b"n");
 link_edge!(d2_link_i_j, b"i", b"j");
 link_edge!(d2_link_c_d, b"c", b"d");
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "link onto an existing path returns EEXIST")]
 fn d2_link_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -306,7 +306,7 @@ fn d2_link_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "link with a missing source path returns ENOENT")]
 fn d2_link_enoent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let dst = copy_child(&mut tmp, b"dst")?;
@@ -318,7 +318,7 @@ fn d2_link_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "two extra hard links raise nlink to at least 3")]
 fn d2_link_three_names() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -336,7 +336,7 @@ fn d2_link_three_names() -> TestResult {
 
 macro_rules! unlink_edge {
     ($name:ident, $nm:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "unlink of a regular file succeeds and the path is gone")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, $nm)?;
@@ -357,7 +357,7 @@ unlink_edge!(d2_ul_z, b"z");
 unlink_edge!(d2_ul_name01, b"name01");
 unlink_edge!(d2_ul_dotfile, b".u");
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "unlink of a missing path returns ENOENT")]
 fn d2_unlink_enoent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = copy_child(&mut tmp, b"missing")?;
@@ -365,7 +365,7 @@ fn d2_unlink_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "unlink of a directory returns EISDIR or EPERM")]
 fn d2_unlink_dir_eisdir_or_eperm() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -380,7 +380,7 @@ fn d2_unlink_dir_eisdir_or_eperm() -> TestResult {
 
 macro_rules! open_flag_combo {
     ($name:ident, $flags:expr, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "open with O_CREAT|O_EXCL and the requested flags succeeds")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let path = copy_child(&mut tmp, b"of")?;
@@ -427,7 +427,7 @@ open_flag_combo!(
     0o644
 );
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_TRUNC preserves the inode and sets size 0")]
 fn d2_open_trunc_preserves_inode() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = create_empty(&mut tmp, b"t")?;
@@ -441,7 +441,7 @@ fn d2_open_trunc_preserves_inode() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open with O_CREAT|O_EXCL on an existing file returns EEXIST")]
 fn d2_open_excl_eexist_modes() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = create_empty(&mut tmp, b"e")?;
@@ -459,7 +459,7 @@ fn d2_open_excl_eexist_modes() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open of a directory with O_DIRECTORY succeeds")]
 fn d2_open_directory_flag() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -469,7 +469,7 @@ fn d2_open_directory_flag() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a regular file with O_DIRECTORY returns ENOTDIR")]
 fn d2_open_directory_on_file_enotdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = create_empty(&mut tmp, b"f")?;
@@ -481,7 +481,7 @@ fn d2_open_directory_on_file_enotdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "open with O_PATH succeeds when the interface is supported")]
 fn d2_open_path_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = create_empty(&mut tmp, b"f")?;
@@ -495,7 +495,7 @@ fn d2_open_path_soft() -> TestResult {
 
 macro_rules! mkfifo_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("mknodat creates a FIFO with mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let path = copy_child(&mut tmp, b"fifo")?;
@@ -534,7 +534,7 @@ mkfifo_mode!(d2_fifo_555, 0o555);
 mkfifo_mode!(d2_fifo_711, 0o711);
 mkfifo_mode!(d2_fifo_733, 0o733);
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mknodat of an existing FIFO returns EEXIST")]
 fn d2_fifo_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -551,7 +551,7 @@ fn d2_fifo_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access F_OK on a newly created FIFO succeeds")]
 fn d2_fifo_stat_f_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -564,7 +564,7 @@ fn d2_fifo_stat_f_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlinking and recreating a FIFO three times succeeds")]
 fn d2_fifo_unlink_then_recreate() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -578,7 +578,7 @@ fn d2_fifo_unlink_then_recreate() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open succeeds after chmod grants the matching access bits")]
 fn d2_chmod_then_open_ok_matrix() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = create_empty(&mut tmp, b"f")?;
@@ -597,7 +597,7 @@ fn d2_chmod_then_open_ok_matrix() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "faccessat with bits not granted by the file mode returns EACCES")]
 fn d2_faccessat_eacces_matrix() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = create_empty(&mut tmp, b"f")?;
@@ -618,7 +618,7 @@ fn d2_faccessat_eacces_matrix() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rename of a file into a subdirectory succeeds")]
 fn d2_rename_across_subdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let sub = create_dir(&mut tmp, b"sub", 0o755)?;
@@ -632,7 +632,7 @@ fn d2_rename_across_subdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "link of a file into a subdirectory succeeds")]
 fn d2_link_across_subdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let sub = create_dir(&mut tmp, b"sub", 0o755)?;
@@ -646,7 +646,7 @@ fn d2_link_across_subdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink of the last remaining hard-link name removes the path")]
 fn d2_unlink_last_link_removes() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -659,7 +659,7 @@ fn d2_unlink_last_link_removes() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open O_CREAT then chmod sets each requested file mode")]
 fn d2_open_creat_umask_force_mode() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     for mode in [0o640u32, 0o620, 0o604, 0o444, 0o222, 0o111, 0o750, 0o740] {

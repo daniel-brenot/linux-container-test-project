@@ -7,7 +7,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_dir, create_empty};
 use crate::syscall::{self, oflag, Errno};
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a path that does not exist returns ENOENT")]
 fn errno_enoent_open() -> TestResult {
     check_err!(
         syscall::open(b"/tmp/lctp-missing-open\0", oflag::O_RDONLY, 0),
@@ -17,7 +17,7 @@ fn errno_enoent_open() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "stat() of a path that does not exist returns ENOENT")]
 fn errno_enoent_stat() -> TestResult {
     check_err!(
         syscall::stat(b"/tmp/lctp-missing-stat\0"),
@@ -27,7 +27,7 @@ fn errno_enoent_stat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "unlink() of a path that does not exist returns ENOENT")]
 fn errno_enoent_unlink() -> TestResult {
     check_err!(
         syscall::unlink(b"/tmp/lctp-missing-unlink\0"),
@@ -37,7 +37,7 @@ fn errno_enoent_unlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a directory with O_RDWR returns EISDIR")]
 fn errno_eisdir_open_write() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     check_err!(
@@ -48,7 +48,7 @@ fn errno_eisdir_open_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "unlink() of a directory returns EISDIR or EPERM")]
 fn errno_eisdir_unlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -61,25 +61,25 @@ fn errno_eisdir_unlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "read() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_read() -> TestResult {
     check_err!(syscall::read(-1, &mut [0u8; 1]), Errno::EBADF, "read bad fd");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "write() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_write() -> TestResult {
     check_err!(syscall::write(-1, b"x"), Errno::EBADF, "write bad fd");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "close() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_close() -> TestResult {
     check_err!(syscall::close(-1), Errno::EBADF, "close bad fd");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "lseek() with an invalid whence returns EINVAL")]
 fn errno_einval_lseek() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -92,7 +92,7 @@ fn errno_einval_lseek() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() with a regular file as a directory component returns ENOTDIR")]
 fn errno_enotdir_component() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -111,7 +111,7 @@ fn errno_enotdir_component() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "mkdir() of a path that already exists returns EEXIST")]
 fn errno_eexist_mkdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = copy_child(&mut tmp, b"d")?;
@@ -121,7 +121,7 @@ fn errno_eexist_mkdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "rmdir() of a directory that still contains a file returns ENOTEMPTY")]
 fn errno_enotempty_rmdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -143,7 +143,7 @@ fn errno_enotempty_rmdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "chmod() of a path that does not exist returns ENOENT")]
 fn errno_enoent_chmod() -> TestResult {
     check_err!(
         syscall::chmod(b"/tmp/lctp-missing-chmod\0", 0o644),
@@ -153,7 +153,7 @@ fn errno_enoent_chmod() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "access() of a path that does not exist returns ENOENT")]
 fn errno_enoent_access() -> TestResult {
     check_err!(
         syscall::access(b"/tmp/lctp-missing-access\0", syscall::F_OK),
@@ -163,7 +163,7 @@ fn errno_enoent_access() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "chdir() to a path that does not exist returns ENOENT")]
 fn errno_enoent_chdir() -> TestResult {
     check_err!(
         syscall::chdir(b"/tmp/lctp-missing-chdir\0"),
@@ -173,7 +173,7 @@ fn errno_enoent_chdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "mkdir() whose parent directory does not exist returns ENOENT")]
 fn errno_enoent_mkdir_parent() -> TestResult {
     check_err!(
         syscall::mkdir(b"/tmp/lctp-no-parent-x/child\0", 0o755),
@@ -183,7 +183,7 @@ fn errno_enoent_mkdir_parent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "rmdir() of a path that does not exist returns ENOENT")]
 fn errno_enoent_rmdir() -> TestResult {
     check_err!(
         syscall::rmdir(b"/tmp/lctp-missing-rmdir\0"),
@@ -193,7 +193,7 @@ fn errno_enoent_rmdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "link() whose source path does not exist returns ENOENT")]
 fn errno_enoent_link() -> TestResult {
     check_err!(
         syscall::link(b"/tmp/lctp-missing-link-src\0", b"/tmp/lctp-missing-link-dst\0"),
@@ -203,7 +203,7 @@ fn errno_enoent_link() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "rename() whose source path does not exist returns ENOENT")]
 fn errno_enoent_rename() -> TestResult {
     check_err!(
         syscall::rename(b"/tmp/lctp-missing-ren-src\0", b"/tmp/lctp-missing-ren-dst\0"),
@@ -213,7 +213,7 @@ fn errno_enoent_rename() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "readlink() of a path that does not exist returns ENOENT")]
 fn errno_enoent_readlink() -> TestResult {
     let mut buf = [0u8; 64];
     check_err!(
@@ -224,7 +224,7 @@ fn errno_enoent_readlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "truncate() of a path that does not exist returns ENOENT")]
 fn errno_enoent_truncate() -> TestResult {
     check_err!(
         syscall::truncate(b"/tmp/lctp-missing-trunc\0", 0),
@@ -234,49 +234,49 @@ fn errno_enoent_truncate() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "fstat() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_fstat() -> TestResult {
     check_err!(syscall::fstat(-1), Errno::EBADF, "fstat");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "ftruncate() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_ftruncate() -> TestResult {
     check_err!(syscall::ftruncate(-1, 0), Errno::EBADF, "ftruncate");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "fsync() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_fsync() -> TestResult {
     check_err!(syscall::fsync(-1), Errno::EBADF, "fsync");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "fdatasync() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_fdatasync() -> TestResult {
     check_err!(syscall::fdatasync(-1), Errno::EBADF, "fdatasync");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "fchmod() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_fchmod() -> TestResult {
     check_err!(syscall::fchmod(-1, 0o644), Errno::EBADF, "fchmod");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "lseek() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_lseek() -> TestResult {
     check_err!(syscall::lseek(-1, 0, syscall::SEEK_SET), Errno::EBADF, "lseek");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "dup() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_dup() -> TestResult {
     check_err!(syscall::dup(-1), Errno::EBADF, "dup");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "fcntl(F_GETFL) on file descriptor -1 returns EBADF")]
 fn errno_ebadf_fcntl_getfl() -> TestResult {
     check_err!(
         syscall::fcntl(-1, syscall::fcntl_cmd::F_GETFL, 0),
@@ -286,7 +286,7 @@ fn errno_ebadf_fcntl_getfl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "lseek() with a negative whence returns EINVAL")]
 fn errno_einval_lseek_neg_whence() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -295,7 +295,7 @@ fn errno_einval_lseek_neg_whence() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a directory with O_WRONLY returns EISDIR")]
 fn errno_eisdir_open_wronly() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     check_err!(
@@ -306,7 +306,7 @@ fn errno_eisdir_open_wronly() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "chdir() to a regular file returns ENOTDIR")]
 fn errno_enotdir_chdir_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -314,7 +314,7 @@ fn errno_enotdir_chdir_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "mkdir() through a regular file component returns ENOTDIR")]
 fn errno_enotdir_mkdir_through_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -333,7 +333,7 @@ fn errno_enotdir_mkdir_through_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a regular file path with a trailing slash returns ENOTDIR")]
 fn errno_enotdir_open_slash_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -350,7 +350,7 @@ fn errno_enotdir_open_slash_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "truncate() of a directory returns EISDIR or EINVAL")]
 fn errno_eisdir_truncate_dir() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     match syscall::truncate(tmp.path(), 0) {
@@ -360,7 +360,7 @@ fn errno_eisdir_truncate_dir() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() with O_CREAT|O_EXCL on an existing file returns EEXIST")]
 fn errno_eexist_open_excl() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"ex")?;
@@ -372,7 +372,7 @@ fn errno_eexist_open_excl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a dangling symlink returns ENOENT")]
 fn errno_enoent_symlink_target_open() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"dangling")?;
@@ -385,20 +385,20 @@ fn errno_enoent_symlink_target_open() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "pread() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_pread() -> TestResult {
     let mut buf = [0u8; 4];
     check_err!(syscall::pread(-1, &mut buf, 0), Errno::EBADF, "pread");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "pwrite() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_pwrite() -> TestResult {
     check_err!(syscall::pwrite(-1, b"x", 0), Errno::EBADF, "pwrite");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "ftruncate() with a negative length returns EINVAL")]
 fn errno_einval_ftruncate_neg() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -407,7 +407,7 @@ fn errno_einval_ftruncate_neg() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "lstat() of a path that does not exist returns ENOENT")]
 fn errno_enoent_lstat() -> TestResult {
     check_err!(
         syscall::lstat(b"/tmp/lctp-missing-lstat\0"),
@@ -417,19 +417,19 @@ fn errno_enoent_lstat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "readv() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_readv() -> TestResult {
     check_err!(syscall::readv(-1, &mut []), Errno::EBADF, "readv");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "writev() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_writev() -> TestResult {
     check_err!(syscall::writev(-1, &mut []), Errno::EBADF, "writev");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "unlink() through a regular file component returns ENOTDIR")]
 fn errno_enotdir_unlinkat_dir_as_file_component() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -447,7 +447,7 @@ fn errno_enotdir_unlinkat_dir_as_file_component() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "openat(AT_FDCWD) of a path that does not exist returns ENOENT")]
 fn errno_enoent_openat_cwd() -> TestResult {
     check_err!(
         syscall::openat(syscall::AT_FDCWD, b"/tmp/lctp-no-openat\0", oflag::O_RDONLY, 0),
@@ -457,7 +457,7 @@ fn errno_enoent_openat_cwd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "openat() with dirfd -1 returns EBADF")]
 fn errno_ebadf_openat_dirfd() -> TestResult {
     check_err!(
         syscall::openat(-1, b"x\0", oflag::O_RDONLY, 0),

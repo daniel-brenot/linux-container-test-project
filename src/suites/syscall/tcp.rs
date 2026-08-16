@@ -23,7 +23,7 @@ fn listen_ephemeral() -> Result<(i32, SockAddrIn), crate::harness::AssertFail> {
     Ok((fd, bound))
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "bind/listen on INADDR_LOOPBACK port 0 yields a nonzero ephemeral port")]
 fn tcp_bind_listen_ephemeral() -> TestResult {
     let (fd, addr) = listen_ephemeral()?;
     check_eq!(addr.sin_family, AF_INET as u16, "family");
@@ -31,7 +31,7 @@ fn tcp_bind_listen_ephemeral() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "connect and accept4 complete a loopback TCP handshake")]
 fn tcp_connect_accept4() -> TestResult {
     let (srv, bound) = listen_ephemeral()?;
     let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
@@ -50,7 +50,7 @@ fn tcp_connect_accept4() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "TCP send/recv on loopback delivers a short payload")]
 fn tcp_send_recv_loopback() -> TestResult {
     let (srv, bound) = listen_ephemeral()?;
     let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
@@ -67,7 +67,7 @@ fn tcp_send_recv_loopback() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "both ends of a loopback TCP connection can send and receive")]
 fn tcp_bidirectional() -> TestResult {
     let (srv, bound) = listen_ephemeral()?;
     let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
@@ -86,7 +86,7 @@ fn tcp_bidirectional() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "accept4 with SOCK_CLOEXEC sets FD_CLOEXEC on the accepted fd")]
 fn tcp_accept4_cloexec() -> TestResult {
     let (srv, bound) = listen_ephemeral()?;
     let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
@@ -100,7 +100,7 @@ fn tcp_accept4_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "shutdown SHUT_WR makes the peer recv return 0")]
 fn tcp_shutdown_wr_eof() -> TestResult {
     let (srv, bound) = listen_ephemeral()?;
     let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
@@ -116,7 +116,7 @@ fn tcp_shutdown_wr_eof() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getpeername on the client reports the listening port")]
 fn tcp_getsockname_port_matches() -> TestResult {
     let (srv, bound) = listen_ephemeral()?;
     let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
@@ -129,7 +129,7 @@ fn tcp_getsockname_port_matches() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "SO_REUSEADDR allows bind of a new socket to an ephemeral port")]
 fn tcp_reuseaddr_rebind() -> TestResult {
     let (fd1, bound) = listen_ephemeral()?;
     check_ok!(syscall::close(fd1), "close1");
@@ -147,7 +147,7 @@ fn tcp_reuseaddr_rebind() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "shutdown SHUT_RD on the client still lets the peer send")]
 fn tcp_shutdown_after_connect_rd() -> TestResult {
     let (srv, bound) = listen_ephemeral()?;
     let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
@@ -162,7 +162,7 @@ fn tcp_shutdown_after_connect_rd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "accept4 with SOCK_NONBLOCK sets O_NONBLOCK and FD_CLOEXEC")]
 fn tcp_accept4_nonblock_flag() -> TestResult {
     let (srv, bound) = listen_ephemeral()?;
     let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
@@ -181,7 +181,7 @@ fn tcp_accept4_nonblock_flag() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "shutdown SHUT_RDWR makes the peer recv return 0")]
 fn tcp_shutdown_rdwr() -> TestResult {
     let (srv, bound) = listen_ephemeral()?;
     let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
@@ -197,7 +197,7 @@ fn tcp_shutdown_rdwr() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "an 8192-byte TCP send/recv on loopback delivers the payload")]
 fn tcp_large_send_recv() -> TestResult {
     let (srv, bound) = listen_ephemeral()?;
     let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");
@@ -227,7 +227,7 @@ fn tcp_large_send_recv() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "after SHUT_WR the peer reads EOF while the reverse direction still works")]
 fn tcp_shutdown_wr_then_recv_zero() -> TestResult {
     let (srv, bound) = listen_ephemeral()?;
     let cli = check_ok!(syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0), "client");

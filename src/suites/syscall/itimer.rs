@@ -11,7 +11,7 @@ fn disarm() -> Result<(), crate::harness::AssertFail> {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getitimer ITIMER_REAL reports zeros when the timer is disarmed")]
 fn getitimer_disarmed_zero() -> TestResult {
     check_ok!(syscall::signal_ignore(SIGALRM), "SIG_IGN");
     disarm()?;
@@ -34,7 +34,7 @@ fn getitimer_disarmed_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getitimer reports a positive remaining time after arming ITIMER_REAL")]
 fn setitimer_real_get_remaining() -> TestResult {
     check_ok!(syscall::signal_ignore(SIGALRM), "SIG_IGN");
     let new = Itimerval {
@@ -58,7 +58,7 @@ fn setitimer_real_get_remaining() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "setitimer returns the previous remaining ITIMER_REAL value")]
 fn setitimer_returns_old() -> TestResult {
     check_ok!(syscall::signal_ignore(SIGALRM), "SIG_IGN");
     disarm()?;
@@ -86,7 +86,7 @@ fn setitimer_returns_old() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "setitimer retains the configured ITIMER_REAL interval")]
 fn setitimer_interval_retained() -> TestResult {
     check_ok!(syscall::signal_ignore(SIGALRM), "SIG_IGN");
     let new = Itimerval {
@@ -126,7 +126,7 @@ fn setitimer_interval_retained() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "setitimer with a zero value clears ITIMER_REAL")]
 fn setitimer_clear() -> TestResult {
     check_ok!(syscall::signal_ignore(SIGALRM), "SIG_IGN");
     let armed = Itimerval {

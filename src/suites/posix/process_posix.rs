@@ -6,14 +6,14 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, PRIO_PROCESS};
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getpgid(0) returns a positive process group ID")]
 fn posix_getpgid_zero() -> TestResult {
     let pgid = check_ok!(syscall::getpgid(0), "getpgid");
     check!(pgid > 0, "pgid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getpgid(0) equals getpgid() of the current process ID")]
 fn posix_getpgid_matches_pid() -> TestResult {
     let a = check_ok!(syscall::getpgid(0), "pgid 0");
     let b = check_ok!(syscall::getpgid(syscall::getpid()), "pgid pid");
@@ -21,7 +21,7 @@ fn posix_getpgid_matches_pid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "times() returns non-negative user and system CPU times")]
 fn posix_times_non_negative() -> TestResult {
     let t = check_ok!(syscall::times(), "times");
     check!(t.tms_utime >= 0, "utime");
@@ -29,7 +29,7 @@ fn posix_times_non_negative() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "times() returns non-negative child user and system CPU times")]
 fn posix_times_child_fields() -> TestResult {
     let t = check_ok!(syscall::times(), "times");
     check!(t.tms_cutime >= 0, "cutime");
@@ -37,21 +37,21 @@ fn posix_times_child_fields() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getpriority(PRIO_PROCESS, 0) returns a nice value in the range -20 to 19")]
 fn posix_getpriority_self() -> TestResult {
     let nice = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "priority");
     check!(nice >= -20 && nice <= 19, "nice");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getpriority(PRIO_PROCESS, getpid()) returns a nice value in the range -20 to 19")]
 fn posix_getpriority_pid() -> TestResult {
     let nice = check_ok!(syscall::getpriority(PRIO_PROCESS, syscall::getpid()), "priority");
     check!(nice >= -20 && nice <= 19, "nice");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "times() child CPU time is not smaller after fork() and wait of a child")]
 fn posix_times_after_fork() -> TestResult {
     let t0 = check_ok!(syscall::times(), "times0");
     let pid = check_ok!(syscall::fork(), "fork");
@@ -65,14 +65,14 @@ fn posix_times_after_fork() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getsid(0) returns a positive session ID")]
 fn posix_getsid_self() -> TestResult {
     let sid = check_ok!(syscall::getsid(0), "getsid");
     check!(sid > 0, "sid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getresuid() reports equal real, effective, and saved user IDs")]
 fn posix_getresuid_consistent() -> TestResult {
     let (r, e, s) = check_ok!(syscall::getresuid(), "getresuid");
     check_eq!(r, e, "uid");
@@ -80,7 +80,7 @@ fn posix_getresuid_consistent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getresgid() reports equal real, effective, and saved group IDs")]
 fn posix_getresgid_consistent() -> TestResult {
     let (r, e, s) = check_ok!(syscall::getresgid(), "getresgid");
     check_eq!(r, e, "gid");
@@ -88,7 +88,7 @@ fn posix_getresgid_consistent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "two successive getpriority() calls for this process return the same nice value")]
 fn posix_priority_stable() -> TestResult {
     let a = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "p1");
     let b = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "p2");
@@ -96,13 +96,13 @@ fn posix_priority_stable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getpgid(0) returns a positive process group ID")]
 fn posix_pgid_positive() -> TestResult {
     check!(check_ok!(syscall::getpgid(0), "pgid") > 0, "positive");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "a fork() child has the same process group ID as its parent")]
 fn posix_child_same_pgid() -> TestResult {
     let pgid = check_ok!(syscall::getpgid(0), "pgid");
     let pid = check_ok!(syscall::fork(), "fork");

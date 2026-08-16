@@ -19,13 +19,13 @@ fn discard_pending(sig: i32) -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "kill with signal 0 on the calling process succeeds")]
 fn signal_kill_self_zero() -> TestResult {
     check_ok!(syscall::kill(syscall::getpid(), 0), "kill 0");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "kill of a child with SIGTERM is reported as a signaled wait status")]
 fn signal_child_sigterm_reap() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -44,7 +44,7 @@ fn signal_child_sigterm_reap() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "kill of a child with SIGINT is reported as a signaled wait status")]
 fn signal_child_sigint_reap() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -63,7 +63,7 @@ fn signal_child_sigint_reap() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "wtermsig of a SIGTERM-killed child equals SIGTERM")]
 fn signal_wtermsig_matches() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -81,7 +81,7 @@ fn signal_wtermsig_matches() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a child that calls exit is reported as exited and not signaled")]
 fn signal_exit_not_signaled() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -95,14 +95,14 @@ fn signal_exit_not_signaled() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "kill with signal 0 on the calling process succeeds twice")]
 fn signal_kill_self_zero_twice() -> TestResult {
     check_ok!(syscall::kill(syscall::getpid(), 0), "k1");
     check_ok!(syscall::kill(syscall::getpid(), 0), "k2");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rt_sigprocmask can block SIGUSR1 and then unblock it")]
 fn signal_sigprocmask_block_unblock() -> TestResult {
     check_ok!(
         syscall::rt_sigprocmask(SIG_BLOCK, Some(sigmask(SIGUSR1)), None),
@@ -115,7 +115,7 @@ fn signal_sigprocmask_block_unblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rt_sigprocmask can save the mask, block SIGUSR1, and restore the old mask")]
 fn signal_sigprocmask_setmask_restore() -> TestResult {
     let mut old = 0u64;
     check_ok!(
@@ -133,7 +133,7 @@ fn signal_sigprocmask_setmask_restore() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "a blocked SIGUSR1 sent to self is reported by rt_sigpending")]
 fn signal_sigpending_after_block_kill() -> TestResult {
     check_ok!(
         syscall::rt_sigprocmask(SIG_BLOCK, Some(sigmask(SIGUSR1)), None),
@@ -147,7 +147,7 @@ fn signal_sigpending_after_block_kill() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "an ignored pending SIGUSR1 is discarded when unblocked without terminating the process")]
 fn signal_ignore_sigusr1_unblock_pending() -> TestResult {
     check_ok!(
         syscall::rt_sigprocmask(SIG_BLOCK, Some(sigmask(SIGUSR1)), None),
@@ -164,7 +164,7 @@ fn signal_ignore_sigusr1_unblock_pending() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "an ignored pending SIGUSR2 is discarded when unblocked without terminating the process")]
 fn signal_ignore_sigusr2_unblock_pending() -> TestResult {
     check_ok!(
         syscall::rt_sigprocmask(SIG_BLOCK, Some(sigmask(SIGUSR2)), None),
@@ -180,7 +180,7 @@ fn signal_ignore_sigusr2_unblock_pending() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rt_sigaction can set SIG_IGN on SIGUSR1, then SIG_DFL, then restore the previous action")]
 fn signal_sigaction_ignore_restore() -> TestResult {
     let mut old = syscall::Sigaction::default();
     let ign = syscall::Sigaction {
@@ -200,14 +200,14 @@ fn signal_sigaction_ignore_restore() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rt_sigaction can query the current action for SIGUSR1")]
 fn signal_sigaction_query() -> TestResult {
     let mut cur = syscall::Sigaction::default();
     check_ok!(syscall::rt_sigaction(SIGUSR1, None, Some(&mut cur)), "query");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "wait reaps an exited child after SIGCHLD is blocked")]
 fn signal_child_death_sigchld_wait() -> TestResult {
     check_ok!(
         syscall::rt_sigprocmask(SIG_BLOCK, Some(sigmask(SIGCHLD)), None),
@@ -233,7 +233,7 @@ fn signal_child_death_sigchld_wait() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a child that ignores SIGUSR1 is not terminated by SIGUSR1 and can still be killed with SIGTERM")]
 fn signal_kill_child_sigusr1_ignored() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -260,7 +260,7 @@ fn signal_kill_child_sigusr1_ignored() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rt_sigprocmask with a null set can query the current mask")]
 fn signal_sigprocmask_query_null_set() -> TestResult {
     let mut old = 0u64;
     check_ok!(
@@ -270,14 +270,14 @@ fn signal_sigprocmask_query_null_set() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rt_sigpending succeeds and fills a pending-signal mask")]
 fn signal_sigpending_succeeds() -> TestResult {
     let mut pending = 0u64;
     check_ok!(syscall::rt_sigpending(&mut pending), "pending");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "blocked SIGUSR1 and SIGUSR2 sent to self both appear in rt_sigpending")]
 fn signal_block_both_usr_pending() -> TestResult {
     let mask = sigmask(SIGUSR1) | sigmask(SIGUSR2);
     check_ok!(syscall::rt_sigprocmask(SIG_BLOCK, Some(mask), None), "block");
@@ -295,7 +295,7 @@ fn signal_block_both_usr_pending() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rt_sigaction can set SIG_IGN then SIG_DFL on SIGUSR2")]
 fn signal_sigaction_ign_then_dfl_usr2() -> TestResult {
     let ign = syscall::Sigaction {
         sa_handler: SIG_IGN,
@@ -310,7 +310,7 @@ fn signal_sigaction_ign_then_dfl_usr2() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "waitpid reports a child that exits 0 as exited with status 0")]
 fn signal_child_exit_zero_wait() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -323,14 +323,14 @@ fn signal_child_exit_zero_wait() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "kill with signal 0 on the calling process succeeds as an existence check")]
 fn signal_kill_zero_other_self() -> TestResult {
     // kill(pid, 0) existence check on self.
     check_ok!(syscall::kill(syscall::getpid(), 0), "exists");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "with SIGCHLD ignored, waitpid of an exited child succeeds or returns ECHILD")]
 fn signal_sigchld_ign_then_fork_wait() -> TestResult {
     check_ok!(syscall::signal_ignore(SIGCHLD), "IGN");
     let pid = check_ok!(syscall::fork(), "fork");
@@ -351,13 +351,13 @@ fn signal_sigchld_ign_then_fork_wait() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rt_sigprocmask SIG_SETMASK can clear the signal mask")]
 fn signal_mask_clear() -> TestResult {
     check_ok!(syscall::rt_sigprocmask(SIG_SETMASK, Some(0), None), "clear");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rt_sigaction can set SIG_IGN on SIGUSR1 and read it back")]
 fn signal_rt_sigaction_roundtrip_handler() -> TestResult {
     let mut old = syscall::Sigaction::default();
     let ign = syscall::Sigaction {
@@ -375,7 +375,7 @@ fn signal_rt_sigaction_roundtrip_handler() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a blocked SIGUSR1 sent to self does not terminate the process")]
 fn signal_block_sigusr1_survives_kill() -> TestResult {
     check_ok!(
         syscall::rt_sigprocmask(SIG_BLOCK, Some(sigmask(SIGUSR1)), None),
@@ -386,7 +386,7 @@ fn signal_block_sigusr1_survives_kill() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a SIGTERM-killed child is reported as signaled and not exited")]
 fn signal_child_sigterm_wexitstatus_not_used() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -405,7 +405,7 @@ fn signal_child_sigterm_wexitstatus_not_used() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "unblocking an ignored pending SIGUSR1 clears it from rt_sigpending")]
 fn signal_pending_cleared_after_ign_unblock() -> TestResult {
     check_ok!(
         syscall::rt_sigprocmask(SIG_BLOCK, Some(sigmask(SIGUSR1)), None),
@@ -424,7 +424,7 @@ fn signal_pending_cleared_after_ign_unblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rt_sigprocmask can block SIGUSR1 twice and then unblock it")]
 fn signal_sigprocmask_block_twice() -> TestResult {
     check_ok!(
         syscall::rt_sigprocmask(SIG_BLOCK, Some(sigmask(SIGUSR1)), None),

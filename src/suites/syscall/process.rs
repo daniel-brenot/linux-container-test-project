@@ -6,7 +6,7 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, wait, Errno};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 reports a child that exited with status 42")]
 fn fork_exit_status() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -19,7 +19,7 @@ fn fork_exit_status() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 reports a child that exited with status 0")]
 fn fork_exit_zero() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -32,7 +32,7 @@ fn fork_exit_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a child sees getppid equal to the parent's pid")]
 fn fork_getppid() -> TestResult {
     let parent = syscall::getpid();
     let pid = check_ok!(syscall::fork(), "fork");
@@ -48,7 +48,7 @@ fn fork_getppid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getpid returns a positive pid that is stable across two calls")]
 fn getpid_stable() -> TestResult {
     let a = syscall::getpid();
     let b = syscall::getpid();
@@ -57,26 +57,26 @@ fn getpid_stable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getppid returns a non-negative value")]
 fn getppid_non_negative() -> TestResult {
     // PID 1 (typical container entrypoint) has ppid 0.
     check!(syscall::getppid() >= 0, "getppid negative");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getuid equals geteuid in this process")]
 fn getuid_euid_match() -> TestResult {
     check_eq!(syscall::getuid(), syscall::geteuid(), "uid != euid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getgid equals getegid in this process")]
 fn getgid_egid_match() -> TestResult {
     check_eq!(syscall::getgid(), syscall::getegid(), "gid != egid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 with WNOHANG and no children returns 0 or ECHILD")]
 fn wait_nohang_nochild() -> TestResult {
     let mut status = 0;
     match syscall::wait4(-1, &mut status, wait::WNOHANG) {
@@ -92,7 +92,7 @@ fn wait_nohang_nochild() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 reaps a child that exited with status 7")]
 fn wait4_reap_zombie() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -104,7 +104,7 @@ fn wait4_reap_zombie() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "two successive fork/wait4 pairs report the requested exit codes")]
 fn fork_double_child() -> TestResult {
     for code in [11i32, 22] {
         let pid = check_ok!(syscall::fork(), "fork");
@@ -118,13 +118,13 @@ fn fork_double_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "gettid equals getpid in a single-threaded process")]
 fn gettid_equals_pid() -> TestResult {
     check_eq!(syscall::gettid(), syscall::getpid(), "tid != pid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "waitpid reaps a child that exited with status 19")]
 fn waitpid_alias_reap() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -141,7 +141,7 @@ fn waitpid_alias_reap() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "waitpid with WUNTRACED still reaps a child that exited normally")]
 fn waitpid_wuntraced_soft() -> TestResult {
     // Without stopping the child, WUNTRACED still reaps a normal exit.
     let pid = check_ok!(syscall::fork(), "fork");
@@ -158,7 +158,7 @@ fn waitpid_wuntraced_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "waitpid with WNOHANG eventually reaps an exited child")]
 fn waitpid_wnohang_after_exit() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {

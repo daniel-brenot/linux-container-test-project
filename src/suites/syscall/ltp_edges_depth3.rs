@@ -1,4 +1,4 @@
-//! LTP-style depth3: fcntl locks/dupfd/setfl, epoll/poll, eventfd, wait status,
+//! Depth-3 coverage: fcntl locks/dupfd/setfl, epoll/poll, eventfd, wait status,
 //! mmap/madvise/memfd, timerfd, inotify, pidfd, SysV IPC, splice/tee, net.
 
 use crate::check;
@@ -38,7 +38,7 @@ fn soft(e: Errno) -> bool {
 
 macro_rules! flock_byte {
     ($name:ident, $ty:expr, $off:expr, $len:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("fcntl F_SETLK applies a ", stringify!($ty), " lock at offset ", stringify!($off), " length ", stringify!($len)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let fd = check_ok!(tmp.create_file(b"lk", 0o644), "c");
@@ -84,7 +84,7 @@ flock_byte!(d3_lk_wr_12_4, F_WRLCK, 12, 4);
 flock_byte!(d3_lk_rd_5_1, F_RDLCK, 5, 1);
 flock_byte!(d3_lk_wr_5_1, F_WRLCK, 5, 1);
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fcntl F_GETLK in a child reports a parent's F_WRLCK as contended")]
 fn d3_fcntl_getlk_contended_fork() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = create_empty(&mut tmp, b"lk")?;
@@ -126,7 +126,7 @@ fn d3_fcntl_getlk_contended_fork() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "fcntl F_SETLK F_WRLCK from a child on a parent write lock returns EAGAIN or EACCES")]
 fn d3_fcntl_setlk_conflict_fork() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let path = create_empty(&mut tmp, b"lk")?;
@@ -172,7 +172,7 @@ fn d3_fcntl_setlk_conflict_fork() -> TestResult {
 
 macro_rules! dupfd_min {
     ($name:ident, $min:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("fcntl F_DUPFD returns a new fd at least ", stringify!($min)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let fd = check_ok!(tmp.create_file(b"d", 0o644), "c");
@@ -200,7 +200,7 @@ dupfd_min!(d3_dupfd_150, 150);
 
 macro_rules! setfl_flag {
     ($name:ident, $flag:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("fcntl F_SETFL sets ", stringify!($flag), " which F_GETFL then reports"))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let fd = check_ok!(tmp.create_file(b"f", 0o644), "c");
@@ -222,7 +222,7 @@ setfl_flag!(d3_setfl_append, oflag::O_APPEND);
 setfl_flag!(d3_setfl_nonblock, oflag::O_NONBLOCK);
 setfl_flag!(d3_setfl_append_nb, oflag::O_APPEND | oflag::O_NONBLOCK);
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fcntl F_DUPFD_CLOEXEC duplicates a fd with a minimum of 20")]
 fn d3_dupfd_cloexec() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"d", 0o644), "c");
@@ -235,7 +235,7 @@ fn d3_dupfd_cloexec() -> TestResult {
 
 macro_rules! epoll_pipe {
     ($name:ident, $ev:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("epoll_wait reports a ready pipe registered with events ", stringify!($ev)))]
         fn $name() -> TestResult {
             let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
             let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -260,7 +260,7 @@ epoll_pipe!(d3_ep_in_et, EPOLLIN | EPOLLET);
 epoll_pipe!(d3_ep_in_os, EPOLLIN | EPOLLONESHOT);
 epoll_pipe!(d3_ep_in_et_os, EPOLLIN | EPOLLET | EPOLLONESHOT);
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "EPOLLONESHOT does not re-deliver until epoll_ctl MOD rearms the fd")]
 fn d3_epoll_oneshot_needs_mod() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -286,7 +286,7 @@ fn d3_epoll_oneshot_needs_mod() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "poll with timeout 0 on an empty pipe returns 0")]
 fn d3_poll_timeout_zero_empty() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let mut fds = [poll::PollFd {
@@ -300,7 +300,7 @@ fn d3_poll_timeout_zero_empty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "poll with timeout 0 reports POLLIN after a pipe write")]
 fn d3_poll_timeout_zero_ready() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     check_ok!(syscall::write(w, b"z"), "w");
@@ -315,7 +315,7 @@ fn d3_poll_timeout_zero_ready() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "ppoll with a zero timespec on an empty pipe returns 0")]
 fn d3_ppoll_timeout_zero() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let mut fds = [poll::PollFd {
@@ -341,7 +341,7 @@ fn d3_ppoll_timeout_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "ppoll with a zero timespec reports a ready pipe after a write")]
 fn d3_ppoll_ready_zero_timeout() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     check_ok!(syscall::write(w, b"q"), "w");
@@ -370,7 +370,7 @@ fn d3_ppoll_ready_zero_timeout() -> TestResult {
 
 macro_rules! efd_sem_drain {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = soft, case = concat!("EFD_SEMAPHORE eventfd initialized to ", stringify!($n), " yields that many reads of 1"))]
         fn $name() -> TestResult {
             let efd = match syscall::eventfd($n, EFD_SEMAPHORE | EFD_CLOEXEC) {
                 Ok(fd) => fd,
@@ -399,7 +399,7 @@ efd_sem_drain!(d3_efd_15, 15);
 efd_sem_drain!(d3_efd_16, 16);
 efd_sem_drain!(d3_efd_20, 20);
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "nonblocking eventfd read of an empty counter returns EAGAIN")]
 fn d3_efd_nonblock_eagain() -> TestResult {
     let efd = match syscall::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC) {
         Ok(fd) => fd,
@@ -424,7 +424,7 @@ fn d3_efd_nonblock_eagain() -> TestResult {
 
 macro_rules! wait_exit {
     ($name:ident, $code:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("wait4 reports wexitstatus ", stringify!($code), " for a child that exits that code"))]
         fn $name() -> TestResult {
             let pid = check_ok!(syscall::fork(), "f");
             if pid == 0 {
@@ -454,7 +454,7 @@ wait_exit!(d3_ex_255, 255);
 
 macro_rules! wait_termsig {
     ($name:ident, $sig:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("wait4 reports wtermsig ", stringify!($sig), " after kill of that signal"))]
         fn $name() -> TestResult {
             let pid = check_ok!(syscall::fork(), "f");
             if pid == 0 {
@@ -479,7 +479,7 @@ wait_termsig!(d3_term_term, SIGTERM);
 wait_termsig!(d3_term_usr1, SIGUSR1);
 wait_termsig!(d3_term_usr2, SIGUSR2);
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "waitid P_PID WEXITED reaps a child that called exit")]
 fn d3_waitid_exited() -> TestResult {
     let pid = check_ok!(syscall::fork(), "f");
     if pid == 0 {
@@ -490,7 +490,7 @@ fn d3_waitid_exited() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "waitid P_PID WEXITED reaps a child killed with SIGKILL")]
 fn d3_waitid_killed() -> TestResult {
     let pid = check_ok!(syscall::fork(), "f");
     if pid == 0 {
@@ -506,7 +506,7 @@ fn d3_waitid_killed() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 WNOHANG with no children returns ECHILD or 0")]
 fn d3_wait4_nohang_none() -> TestResult {
     let mut st = 0;
     match syscall::wait4(-1, &mut st, wait::WNOHANG) {
@@ -518,13 +518,13 @@ fn d3_wait4_nohang_none() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kill(0, 0) succeeds for the current process group")]
 fn d3_kill_zero_self() -> TestResult {
     check_ok!(syscall::kill(0, 0), "kill0");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kill of the current pid with signal 0 succeeds")]
 fn d3_kill_self_zero() -> TestResult {
     check_ok!(syscall::kill(syscall::getpid(), 0), "exist");
     Ok(())
@@ -532,7 +532,7 @@ fn d3_kill_self_zero() -> TestResult {
 
 macro_rules! sigpending_grid {
     ($name:ident, $sig:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("a blocked ignored ", stringify!($sig), " is reported by rt_sigpending"))]
         fn $name() -> TestResult {
             check_ok!(syscall::signal_ignore($sig), "ign");
             check_ok!(
@@ -559,7 +559,7 @@ sigpending_grid!(d3_pend_term, SIGTERM);
 
 macro_rules! madvise_advice {
     ($name:ident, $adv:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = soft, case = concat!("madvise with advice ", stringify!($adv), " is accepted on an anonymous page"))]
         fn $name() -> TestResult {
             let addr = check_ok!(
                 syscall::mmap(
@@ -597,7 +597,7 @@ madvise_advice!(d3_madv_nohuge, madvise::MADV_NOHUGEPAGE);
 
 macro_rules! mprotect_combo {
     ($name:ident, $p:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = soft, case = concat!("mprotect with prot ", stringify!($p), " is accepted on an anonymous page"))]
         fn $name() -> TestResult {
             let addr = check_ok!(
                 syscall::mmap(
@@ -633,7 +633,7 @@ mprotect_combo!(d3_mprot_rwx, prot::PROT_READ | prot::PROT_WRITE | prot::PROT_EX
 
 macro_rules! memfd_seal {
     ($name:ident, $seal:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = soft, case = concat!("F_ADD_SEALS ", stringify!($seal), " is visible via F_GET_SEALS"))]
         fn $name() -> TestResult {
             let fd = match syscall::memfd_create(b"s\0", MFD_ALLOW_SEALING as u32) {
                 Ok(f) => f,
@@ -665,7 +665,7 @@ memfd_seal!(d3_seal_write, F_SEAL_WRITE);
 
 macro_rules! falloc_punch {
     ($name:ident, $off:expr, $len:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = soft, case = concat!("fallocate FALLOC_FL_PUNCH_HOLE at offset ", stringify!($off), " length ", stringify!($len), " is accepted"))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let fd = check_ok!(tmp.create_file(b"fa", 0o644), "c");
@@ -698,7 +698,7 @@ falloc_punch!(d3_punch_512_512, 512, 512);
 
 macro_rules! tfd_rel_ms {
     ($name:ident, $ms:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("timerfd_settime arms a relative CLOCK_MONOTONIC expiry of ", stringify!($ms), " ms"))]
         fn $name() -> TestResult {
             let fd = check_ok!(
                 syscall::timerfd_create(clock::CLOCK_MONOTONIC, TFD_CLOEXEC),
@@ -729,7 +729,7 @@ tfd_rel_ms!(d3_tfd_250, 250);
 
 macro_rules! tfd_abs_ms {
     ($name:ident, $ms:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("timerfd_settime TFD_TIMER_ABSTIME arms a CLOCK_MONOTONIC expiry ", stringify!($ms), " ms in the future"))]
         fn $name() -> TestResult {
             let fd = check_ok!(
                 syscall::timerfd_create(clock::CLOCK_MONOTONIC, TFD_CLOEXEC),
@@ -762,7 +762,7 @@ tfd_abs_ms!(d3_tfd_abs_32, 32);
 
 macro_rules! in_mask {
     ($name:ident, $m:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("inotify_add_watch accepts mask ", stringify!($m), " and inotify_rm_watch removes it"))]
         fn $name() -> TestResult {
             let tmp = check_ok!(TempDir::create(), "t");
             let fd = check_ok!(syscall::inotify_init1(IN_CLOEXEC), "i");
@@ -794,7 +794,7 @@ in_mask!(
     IN_CREATE | IN_DELETE | IN_MODIFY | IN_ATTRIB | IN_OPEN | IN_CLOSE_WRITE | IN_CLOSE_NOWRITE
 );
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pidfd_send_signal SIGTERM terminates a sleeping child")]
 fn d3_pidfd_send_term() -> TestResult {
     let pid = check_ok!(syscall::fork(), "f");
     if pid == 0 {
@@ -822,7 +822,7 @@ fn d3_pidfd_send_term() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pidfd_send_signal SIGUSR1 is delivered to a child")]
 fn d3_pidfd_send_usr1() -> TestResult {
     let pid = check_ok!(syscall::fork(), "f");
     if pid == 0 {
@@ -853,7 +853,7 @@ fn d3_pidfd_send_usr1() -> TestResult {
 
 macro_rules! shm_size {
     ($name:ident, $sz:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = soft, case = concat!("shmget IPC_PRIVATE of ", stringify!($sz), " bytes can be attached, written, and removed"))]
         fn $name() -> TestResult {
             let shmid = match syscall::shmget(IPC_PRIVATE, $sz, IPC_CREAT | 0o600) {
                 Ok(id) => id,
@@ -888,7 +888,7 @@ shm_size!(d3_shm_64k, 65536);
 
 macro_rules! splice_n {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = soft, case = concat!("splice moves ", stringify!($n), " bytes from one pipe to another"))]
         fn $name() -> TestResult {
             let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
             let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -927,7 +927,7 @@ splice_n!(d3_sp_300, 300);
 
 macro_rules! tee_n {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = soft, case = concat!("tee copies ", stringify!($n), " bytes from one pipe to another"))]
         fn $name() -> TestResult {
             let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
             let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -964,7 +964,7 @@ tee_n!(d3_tee_100, 100);
 
 macro_rules! vmsplice_n {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = soft, case = concat!("vmsplice writes ", stringify!($n), " bytes from a buffer into a pipe"))]
         fn $name() -> TestResult {
             let (r, w) = check_ok!(syscall::pipe2(0), "p");
             let mut buf = [b'V'; $n];
@@ -1012,7 +1012,7 @@ fn tcp_pair() -> Result<(i32, i32, i32), crate::harness::AssertFail> {
 
 macro_rules! tcp_send_sz {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("TCP send of ", stringify!($n), " bytes is received by the peer"))]
         fn $name() -> TestResult {
             let (srv, cli, acc) = tcp_pair()?;
             let msg = [b'T'; $n];
@@ -1043,7 +1043,7 @@ tcp_send_sz!(d3_tcp_256, 256);
 tcp_send_sz!(d3_tcp_512, 512);
 tcp_send_sz!(d3_tcp_1024, 1024);
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "recv MSG_DONTWAIT on an empty TCP socket returns EAGAIN")]
 fn d3_tcp_dontwait_empty() -> TestResult {
     let (srv, cli, acc) = tcp_pair()?;
     let mut buf = [0u8; 8];
@@ -1069,7 +1069,7 @@ fn d3_tcp_dontwait_empty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "shutdown SHUT_WR on a TCP client makes the peer recv return 0")]
 fn d3_tcp_shutdown_eof() -> TestResult {
     let (srv, cli, acc) = tcp_pair()?;
     check_ok!(syscall::shutdown(cli, SHUT_WR), "shut");
@@ -1081,7 +1081,7 @@ fn d3_tcp_shutdown_eof() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "recv MSG_DONTWAIT on an empty UDP socket returns EAGAIN")]
 fn d3_udp_dontwait() -> TestResult {
     let fd = check_ok!(syscall::socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0), "s");
     check_ok!(syscall::bind(fd, &SockAddrIn::loopback(0)), "b");
@@ -1101,7 +1101,7 @@ fn d3_udp_dontwait() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "UDP sendto then recv delivers a two-byte payload")]
 fn d3_udp_echo_small() -> TestResult {
     let a = check_ok!(syscall::socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0), "a");
     let b = check_ok!(syscall::socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0), "b");
@@ -1118,7 +1118,7 @@ fn d3_udp_echo_small() -> TestResult {
 
 macro_rules! so_type {
     ($name:ident, $ty:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("getsockopt SO_TYPE on an AF_INET ", stringify!($ty), " socket returns that type"))]
         fn $name() -> TestResult {
             let fd = check_ok!(syscall::socket(AF_INET, $ty, 0), "s");
             let mut v = [0u8; 4];
@@ -1133,7 +1133,7 @@ macro_rules! so_type {
 so_type!(d3_so_stream, SOCK_STREAM);
 so_type!(d3_so_dgram, SOCK_DGRAM);
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "anonymous mmap PROT_READ|PROT_WRITE is writable then munmap succeeds")]
 fn d3_mmap_anon_rw() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -1154,7 +1154,7 @@ fn d3_mmap_anon_rw() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "close of fd -1 returns EBADF")]
 fn d3_check_err_bad_fd() -> TestResult {
     check_err!(syscall::close(-1), Errno::EBADF, "ebadf");
     Ok(())

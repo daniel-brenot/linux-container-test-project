@@ -12,7 +12,7 @@ fn soft(e: Errno) -> bool {
     )
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "io_uring_setup succeeds, or is rejected as unsupported")]
 fn io_uring_setup_probe_soft() -> TestResult {
     let mut params = IoUringParams::default();
     match syscall::io_uring_setup(1, &mut params) {
@@ -26,7 +26,7 @@ fn io_uring_setup_probe_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "io_uring_setup with four entries reports sq_entries, or is rejected as unsupported")]
 fn io_uring_setup_entries_soft() -> TestResult {
     let mut params = IoUringParams::default();
     match syscall::io_uring_setup(4, &mut params) {
@@ -40,7 +40,7 @@ fn io_uring_setup_entries_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "io_uring_enter with zero submit and complete counts succeeds or is rejected as unsupported")]
 fn io_uring_enter_nop_soft() -> TestResult {
     let mut params = IoUringParams::default();
     let fd = match syscall::io_uring_setup(1, &mut params) {
@@ -61,7 +61,7 @@ fn io_uring_enter_nop_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "io_uring_register of buffers with a null argument succeeds or is rejected as unsupported")]
 fn io_uring_register_probe_soft() -> TestResult {
     let mut params = IoUringParams::default();
     let fd = match syscall::io_uring_setup(1, &mut params) {

@@ -9,7 +9,7 @@ fn valid_nsec(ts: &syscall::Timespec) -> bool {
     ts.tv_nsec >= 0 && ts.tv_nsec < 1_000_000_000
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "clock_gettime CLOCK_REALTIME returns a plausible wall-clock time")]
 fn clock_realtime() -> TestResult {
     let t = check_ok!(syscall::clock_gettime(clock::CLOCK_REALTIME), "realtime");
     check!(t.tv_sec > 1_600_000_000, "realtime too small");
@@ -17,7 +17,7 @@ fn clock_realtime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "clock_gettime CLOCK_MONOTONIC returns a non-negative valid timespec")]
 fn clock_monotonic() -> TestResult {
     let t = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "monotonic");
     check!(t.tv_sec >= 0, "negative monotonic");
@@ -25,7 +25,7 @@ fn clock_monotonic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "clock_gettime CLOCK_MONOTONIC_RAW returns a non-negative valid timespec")]
 fn clock_monotonic_raw() -> TestResult {
     let t = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC_RAW), "raw");
     check!(t.tv_sec >= 0, "negative raw");
@@ -33,7 +33,7 @@ fn clock_monotonic_raw() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "clock_gettime CLOCK_PROCESS_CPUTIME_ID returns a non-negative valid timespec")]
 fn clock_process_cputime() -> TestResult {
     let t = check_ok!(syscall::clock_gettime(clock::CLOCK_PROCESS_CPUTIME_ID), "cputime");
     check!(t.tv_sec >= 0, "negative cputime sec");
@@ -41,14 +41,14 @@ fn clock_process_cputime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "nanosleep of one millisecond succeeds")]
 fn nanosleep_short() -> TestResult {
     let req = syscall::Timespec { tv_sec: 0, tv_nsec: 1_000_000 };
     check_ok!(syscall::nanosleep(&req), "nanosleep");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "clock_nanosleep on CLOCK_MONOTONIC for two milliseconds succeeds")]
 fn clock_nanosleep_monotonic() -> TestResult {
     let req = syscall::Timespec { tv_sec: 0, tv_nsec: 2_000_000 };
     check_ok!(
@@ -58,7 +58,7 @@ fn clock_nanosleep_monotonic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "gettimeofday returns a plausible tv_sec and an in-range tv_usec")]
 fn gettimeofday() -> TestResult {
     let tv = check_ok!(syscall::gettimeofday(), "gettimeofday");
     check!(tv.tv_sec > 1_600_000_000, "tv_sec small");
@@ -66,14 +66,14 @@ fn gettimeofday() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "clock_gettime CLOCK_MONOTONIC returns tv_nsec in 0..1e9")]
 fn timespec_nsec_range() -> TestResult {
     let t = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "mono");
     check!(valid_nsec(&t), "nsec out of range");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "two CLOCK_MONOTONIC samples are non-decreasing")]
 fn monotonic_non_decreasing() -> TestResult {
     let t1 = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "t1");
     let t2 = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "t2");
@@ -84,7 +84,7 @@ fn monotonic_non_decreasing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "clock_settime CLOCK_REALTIME succeeds or returns EPERM/EACCES/EINVAL")]
 fn clock_settime_realtime_eperm() -> TestResult {
     use crate::syscall::Errno;
     let now = check_ok!(syscall::clock_gettime(clock::CLOCK_REALTIME), "gettime");

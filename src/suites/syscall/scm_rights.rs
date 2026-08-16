@@ -44,7 +44,7 @@ fn take_scm_rights(cbuf: &[u8], controllen: usize) -> Option<i32> {
     }
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sendmsg SCM_RIGHTS passes a pipe fd whose payload is readable on the received fd")]
 fn scm_rights_pass_pipe_fd() -> TestResult {
     let (a, b) = check_ok!(
         syscall::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0),
@@ -106,7 +106,7 @@ fn scm_rights_pass_pipe_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sendmsg SCM_RIGHTS passes a memfd whose contents are readable on the received fd")]
 fn scm_rights_pass_memfd() -> TestResult {
     let (a, b) = check_ok!(
         syscall::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0),
@@ -162,7 +162,7 @@ fn scm_rights_pass_memfd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "sendmsg and recvmsg without control data transfer a plain payload")]
 fn scm_rights_sendmsg_no_control() -> TestResult {
     let (a, b) = check_ok!(
         syscall::socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0),

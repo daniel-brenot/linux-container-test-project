@@ -1,5 +1,5 @@
-//! pjdfstest-inspired depth3: chmod/open/unlink/mkdir/rename/link/symlink/
-//! truncate mode & errno grids, renameat2 edges, utimensat OMIT/NOW.
+//! chmod/open/unlink/mkdir/rename/link/symlink/
+//! truncate mode and errno grids, renameat2 edges, and utimensat OMIT/NOW.
 
 use crate::check;
 use crate::check_eq;
@@ -23,7 +23,7 @@ fn soft(e: Errno) -> bool {
 
 macro_rules! chmod_file_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("chmod on a regular file sets mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"f")?;
@@ -61,7 +61,7 @@ chmod_file_mode!(d3_chmod_412, 0o412);
 
 macro_rules! chmod_dir_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("chmod on a directory sets mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -90,7 +90,7 @@ chmod_dir_mode!(d3_dchmod_701, 0o701);
 
 macro_rules! eacces_open {
     ($name:ident, $mode:expr, $flags:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "open after chmod without the required permission bits returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"f")?;
@@ -121,7 +121,7 @@ eacces_open!(d3_eacc_app_440, 0o440, oflag::O_RDWR | oflag::O_APPEND);
 
 macro_rules! eacces_dir_unlink {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "unlink in a directory without write permission returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -152,7 +152,7 @@ eacces_dir_unlink!(d3_punl_500, 0o500);
 
 macro_rules! eacces_dir_mkdir {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "mkdir in a directory without write permission returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -176,7 +176,7 @@ eacces_dir_mkdir!(d3_pmk_501, 0o501);
 
 macro_rules! eacces_dir_rename_into {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "rename into a directory without write permission returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -199,7 +199,7 @@ eacces_dir_rename_into!(d3_pren_111, 0o111);
 
 macro_rules! eacces_dir_link_into {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "link into a directory without write permission returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -222,7 +222,7 @@ eacces_dir_link_into!(d3_plnk_111, 0o111);
 
 macro_rules! open_creat_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("open O_CREAT creates a regular file with mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = copy_child(&mut tmp, b"oc")?;
@@ -264,7 +264,7 @@ open_creat_mode!(d3_oc_104, 0o104);
 open_creat_mode!(d3_oc_041, 0o041);
 open_creat_mode!(d3_oc_014, 0o014);
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open with O_CREAT|O_EXCL on an existing file returns EEXIST")]
 fn d3_open_excl_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"e")?;
@@ -276,7 +276,7 @@ fn d3_open_excl_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a regular file with a trailing slash returns ENOTDIR")]
 fn d3_open_trailing_slash_file_enotdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -293,7 +293,7 @@ fn d3_open_trailing_slash_file_enotdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open of a directory with a trailing slash and O_DIRECTORY succeeds")]
 fn d3_open_trailing_slash_dir_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -313,7 +313,7 @@ fn d3_open_trailing_slash_dir_ok() -> TestResult {
 
 macro_rules! trunc_size {
     ($name:ident, $sz:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("truncate sets the file size to ", stringify!($sz)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"t")?;
@@ -345,7 +345,7 @@ trunc_size!(d3_trunc_256, 256);
 
 macro_rules! rename_pair {
     ($name:ident, $a:expr, $b:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "rename of a regular file to a new name succeeds and removes the old path")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let s = create_empty(&mut tmp, $a)?;
@@ -378,7 +378,7 @@ rename_pair!(d3_ren_16, b"longnameA", b"longnameB");
 
 macro_rules! link_pair {
     ($name:ident, $a:expr, $b:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "link creates a second name that shares the source inode")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let s = create_empty(&mut tmp, $a)?;
@@ -409,7 +409,7 @@ link_pair!(d3_lnk_12, b"p1", b"q1");
 
 macro_rules! symlink_pair {
     ($name:ident, $tgt:expr, $link:expr, $tgt_c:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "symlink creates a symbolic link that lstat reports as a link")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let _ = create_empty(&mut tmp, $tgt)?;
@@ -434,7 +434,7 @@ symlink_pair!(d3_sym_08, b"t7", b"s7", b"t7\0");
 
 macro_rules! unlink_name {
     ($name:ident, $nm:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "unlink of a regular file succeeds and the path is gone")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, $nm)?;
@@ -458,7 +458,7 @@ unlink_name!(d3_ul_10, b"name10");
 
 macro_rules! mkdir_rmdir {
     ($name:ident, $nm:expr, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "mkdir creates a directory and rmdir removes it")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let d = create_dir(&mut tmp, $nm, $mode)?;
@@ -484,7 +484,7 @@ mkdir_rmdir!(d3_md_770, b"d9", 0o770);
 mkdir_rmdir!(d3_md_555, b"da", 0o555);
 mkdir_rmdir!(d3_md_511, b"db", 0o511);
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "renameat2 with RENAME_NOREPLACE onto a missing path succeeds when supported")]
 fn d3_renameat2_noreplace_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -500,7 +500,7 @@ fn d3_renameat2_noreplace_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "renameat2 with RENAME_NOREPLACE over an existing path returns EEXIST when supported")]
 fn d3_renameat2_noreplace_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -514,7 +514,7 @@ fn d3_renameat2_noreplace_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "renameat2 with RENAME_EXCHANGE swaps two files when supported")]
 fn d3_renameat2_exchange() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -539,7 +539,7 @@ fn d3_renameat2_exchange() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "renameat2 with RENAME_EXCHANGE swaps two directories when supported")]
 fn d3_renameat2_exchange_dirs() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_dir(&mut tmp, b"da", 0o755)?;
@@ -566,7 +566,7 @@ fn d3_renameat2_exchange_dirs() -> TestResult {
 
 macro_rules! utimens_now {
     ($name:ident) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "utimensat with UTIME_NOW sets a positive mtime")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"u")?;
@@ -595,7 +595,7 @@ utimens_now!(d3_ut_now_04);
 
 macro_rules! utimens_omit {
     ($name:ident) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "utimensat with UTIME_OMIT leaves mtime unchanged")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"u")?;
@@ -625,7 +625,7 @@ utimens_omit!(d3_ut_omit_04);
 
 macro_rules! utimens_explicit {
     ($name:ident, $sec:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("utimensat sets mtime to ", stringify!($sec)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"u")?;
@@ -654,7 +654,7 @@ utimens_explicit!(d3_ut_exp_4, 1_800_000_000);
 utimens_explicit!(d3_ut_exp_5, 1_900_000_000);
 utimens_explicit!(d3_ut_exp_6, 2_000_000_000);
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "utimensat with UTIME_OMIT for atime sets only mtime")]
 fn d3_ut_omit_atime_set_mtime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"u")?;
@@ -676,7 +676,7 @@ fn d3_ut_omit_atime_set_mtime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "utimensat with UTIME_OMIT for mtime sets only atime")]
 fn d3_ut_set_atime_omit_mtime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"u")?;
@@ -698,7 +698,7 @@ fn d3_ut_set_atime_omit_mtime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "utimensat does not move ctime earlier")]
 fn d3_ut_ctime_changes() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"u")?;
@@ -721,7 +721,7 @@ fn d3_ut_ctime_changes() -> TestResult {
 
 macro_rules! fifo_nonblock_open {
     ($name:ident, $flags:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = soft, case = "open of a FIFO with O_NONBLOCK succeeds or returns ENXIO when no peer is present")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = copy_child(&mut tmp, b"fifo")?;
@@ -751,7 +751,7 @@ fifo_nonblock_open!(d3_fifo_rd_cloexec, oflag::O_RDONLY | oflag::O_CLOEXEC);
 fifo_nonblock_open!(d3_fifo_wr_cloexec, oflag::O_WRONLY | oflag::O_CLOEXEC);
 fifo_nonblock_open!(d3_fifo_rdwr_cloexec, oflag::O_RDWR | oflag::O_CLOEXEC);
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access succeeds after chmod grants the requested bits")]
 fn d3_access_ok_matrix() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -772,7 +772,7 @@ fn d3_access_ok_matrix() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir of a directory that contains a file returns ENOTEMPTY")]
 fn d3_rmdir_notempty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -790,7 +790,7 @@ fn d3_rmdir_notempty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mkdir on an existing directory returns EEXIST")]
 fn d3_mkdir_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -799,7 +799,7 @@ fn d3_mkdir_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "link onto an existing path returns EEXIST")]
 fn d3_link_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -808,7 +808,7 @@ fn d3_link_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "symlink onto an existing file returns EEXIST")]
 fn d3_symlink_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;

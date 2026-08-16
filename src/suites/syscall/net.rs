@@ -8,7 +8,7 @@ use crate::syscall::{
     self, epoll, oflag, poll, AF_UNIX, EPOLL_CTL_ADD, EPOLLIN, POLLIN, SOCK_STREAM,
 };
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "poll reports POLLIN on a pipe with unread data")]
 fn poll_pipe_readable() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     check_ok!(syscall::write(w, b"x"), "write");
@@ -25,7 +25,7 @@ fn poll_pipe_readable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "poll on an empty pipe times out with zero events")]
 fn poll_pipe_timeout() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     let mut pfd = [poll::PollFd {
@@ -40,7 +40,7 @@ fn poll_pipe_timeout() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_wait reports EPOLLIN on a pipe with unread data")]
 fn epoll_pipe_readable() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     let ep = check_ok!(syscall::epoll_create1(oflag::O_CLOEXEC), "epoll_create1");
@@ -57,7 +57,7 @@ fn epoll_pipe_readable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a UNIX socketpair send/recv round-trips a stream message")]
 fn socketpair_send_recv_all() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "socketpair");
     let msg = b"stream-msg";
@@ -70,7 +70,7 @@ fn socketpair_send_recv_all() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "shutdown SHUT_WR on a socketpair makes the peer read return 0")]
 fn socketpair_half_close() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "socketpair");
     check_ok!(syscall::shutdown(a, syscall::SHUT_WR), "shutdown wr");
@@ -82,7 +82,7 @@ fn socketpair_half_close() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a UNIX socketpair send/recv round-trips a 512-byte message")]
 fn socketpair_large_message() -> TestResult {
     let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "socketpair");
     let msg = [0xABu8; 512];

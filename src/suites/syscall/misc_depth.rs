@@ -1,4 +1,4 @@
-//! Misc LTP-ish depth: uname, getrandom, ioctl, dup, close_range, kcmp, etc.
+//! Depth coverage for uname, getrandom, ioctl, dup, close_range, kcmp, and related syscalls.
 
 use crate::check;
 use crate::check_eq;
@@ -12,35 +12,35 @@ use crate::syscall::{
     LOCK_NB, LOCK_SH, LOCK_UN, MEMBARRIER_CMD_QUERY, TIOCGWINSZ,
 };
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "uname sysname starts with Linux")]
 fn misc_uname_sysname() -> TestResult {
     let u = check_ok!(syscall::uname(), "uname");
     check!(cstr_prefix(&u.sysname).starts_with(b"Linux"), "sys");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "uname nodename is nonempty")]
 fn misc_uname_nodename() -> TestResult {
     let u = check_ok!(syscall::uname(), "uname");
     check!(!cstr_prefix(&u.nodename).is_empty(), "node");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "uname release is nonempty")]
 fn misc_uname_release() -> TestResult {
     let u = check_ok!(syscall::uname(), "uname");
     check!(!cstr_prefix(&u.release).is_empty(), "rel");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "uname version is nonempty")]
 fn misc_uname_version() -> TestResult {
     let u = check_ok!(syscall::uname(), "uname");
     check!(!cstr_prefix(&u.version).is_empty(), "ver");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "uname machine is nonempty")]
 fn misc_uname_machine() -> TestResult {
     let u = check_ok!(syscall::uname(), "uname");
     let m = cstr_prefix(&u.machine);
@@ -48,14 +48,14 @@ fn misc_uname_machine() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getrandom fills a 16-byte buffer")]
 fn misc_getrandom_basic() -> TestResult {
     let mut buf = [0u8; 16];
     check_eq!(check_ok!(syscall::getrandom(&mut buf, 0), "gr"), 16, "n");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "getrandom with GRND_NONBLOCK succeeds or returns EAGAIN/ENOSYS/EINVAL")]
 fn misc_getrandom_nonblock_soft() -> TestResult {
     let mut buf = [0u8; 8];
     match syscall::getrandom(&mut buf, GRND_NONBLOCK) {
@@ -66,7 +66,7 @@ fn misc_getrandom_nonblock_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "getrandom with GRND_RANDOM succeeds or returns EAGAIN/ENOSYS/EINVAL")]
 fn misc_getrandom_random_soft() -> TestResult {
     let mut buf = [0u8; 8];
     match syscall::getrandom(&mut buf, GRND_RANDOM) {
@@ -77,7 +77,7 @@ fn misc_getrandom_random_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "TIOCGWINSZ on a regular file returns ENOTTY or EINVAL")]
 fn misc_ioctl_tiocgwinsz_enotty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"tty", 0o644), "create");
@@ -94,7 +94,7 @@ fn misc_ioctl_tiocgwinsz_enotty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "dup returns a distinct file descriptor")]
 fn misc_dup_basic() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"d", 0o644), "create");
@@ -105,7 +105,7 @@ fn misc_dup_basic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "dup2 onto fd 80 returns 80")]
 fn misc_dup2_to_high() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"d2", 0o644), "create");
@@ -116,7 +116,7 @@ fn misc_dup2_to_high() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "dup3 with O_CLOEXEC sets FD_CLOEXEC on the new fd")]
 fn misc_dup3_cloexec() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"d3", 0o644), "create");
@@ -128,19 +128,19 @@ fn misc_dup3_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "dup of fd -1 returns EBADF")]
 fn misc_dup_ebadf() -> TestResult {
     check_err!(syscall::dup(-1), Errno::EBADF, "dup");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "dup2 of fd -1 returns EBADF")]
 fn misc_dup2_ebadf() -> TestResult {
     check_err!(syscall::dup2(-1, 10), Errno::EBADF, "dup2");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "close_range with CLOSE_RANGE_CLOEXEC sets FD_CLOEXEC or returns ENOSYS/EINVAL")]
 fn misc_close_range_cloexec_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"cr", 0o644), "create");
@@ -164,7 +164,7 @@ fn misc_close_range_cloexec_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "close_range closes the fd or returns ENOSYS/EINVAL")]
 fn misc_close_range_close_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"crc", 0o644), "create");
@@ -186,7 +186,7 @@ fn misc_close_range_close_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "kcmp of the same file descriptor returns 0 or ENOSYS/EPERM/EINVAL")]
 fn misc_kcmp_same() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"k")?;
@@ -205,7 +205,7 @@ fn misc_kcmp_same() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "kcmp of two distinct files is nonzero or returns ENOSYS/EPERM/EINVAL")]
 fn misc_kcmp_distinct_files() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = check_ok!(tmp.create_file(b"a", 0o644), "a");
@@ -225,7 +225,7 @@ fn misc_kcmp_distinct_files() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "process_vm_readv from self copies bytes or returns ENOSYS/EPERM/EINVAL")]
 fn misc_process_vm_readv_self() -> TestResult {
     let mut src = [1u8, 2, 3, 4];
     let mut dst = [0u8; 4];
@@ -248,7 +248,7 @@ fn misc_process_vm_readv_self() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "process_vm_writev to self copies bytes or returns ENOSYS/EPERM/EINVAL")]
 fn misc_process_vm_writev_self() -> TestResult {
     let mut dst = [0u8; 4];
     let src = [9u8, 8, 7, 6];
@@ -271,14 +271,14 @@ fn misc_process_vm_writev_self() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "membarrier MEMBARRIER_CMD_QUERY succeeds")]
 fn misc_membarrier_query() -> TestResult {
     let m = check_ok!(syscall::membarrier(MEMBARRIER_CMD_QUERY, 0), "q");
     let _ = m;
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "personality query returns a stable value")]
 fn misc_personality_query() -> TestResult {
     let p = check_ok!(syscall::personality(0xffff_ffff), "p");
     let p2 = check_ok!(syscall::personality(0xffff_ffff), "p2");
@@ -286,7 +286,7 @@ fn misc_personality_query() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "capget with LINUX_CAPABILITY_VERSION_3 succeeds")]
 fn misc_capget_v3() -> TestResult {
     let mut hdr = CapUserHeader {
         version: LINUX_CAPABILITY_VERSION_3,
@@ -297,7 +297,7 @@ fn misc_capget_v3() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "getcpu succeeds or returns ENOSYS/EINVAL")]
 fn misc_getcpu_soft() -> TestResult {
     let mut cpu = 0u32;
     let mut node = 0u32;
@@ -312,7 +312,7 @@ fn misc_getcpu_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sched_yield succeeds when called repeatedly")]
 fn misc_sched_yield_many() -> TestResult {
     for _ in 0..8 {
         check_ok!(syscall::sched_yield(), "yield");
@@ -320,7 +320,7 @@ fn misc_sched_yield_many() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "sched_getaffinity returns a nonempty mask or ENOSYS/EINVAL")]
 fn misc_sched_getaffinity() -> TestResult {
     let mut mask = [0u8; 128];
     match syscall::sched_getaffinity(0, &mut mask) {
@@ -331,7 +331,7 @@ fn misc_sched_getaffinity() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "sched_setaffinity of the current mask succeeds or returns EINVAL/EPERM/ENOSYS")]
 fn misc_sched_setaffinity_roundtrip_soft() -> TestResult {
     let mut mask = [0u8; 128];
     if syscall::sched_getaffinity(0, &mut mask).is_err() {
@@ -345,7 +345,7 @@ fn misc_sched_setaffinity_roundtrip_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "flock exclusive lock and unlock succeed on a regular file")]
 fn misc_flock_ex_un() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"fl", 0o644), "create");
@@ -355,7 +355,7 @@ fn misc_flock_ex_un() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "flock shared lock and unlock succeed on a regular file")]
 fn misc_flock_sh_un() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"fls", 0o644), "create");
@@ -365,7 +365,7 @@ fn misc_flock_sh_un() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "non-blocking exclusive flock succeeds when uncontended")]
 fn misc_flock_ex_nb() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"fln", 0o644), "create");
@@ -375,7 +375,7 @@ fn misc_flock_ex_nb() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "non-blocking exclusive flock against a held exclusive lock returns EWOULDBLOCK")]
 fn misc_flock_conflict_nb() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"flc")?;
@@ -389,28 +389,28 @@ fn misc_flock_conflict_nb() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sched_getscheduler of self reports SCHED_OTHER")]
 fn misc_sched_getscheduler() -> TestResult {
     let pol = check_ok!(syscall::sched_getscheduler(0), "pol");
     check_eq!(pol, syscall::SCHED_OTHER, "other");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getpriority of self is in the nice range -20..19")]
 fn misc_getpriority() -> TestResult {
     let p = check_ok!(syscall::getpriority(syscall::PRIO_PROCESS, 0), "prio");
     check!(p >= -20 && p <= 19, "range");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "getrandom fills a 64-byte buffer")]
 fn misc_getrandom_64() -> TestResult {
     let mut buf = [0u8; 64];
     check_eq!(check_ok!(syscall::getrandom(&mut buf, 0), "gr"), 64, "n");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "dup2 onto the same fd is a no-op that returns that fd")]
 fn misc_dup2_self() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"ds", 0o644), "create");
@@ -419,7 +419,7 @@ fn misc_dup2_self() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "two uname calls report the same sysname and release")]
 fn misc_uname_stable() -> TestResult {
     let a = check_ok!(syscall::uname(), "a");
     let b = check_ok!(syscall::uname(), "b");
@@ -428,7 +428,7 @@ fn misc_uname_stable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "two membarrier queries return the same mask")]
 fn misc_membarrier_twice() -> TestResult {
     let a = check_ok!(syscall::membarrier(MEMBARRIER_CMD_QUERY, 0), "a");
     let b = check_ok!(syscall::membarrier(MEMBARRIER_CMD_QUERY, 0), "b");
@@ -436,7 +436,7 @@ fn misc_membarrier_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "capget for the calling pid succeeds")]
 fn misc_capget_self_pid() -> TestResult {
     let mut hdr = CapUserHeader {
         version: LINUX_CAPABILITY_VERSION_3,
@@ -447,7 +447,7 @@ fn misc_capget_self_pid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "close_range with first greater than last returns EINVAL/ENOSYS or succeeds")]
 fn misc_close_range_empty_soft() -> TestResult {
     match syscall::close_range(1000, 999, 0) {
         Ok(()) | Err(Errno::EINVAL) | Err(Errno::ENOSYS) => {}
@@ -456,7 +456,7 @@ fn misc_close_range_empty_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "two descriptors can hold shared flock locks on the same file")]
 fn misc_flock_sh_two_fds() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"fl2")?;

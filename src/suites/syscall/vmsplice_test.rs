@@ -6,7 +6,7 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, IoVec};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "vmsplice copies a userspace buffer into a pipe that can then be read")]
 fn vmsplice_into_pipe() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     let mut data = *b"vmsplice-payload";
@@ -24,7 +24,7 @@ fn vmsplice_into_pipe() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "vmsplice of two iovecs concatenates them into a pipe")]
 fn vmsplice_multi_iovec() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     let mut a = *b"hello";
@@ -49,7 +49,7 @@ fn vmsplice_multi_iovec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "vmsplice of an empty iovec array returns 0")]
 fn vmsplice_empty_iov() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     let iov: [IoVec; 0] = [];
@@ -60,7 +60,7 @@ fn vmsplice_empty_iov() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "vmsplice of a 64-byte buffer into a pipe is readable in full")]
 fn vmsplice_partial_then_read() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     let mut data = [0u8; 64];

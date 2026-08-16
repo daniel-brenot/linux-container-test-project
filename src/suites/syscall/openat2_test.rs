@@ -8,7 +8,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_dir, create_empty, write_file};
 use crate::syscall::{self, oflag, Errno, OpenHow, RESOLVE_BENEATH, RESOLVE_NO_SYMLINKS};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "openat2 can open an existing file read-only")]
 fn openat2_rdonly() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -26,7 +26,7 @@ fn openat2_rdonly() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "openat2 with O_CREAT|O_EXCL creates a new regular file")]
 fn openat2_creat() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"new")?;
@@ -43,7 +43,7 @@ fn openat2_creat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "openat2 with RESOLVE_NO_SYMLINKS on a symlink returns ELOOP")]
 fn openat2_resolve_no_symlinks() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"file")?;
@@ -62,7 +62,7 @@ fn openat2_resolve_no_symlinks() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "openat2 with RESOLVE_BENEATH on .. returns EXDEV, ENOENT, or EPERM")]
 fn openat2_resolve_beneath_escape() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let sub = create_dir(&mut tmp, b"sub", 0o755)?;
@@ -95,7 +95,7 @@ fn openat2_resolve_beneath_escape() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "openat2 with RESOLVE_BENEATH can open a file in the same directory")]
 fn openat2_beneath_same_dir_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let sub = create_dir(&mut tmp, b"sub", 0o755)?;

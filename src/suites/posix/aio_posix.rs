@@ -11,7 +11,7 @@ fn soft(e: Errno) -> bool {
     )
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "io_setup() of 1 request succeeds or is rejected as unsupported")]
 fn aio_io_setup_soft() -> TestResult {
     let mut ctx = 0u64;
     match syscall::io_setup(1, &mut ctx) {
@@ -24,7 +24,7 @@ fn aio_io_setup_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "io_setup() of 8 requests succeeds or is rejected as unsupported")]
 fn aio_io_setup_8_soft() -> TestResult {
     let mut ctx = 0u64;
     match syscall::io_setup(8, &mut ctx) {
@@ -37,7 +37,7 @@ fn aio_io_setup_8_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "io_setup() of 64 requests succeeds or is rejected as unsupported")]
 fn aio_io_setup_64_soft() -> TestResult {
     let mut ctx = 0u64;
     match syscall::io_setup(64, &mut ctx) {
@@ -50,7 +50,7 @@ fn aio_io_setup_64_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "io_setup() of 0 requests succeeds or is rejected as unsupported")]
 fn aio_io_setup_zero_soft() -> TestResult {
     let mut ctx = 0u64;
     match syscall::io_setup(0, &mut ctx) {
@@ -63,7 +63,7 @@ fn aio_io_setup_zero_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "io_destroy() of context 0 succeeds or is rejected as unsupported")]
 fn aio_io_destroy_zero_soft() -> TestResult {
     match syscall::io_destroy(0) {
         Err(e) if e == Errno::EINVAL || soft(e) => Ok(()),
@@ -72,7 +72,7 @@ fn aio_io_destroy_zero_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "io_setup() then io_destroy() of the context succeeds or is rejected as unsupported")]
 fn aio_io_setup_destroy_pair() -> TestResult {
     let mut ctx = 0u64;
     match syscall::io_setup(4, &mut ctx) {
@@ -89,7 +89,7 @@ fn aio_io_setup_destroy_pair() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "io_uring_setup() of 1 entry succeeds or is rejected as unsupported")]
 fn aio_uring_setup_soft() -> TestResult {
     let mut params = IoUringParams::default();
     match syscall::io_uring_setup(1, &mut params) {
@@ -103,7 +103,7 @@ fn aio_uring_setup_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "io_uring_setup() of 4 entries succeeds or is rejected as unsupported")]
 fn aio_uring_setup_4_soft() -> TestResult {
     let mut params = IoUringParams::default();
     match syscall::io_uring_setup(4, &mut params) {
@@ -116,7 +116,7 @@ fn aio_uring_setup_4_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "io_uring_setup() of 8 entries succeeds or is rejected as unsupported")]
 fn aio_uring_setup_8_soft() -> TestResult {
     let mut params = IoUringParams::default();
     match syscall::io_uring_setup(8, &mut params) {
@@ -129,7 +129,7 @@ fn aio_uring_setup_8_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "io_uring_setup() fills params and returns a fd or is rejected as unsupported")]
 fn aio_uring_setup_params_filled() -> TestResult {
     let mut params = IoUringParams::default();
     match syscall::io_uring_setup(2, &mut params) {
@@ -144,7 +144,7 @@ fn aio_uring_setup_params_filled() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "two successive io_setup() and io_destroy() pairs succeed or are rejected as unsupported")]
 fn aio_io_setup_twice_soft() -> TestResult {
     for n in [1u32, 2] {
         let mut ctx = 0u64;
@@ -159,7 +159,7 @@ fn aio_io_setup_twice_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "two successive io_uring_setup() calls succeed or are rejected as unsupported")]
 fn aio_uring_setup_twice_soft() -> TestResult {
     for _ in 0..2 {
         let mut params = IoUringParams::default();
@@ -174,7 +174,7 @@ fn aio_uring_setup_twice_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "io_setup() of 1024 requests succeeds or is rejected as unsupported")]
 fn aio_io_setup_large_soft() -> TestResult {
     let mut ctx = 0u64;
     match syscall::io_setup(1024, &mut ctx) {
@@ -187,7 +187,7 @@ fn aio_io_setup_large_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "io_uring_setup() of 0 entries succeeds or is rejected as unsupported")]
 fn aio_uring_setup_zero_soft() -> TestResult {
     let mut params = IoUringParams::default();
     match syscall::io_uring_setup(0, &mut params) {
@@ -200,7 +200,7 @@ fn aio_uring_setup_zero_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "io_setup() and io_uring_setup() are probed and unsupported rejection is accepted")]
 fn aio_probe_both_apis() -> TestResult {
     let mut ctx = 0u64;
     let _ = syscall::io_setup(1, &mut ctx);
@@ -214,7 +214,7 @@ fn aio_probe_both_apis() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "io_destroy() of an invalid context succeeds or is rejected as unsupported")]
 fn aio_io_setup_destroy_invalid_soft() -> TestResult {
     match syscall::io_destroy(0xdead_beef) {
         Err(e) if e == Errno::EINVAL || soft(e) => Ok(()),
@@ -223,7 +223,7 @@ fn aio_io_setup_destroy_invalid_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "io_uring_setup() of 16 entries succeeds or is rejected as unsupported")]
 fn aio_uring_setup_16_soft() -> TestResult {
     let mut params = IoUringParams::default();
     match syscall::io_uring_setup(16, &mut params) {
@@ -236,7 +236,7 @@ fn aio_uring_setup_16_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "io_setup() of 2 requests succeeds or is rejected as unsupported")]
 fn aio_io_setup_2_soft() -> TestResult {
     let mut ctx = 0u64;
     match syscall::io_setup(2, &mut ctx) {
@@ -249,7 +249,7 @@ fn aio_io_setup_2_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "close() of an io_uring fd then a second close() returns EBADF or is rejected as unsupported")]
 fn aio_uring_close_twice_soft() -> TestResult {
     let mut params = IoUringParams::default();
     match syscall::io_uring_setup(1, &mut params) {
@@ -267,7 +267,7 @@ fn aio_uring_close_twice_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "the AIO probe module is linked and the smoke test returns success")]
 fn aio_smoke_ok() -> TestResult {
     // Always-pass marker that AIO soft module is linked.
     Ok(())

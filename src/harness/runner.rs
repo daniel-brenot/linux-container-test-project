@@ -12,12 +12,36 @@ use linkme::distributed_slice;
 #[distributed_slice]
 pub static ALL_TESTS: [TestCase] = [..];
 
+/// Outcome the case is written to verify.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Expect {
+    /// The operation or property must succeed / hold.
+    Success,
+    /// The operation must fail (errno named in [`TestCase::case`]).
+    Failure,
+    /// Success if the interface exists; unsupported rejection is accepted.
+    Soft,
+}
+
+impl Expect {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Success => "success",
+            Self::Failure => "failure",
+            Self::Soft => "soft",
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 pub struct TestCase {
     pub name: &'static str,
     pub suite: Suite,
     /// When true, only executed in `--full` mode.
     pub full_only: bool,
+    pub expect: Expect,
+    /// One-line description of the behaviour and expected outcome.
+    pub case: &'static str,
     pub func: fn() -> TestResult,
 }
 
@@ -153,7 +177,14 @@ fn list_tests(args: &Args) {
             return;
         }
         let mode = if t.full_only { "full" } else { "quick" };
-        println!("{}\t{}\t{}", suite_name(t.suite), mode, t.name);
+        println!(
+            "{}\t{}\t{}\t{}\t{}",
+            suite_name(t.suite),
+            mode,
+            t.expect.as_str(),
+            t.name,
+            t.case
+        );
     });
 }
 

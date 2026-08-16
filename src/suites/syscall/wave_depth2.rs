@@ -1,4 +1,4 @@
-//! Extra depth2 wave: denser LTP/pjdfstest/POSIX matrices.
+//! Extra depth-2 wave: denser syscall, filesystem, and posix-suite matrices.
 
 use crate::check;
 use crate::check_eq;
@@ -23,7 +23,7 @@ fn soft(e: Errno) -> bool {
 
 macro_rules! flock_byte {
     ($name:ident, $ty:expr, $off:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("fcntl F_SETLK applies a one-byte ", stringify!($ty), " lock at offset ", stringify!($off)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let fd = check_ok!(tmp.create_file(b"b", 0o644), "c");
@@ -79,7 +79,7 @@ flock_byte!(d2b_wr_15, F_WRLCK, 15);
 
 macro_rules! wait_code {
     ($name:ident, $c:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("wait4 reports wexitstatus ", stringify!($c), " for a child that exits that code"))]
         fn $name() -> TestResult {
             let pid = check_ok!(syscall::fork(), "f");
             if pid == 0 {
@@ -117,7 +117,7 @@ wait_code!(d2b_ex_254, 254);
 
 macro_rules! splice_n {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = soft, case = concat!("splice moves ", stringify!($n), " bytes from one pipe to another"))]
         fn $name() -> TestResult {
             let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
             let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -150,7 +150,7 @@ splice_n!(d2b_sp_256, 256);
 
 macro_rules! tee_n {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = soft, case = concat!("tee copies ", stringify!($n), " bytes from one pipe to another"))]
         fn $name() -> TestResult {
             let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
             let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -181,7 +181,7 @@ tee_n!(d2b_tee_128, 128);
 
 macro_rules! efd_sem {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = soft, case = concat!("EFD_SEMAPHORE eventfd initialized to ", stringify!($n), " yields that many reads of 1"))]
         fn $name() -> TestResult {
             let efd = match syscall::eventfd($n, EFD_SEMAPHORE | EFD_CLOEXEC) {
                 Ok(fd) => fd,
@@ -207,7 +207,7 @@ efd_sem!(d2b_efd_10, 10);
 
 macro_rules! so_type {
     ($name:ident, $dom:expr, $ty:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("getsockopt SO_TYPE on ", stringify!($dom), "/", stringify!($ty), " returns that socket type"))]
         fn $name() -> TestResult {
             let fd = check_ok!(syscall::socket($dom, $ty, 0), "s");
             let mut v = [0u8; 4];
@@ -226,7 +226,7 @@ so_type!(d2b_so_inet_dgram, AF_INET, SOCK_DGRAM);
 
 macro_rules! so_buf {
     ($name:ident, $opt:expr, $sz:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = soft, case = concat!("setsockopt ", stringify!($opt), " of ", stringify!($sz), " is accepted and getsockopt reflects a comparable size"))]
         fn $name() -> TestResult {
             let fd = check_ok!(syscall::socket(AF_INET, SOCK_DGRAM, 0), "s");
             let b = ($sz as i32).to_ne_bytes();
@@ -259,7 +259,7 @@ so_buf!(d2b_snd_64k, SO_SNDBUF, 65536);
 
 macro_rules! in_mask {
     ($name:ident, $m:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("inotify_add_watch accepts mask ", stringify!($m), " and inotify_rm_watch removes it"))]
         fn $name() -> TestResult {
             let tmp = check_ok!(TempDir::create(), "t");
             let fd = check_ok!(syscall::inotify_init1(IN_CLOEXEC), "i");
@@ -283,7 +283,7 @@ in_mask!(d2b_in_all, IN_CREATE | IN_DELETE | IN_MODIFY | IN_ATTRIB | IN_OPEN);
 
 macro_rules! tfd_abs_ms {
     ($name:ident, $ms:expr) => {
-        #[crate::lctp_test(suite = syscall)]
+        #[crate::lctp_test(suite = syscall, expect = success, case = concat!("timerfd_settime TFD_TIMER_ABSTIME arms a CLOCK_MONOTONIC expiry ", stringify!($ms), " ms in the future"))]
         fn $name() -> TestResult {
             let fd = check_ok!(
                 syscall::timerfd_create(clock::CLOCK_MONOTONIC, TFD_CLOEXEC),
@@ -316,7 +316,7 @@ tfd_abs_ms!(d2b_tfd_20, 20);
 tfd_abs_ms!(d2b_tfd_100, 100);
 tfd_abs_ms!(d2b_tfd_200, 200);
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "memfd_create with MFD_ALLOW_SEALING reports no seals via F_GET_SEALS")]
 fn d2b_memfd_seals_get_zero() -> TestResult {
     let fd = check_ok!(
         syscall::memfd_create(b"z\0", MFD_ALLOW_SEALING as u32),
@@ -328,7 +328,7 @@ fn d2b_memfd_seals_get_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_wait reports EPOLLIN on an eventfd initialized to 1")]
 fn d2b_epoll_eventfd() -> TestResult {
     let efd = check_ok!(syscall::eventfd(1, EFD_CLOEXEC), "e");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -344,7 +344,7 @@ fn d2b_epoll_eventfd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "poll reports POLLIN on an eventfd initialized to 1")]
 fn d2b_poll_eventfd() -> TestResult {
     let efd = check_ok!(syscall::eventfd(1, EFD_CLOEXEC), "e");
     let mut fds = [poll::PollFd {
@@ -358,7 +358,7 @@ fn d2b_poll_eventfd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pidfd_send_signal SIGKILL terminates a child so wait4 reports signaled")]
 fn d2b_pidfd_kill() -> TestResult {
     let pid = check_ok!(syscall::fork(), "f");
     if pid == 0 {
@@ -377,7 +377,7 @@ fn d2b_pidfd_kill() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "sched_setaffinity accepts the mask returned by sched_getaffinity")]
 fn d2b_affinity_restore() -> TestResult {
     let mut m = [0u8; 128];
     check_ok!(syscall::sched_getaffinity(0, &mut m), "g");
@@ -393,7 +393,7 @@ fn d2b_affinity_restore() -> TestResult {
 
 macro_rules! fs_eacces_r {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = concat!("access R_OK on a file with mode ", stringify!($mode), " returns EACCES"))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"f")?;
@@ -424,7 +424,7 @@ fs_eacces_r!(d2b_fs_er_330, 0o330);
 
 macro_rules! fs_eacces_w {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = concat!("access W_OK on a file with mode ", stringify!($mode), " returns EACCES"))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"f")?;
@@ -455,7 +455,7 @@ fs_eacces_w!(d2b_fs_ew_445, 0o445);
 
 macro_rules! fs_ok_r {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("access R_OK succeeds on a file with mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"f")?;
@@ -482,7 +482,7 @@ fs_ok_r!(d2b_fs_or_744, 0o744);
 
 macro_rules! fifo_m {
     ($name:ident, $m:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("mknodat S_IFIFO creates a fifo whose mode bits are ", stringify!($m)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = copy_child(&mut tmp, b"fifo")?;
@@ -517,7 +517,7 @@ fifo_m!(d2b_fifo_770, 0o770);
 
 macro_rules! ren {
     ($name:ident, $a:expr, $b:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("rename moves ", stringify!($a), " to ", stringify!($b)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let s = create_empty(&mut tmp, $a)?;
@@ -542,7 +542,7 @@ ren!(d2b_ren_10, b"ri", b"rj");
 
 macro_rules! lnk {
     ($name:ident, $a:expr, $b:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("link creates a hard link from ", stringify!($a), " to ", stringify!($b)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let s = create_empty(&mut tmp, $a)?;
@@ -567,7 +567,7 @@ lnk!(d2b_lnk_10, b"li", b"lj");
 
 macro_rules! open_creat_m {
     ($name:ident, $m:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("open O_CREAT|O_EXCL creates a file whose mode bits are ", stringify!($m)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = copy_child(&mut tmp, b"oc")?;
@@ -595,7 +595,7 @@ open_creat_m!(d2b_oc_750, 0o750);
 open_creat_m!(d2b_oc_760, 0o760);
 open_creat_m!(d2b_oc_770, 0o770);
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mkdir in a directory without write permission returns EACCES")]
 fn d2b_dir_no_write_mkdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -608,7 +608,7 @@ fn d2b_dir_no_write_mkdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink of one hard-link name leaves the remaining name accessible")]
 fn d2b_unlink_after_link() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -625,7 +625,7 @@ fn d2b_unlink_after_link() -> TestResult {
 
 macro_rules! px_acc {
     ($name:ident, $ch:expr, $m:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = concat!("access with mask ", stringify!($m), " succeeds on a file with mode ", stringify!($ch)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"f")?;
@@ -668,7 +668,7 @@ px_acc!(d2b_px_rwx_777, 0o777, R_OK | W_OK | X_OK);
 
 macro_rules! px_fa {
     ($name:ident, $ch:expr, $m:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = concat!("faccessat with mask ", stringify!($m), " succeeds on a file with mode ", stringify!($ch)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"f")?;
@@ -693,7 +693,7 @@ px_fa!(d2b_px_fa_rwx_700, 0o700, R_OK | W_OK | X_OK);
 
 macro_rules! px_cns {
     ($name:ident, $ns:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = concat!("clock_nanosleep CLOCK_MONOTONIC of ", stringify!($ns), " ns returns success"))]
         fn $name() -> TestResult {
             let req = Timespec {
                 tv_sec: 0,
@@ -719,7 +719,7 @@ px_cns!(d2b_cns_8ms, 8_000_000);
 px_cns!(d2b_cns_9ms, 9_000_000);
 px_cns!(d2b_cns_15ms, 15_000_000);
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rt_sigprocmask SIG_BLOCK adds SIGUSR1 and SIGTERM to the mask")]
 fn d2b_sig_block_usr1_term() -> TestResult {
     let mut old = 0u64;
     let set = syscall::sigmask(SIGUSR1) | syscall::sigmask(SIGTERM);
@@ -741,7 +741,7 @@ fn d2b_sig_block_usr1_term() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "setsockopt SO_REUSEADDR is accepted or ignored on an AF_INET stream socket")]
 fn d2b_reuseaddr_listen_soft() -> TestResult {
     let fd = check_ok!(syscall::socket(AF_INET, SOCK_STREAM, 0), "s");
     let one = 1i32.to_ne_bytes();

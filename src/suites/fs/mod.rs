@@ -1,4 +1,4 @@
-//! Filesystem semantics tests (pjdfstest-inspired, unprivileged-only).
+//! Filesystem semantics tests (unprivileged-only).
 
 mod access;
 mod chmod;

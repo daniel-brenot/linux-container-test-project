@@ -13,13 +13,13 @@ fn sigbit(sig: i32) -> Sigset {
     1u64 << (sig - 1)
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kill of self with signal 0 succeeds")]
 fn sig_kill_self_zero() -> TestResult {
     check_ok!(syscall::kill(syscall::getpid(), 0), "kill0");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kill of a live child with signal 0 succeeds")]
 fn sig_kill_child_zero() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -34,7 +34,7 @@ fn sig_kill_child_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kill of a likely unused pid with signal 0 returns ESRCH or succeeds")]
 fn sig_kill_bad_pid_zero() -> TestResult {
     match syscall::kill(999_999_999, 0) {
         Err(Errno::ESRCH) => {}
@@ -44,7 +44,7 @@ fn sig_kill_bad_pid_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "rt_sigaction can set SIG_IGN on SIGUSR1")]
 fn sig_rt_sigaction_ign() -> TestResult {
     let mut old = Sigaction::default();
     let mut neu = Sigaction {
@@ -57,7 +57,7 @@ fn sig_rt_sigaction_ign() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "rt_sigaction can set SIG_DFL on SIGUSR1")]
 fn sig_rt_sigaction_dfl() -> TestResult {
     let mut neu = Sigaction {
         sa_handler: SIG_DFL,
@@ -67,14 +67,14 @@ fn sig_rt_sigaction_dfl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "rt_sigaction can query the current SIGUSR1 action")]
 fn sig_rt_sigaction_get_old() -> TestResult {
     let mut old = Sigaction::default();
     check_ok!(syscall::rt_sigaction(SIGUSR1, None, Some(&mut old)), "get");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "rt_sigprocmask can block and unblock SIGUSR1")]
 fn sig_block_unblock_usr1() -> TestResult {
     let set = sigbit(SIGUSR1);
     let mut old = 0u64;
@@ -84,7 +84,7 @@ fn sig_block_unblock_usr1() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a blocked SIGUSR1 sent to self appears in rt_sigpending")]
 fn sig_pending_after_blocked_raise() -> TestResult {
     let set = sigbit(SIGUSR1);
     let mut old = 0u64;
@@ -105,7 +105,7 @@ fn sig_pending_after_blocked_raise() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "signalfd can be created for a blocked SIGUSR1 mask")]
 fn sig_signalfd_create() -> TestResult {
     let mask = sigbit(SIGUSR1);
     let mut old = 0u64;
@@ -116,7 +116,7 @@ fn sig_signalfd_create() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "reading a signalfd delivers the raised SIGUSR1")]
 fn sig_signalfd_read_usr1() -> TestResult {
     let mask = sigbit(SIGUSR1);
     let mut old = 0u64;
@@ -139,7 +139,7 @@ fn sig_signalfd_read_usr1() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "nonblocking read of an idle signalfd returns EAGAIN")]
 fn sig_signalfd_nonblock_eagain() -> TestResult {
     let mask = sigbit(SIGUSR1);
     let mut old = 0u64;
@@ -160,7 +160,7 @@ fn sig_signalfd_nonblock_eagain() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 reaps a child with SIGCHLD at default action")]
 fn sig_sigchld_wait_child() -> TestResult {
     let mut act = Sigaction {
         sa_handler: SIG_DFL,
@@ -177,7 +177,7 @@ fn sig_sigchld_wait_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "wait4 reaps a child or returns ECHILD when SIGCHLD is ignored")]
 fn sig_sigchld_ign_still_wait() -> TestResult {
     let mut old = Sigaction::default();
     let mut act = Sigaction {
@@ -203,7 +203,7 @@ fn sig_sigchld_ign_still_wait() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "rt_sigprocmask can set an empty mask and restore the old one")]
 fn sig_procmask_setmask_empty() -> TestResult {
     let empty = 0u64;
     let mut old = 0u64;
@@ -212,7 +212,7 @@ fn sig_procmask_setmask_empty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "rt_sigpending succeeds and returns the current pending set")]
 fn sig_pending_initially_clear_soft() -> TestResult {
     let mut pending = 0u64;
     check_ok!(syscall::rt_sigpending(&mut pending), "pending");
@@ -220,7 +220,7 @@ fn sig_pending_initially_clear_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "kill(0, 0) succeeds or returns ESRCH/EPERM")]
 fn sig_kill_zero_process_group_soft() -> TestResult {
     // kill(0, 0) probes calling process group.
     match syscall::kill(0, 0) {
@@ -231,7 +231,7 @@ fn sig_kill_zero_process_group_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "rt_sigprocmask can block SIGUSR1 and SIGUSR2 together")]
 fn sig_block_two_signals() -> TestResult {
     let set = sigbit(SIGUSR1) | sigbit(syscall::SIGUSR2);
     let mut old = 0u64;
@@ -241,7 +241,7 @@ fn sig_block_two_signals() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "signalfd on an existing fd updates the signal mask")]
 fn sig_signalfd_update_mask() -> TestResult {
     let m1 = sigbit(SIGUSR1);
     let mut old = 0u64;
@@ -256,7 +256,7 @@ fn sig_signalfd_update_mask() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "rt_sigaction can set SIG_IGN on SIGHUP and restore the old action")]
 fn sig_action_ign_hup() -> TestResult {
     let mut old = Sigaction::default();
     let mut neu = Sigaction {
@@ -268,7 +268,7 @@ fn sig_action_ign_hup() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kill with signal 0 succeeds against a still-running child")]
 fn sig_child_kill_zero_alive() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -283,7 +283,7 @@ fn sig_child_kill_zero_alive() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "rt_sigaction can set SIG_IGN on SIGINT and restore the old action")]
 fn sig_rt_sigaction_int_ign() -> TestResult {
     let mut old = Sigaction::default();
     let mut neu = Sigaction {
@@ -295,7 +295,7 @@ fn sig_rt_sigaction_int_ign() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "rt_sigprocmask with a null set queries the current mask")]
 fn sig_procmask_query_only() -> TestResult {
     let mut cur = 0u64;
     check_ok!(syscall::rt_sigprocmask(SIG_SETMASK, None, Some(&mut cur)), "query");
@@ -303,7 +303,7 @@ fn sig_procmask_query_only() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "an ignored then unblocked SIGUSR1 is no longer pending")]
 fn sig_pending_clear_after_ign() -> TestResult {
     let set = sigbit(SIGUSR1);
     let mut oldm = 0u64;
@@ -324,7 +324,7 @@ fn sig_pending_clear_after_ign() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kill of self with SIGTERM succeeds when the action is SIG_IGN")]
 fn sig_kill_self_term_with_ign() -> TestResult {
     let mut old = Sigaction::default();
     let mut neu = Sigaction {
@@ -337,7 +337,7 @@ fn sig_kill_self_term_with_ign() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "waitpid reaps a child that exited with status 42")]
 fn sig_wait_after_sigchld_default() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {

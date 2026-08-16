@@ -13,7 +13,7 @@ fn soft(e: Errno) -> bool {
     )
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "msgsnd then msgrcv round-trips a four-byte payload on an IPC_PRIVATE queue")]
 fn sysv_msg_ipc_private_roundtrip() -> TestResult {
     let msqid = match syscall::msgget(IPC_PRIVATE, IPC_CREAT | 0o600) {
         Ok(id) => id,
@@ -51,7 +51,7 @@ fn sysv_msg_ipc_private_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "msgrcv with a positive type receives the matching message and leaves the other")]
 fn sysv_msg_type_filter() -> TestResult {
     let msqid = match syscall::msgget(IPC_PRIVATE, IPC_CREAT | 0o600) {
         Ok(id) => id,
@@ -80,7 +80,7 @@ fn sysv_msg_type_filter() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = failure, case = "a second msgctl IPC_RMID returns EINVAL, EPERM, or EIDRM")]
 fn sysv_msg_rmid() -> TestResult {
     let msqid = match syscall::msgget(IPC_PRIVATE, IPC_CREAT | 0o600) {
         Ok(id) => id,

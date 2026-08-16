@@ -7,7 +7,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_empty, write_file};
 use crate::syscall::{self, oflag, AT_SYMLINK_NOFOLLOW, STATX_BASIC_STATS, Statx};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "statx basic stats match fstat size, inode, and mode bits")]
 fn statx_basic_vs_fstat() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"sx")?;
@@ -27,7 +27,7 @@ fn statx_basic_vs_fstat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "statx reports size 0 for an empty regular file")]
 fn statx_empty_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"empty")?;
@@ -41,7 +41,7 @@ fn statx_empty_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "statx follows a symlink by default and reports a symlink with AT_SYMLINK_NOFOLLOW")]
 fn statx_symlink_nofollow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"target")?;
@@ -73,7 +73,7 @@ fn statx_symlink_nofollow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "statx reports a directory mode for a directory path")]
 fn statx_dir() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let mut sx = Statx::default();
@@ -85,7 +85,7 @@ fn statx_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "statx with STATX_SIZE|STATX_INO returns size and a nonzero inode")]
 fn statx_mask_partial() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"m")?;

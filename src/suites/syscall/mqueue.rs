@@ -45,7 +45,7 @@ fn mq_unavailable(e: Errno) -> bool {
     )
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "mq_open O_CREAT|O_EXCL creates a POSIX queue that close and mq_unlink tear down")]
 fn mq_open_create_unlink_soft() -> TestResult {
     let mut namebuf = [0u8; 32];
     let name = mq_name(&mut namebuf);
@@ -79,7 +79,7 @@ fn mq_open_create_unlink_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "mq_open of a missing queue name is rejected rather than returning a live fd")]
 fn mq_open_missing_name_soft() -> TestResult {
     match syscall::mq_open(b"/lctp-mq-absent-xyz\0", oflag::O_RDONLY, 0, None) {
         Err(e) if mq_unavailable(e) => Ok(()),

@@ -287,7 +287,7 @@ unsafe extern "C" fn thr_store_tid(arg: *mut u8) -> i32 {
 
 macro_rules! spawn_join_n {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = posix, full)]
+        #[crate::lctp_test(suite = posix, full, expect = soft, case = "sequential spawn-join cycles restore a single-threaded tid")]
         fn $name() -> TestResult {
             for _ in 0..$n {
                 let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
@@ -321,7 +321,7 @@ spawn_join_n!(thr2_sj_48, 48);
 
 macro_rules! seq_inc {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = soft, case = "sequential threads can each increment a shared counter")]
         fn $name() -> TestResult {
             let cell = AtomicU32::new(0);
             for _ in 0..$n {
@@ -352,7 +352,7 @@ seq_inc!(thr2_seq_32, 32);
 
 macro_rules! mutex_grid {
     ($name:ident, $threads:expr, $loops:expr) => {
-        #[crate::lctp_test(suite = posix, full)]
+        #[crate::lctp_test(suite = posix, full, expect = soft, case = "several threads can serialize increments with a futex mutex")]
         fn $name() -> TestResult {
             #[repr(C)]
             struct Arg {
@@ -413,7 +413,7 @@ mutex_grid!(thr2_mtx_4x100, 4, 100);
 
 macro_rules! trylock_n {
     ($name:ident, $threads:expr, $loops:expr) => {
-        #[crate::lctp_test(suite = posix, full)]
+        #[crate::lctp_test(suite = posix, full, expect = soft, case = "several threads can make progress with a trylock-style mutex")]
         fn $name() -> TestResult {
             #[repr(C)]
             struct Arg {
@@ -463,7 +463,7 @@ trylock_n!(thr2_try_4x64, 4, 64);
 
 macro_rules! rw_rd {
     ($name:ident, $threads:expr, $loops:expr) => {
-        #[crate::lctp_test(suite = posix, full)]
+        #[crate::lctp_test(suite = posix, full, expect = soft, case = "several threads can take shared reader locks together")]
         fn $name() -> TestResult {
             #[repr(C)]
             struct Arg {
@@ -515,7 +515,7 @@ rw_rd!(thr2_rd_4x32, 4, 32);
 
 macro_rules! rw_wr {
     ($name:ident, $threads:expr, $loops:expr) => {
-        #[crate::lctp_test(suite = posix, full)]
+        #[crate::lctp_test(suite = posix, full, expect = soft, case = "several threads can take exclusive writer locks in turn")]
         fn $name() -> TestResult {
             #[repr(C)]
             struct Arg {
@@ -567,7 +567,7 @@ rw_wr!(thr2_wr_4x16, 4, 16);
 
 macro_rules! barrier_n {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = posix, full)]
+        #[crate::lctp_test(suite = posix, full, expect = soft, case = "several threads can rendezvous on a futex barrier")]
         fn $name() -> TestResult {
             #[repr(C)]
             struct Arg {
@@ -610,7 +610,7 @@ barrier_n!(thr2_bar_4b, 4);
 
 macro_rules! cond_n {
     ($name:ident, $waiters:expr) => {
-        #[crate::lctp_test(suite = posix, full)]
+        #[crate::lctp_test(suite = posix, full, expect = soft, case = "several waiters can be woken by a futex broadcast")]
         fn $name() -> TestResult {
             #[repr(C)]
             struct Arg {
@@ -654,7 +654,7 @@ cond_n!(thr2_cond_4, 4);
 
 macro_rules! once_n {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = posix, full)]
+        #[crate::lctp_test(suite = posix, full, expect = soft, case = "several threads run a once-style gate exactly once")]
         fn $name() -> TestResult {
             #[repr(C)]
             struct Arg {
@@ -692,7 +692,7 @@ once_n!(thr2_once_4, 4);
 
 macro_rules! add64_pair {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = posix, full)]
+        #[crate::lctp_test(suite = posix, full, expect = soft, case = "two threads can add concurrently to a shared 64-bit counter")]
         fn $name() -> TestResult {
             #[repr(C)]
             struct Arg {
@@ -735,7 +735,7 @@ add64_pair!(thr2_u64_3000, 3000);
 
 macro_rules! yield_threads {
     ($name:ident, $threads:expr, $yields:expr) => {
-        #[crate::lctp_test(suite = posix, full)]
+        #[crate::lctp_test(suite = posix, full, expect = soft, case = "several threads can yield then increment a shared counter")]
         fn $name() -> TestResult {
             #[repr(C)]
             struct Arg {
@@ -779,7 +779,7 @@ yield_threads!(thr2_yld_4x8, 4, 8);
 
 macro_rules! parallel_inc {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = soft, case = "parallel threads can each increment a shared counter")]
         fn $name() -> TestResult {
             let cells: [AtomicU32; 4] = [
                 AtomicU32::new(0),
@@ -814,7 +814,7 @@ parallel_inc!(thr2_par_2, 2);
 parallel_inc!(thr2_par_3, 3);
 parallel_inc!(thr2_par_4, 4);
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a child tid handle is distinct from the process pid")]
 fn thr2_tid_ne_pid_child() -> TestResult {
     let cell = AtomicI32::new(0);
     let Some(t) = soft_spawn(thr_store_tid, &cell as *const _ as *mut u8)? else {
@@ -830,13 +830,13 @@ fn thr2_tid_ne_pid_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "the main thread has gettid equal to getpid")]
 fn thr2_self_tid_eq_pid() -> TestResult {
     check_eq!(syscall::gettid(), syscall::getpid(), "main");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "reader and writer threads can share a lock-like state word")]
 fn thr2_mixed_rd_wr() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -868,7 +868,7 @@ fn thr2_mixed_rd_wr() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mutex-protected work can be followed by a once-style gate")]
 fn thr2_mutex_then_once() -> TestResult {
     #[repr(C)]
     struct MArg {
@@ -914,7 +914,7 @@ fn thr2_mutex_then_once() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "sequential threads can reuse stacks while updating a 64-bit cell")]
 fn thr2_stack_reuse_u64() -> TestResult {
     for _ in 0..8 {
         let cell = AtomicU64::new(0);
@@ -927,7 +927,7 @@ fn thr2_stack_reuse_u64() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "threads can pass a futex barrier for two generations")]
 fn thr2_double_barrier_rounds() -> TestResult {
     for _ in 0..3 {
         #[repr(C)]
@@ -955,7 +955,7 @@ fn thr2_double_barrier_rounds() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a nop thread can be spawned and joined")]
 fn thr2_nop_ok() -> TestResult {
     let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
         return Ok(());
@@ -963,7 +963,7 @@ fn thr2_nop_ok() -> TestResult {
     soft_join(t)
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "four threads can increment a shared 64-bit counter")]
 fn thr2_four_inc64() -> TestResult {
     let cells = [
         AtomicU64::new(0),
@@ -992,7 +992,7 @@ fn thr2_four_inc64() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a waiter can be woken by a futex signal")]
 fn thr2_cond_signal_style() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -1016,7 +1016,7 @@ fn thr2_cond_signal_style() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mutex-protected increments complete across several rounds")]
 fn thr2_stress_mutex_rounds() -> TestResult {
     for round in 0..4u32 {
         #[repr(C)]
@@ -1048,13 +1048,13 @@ fn thr2_stress_mutex_rounds() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "gettid of the main thread is positive")]
 fn thr2_gettid_positive() -> TestResult {
     check!(syscall::gettid() > 0, "tid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "joining sequential threads restores gettid equal to getpid")]
 fn thr2_join_restores_main() -> TestResult {
     for _ in 0..6 {
         let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {

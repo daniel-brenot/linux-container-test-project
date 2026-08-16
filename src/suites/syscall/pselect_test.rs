@@ -6,7 +6,7 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, FdSet, Timespec};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pselect6 reports a pipe that already has data as readable")]
 fn pselect6_pipe_readable() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     check_ok!(syscall::write(w, b"x"), "write");
@@ -27,7 +27,7 @@ fn pselect6_pipe_readable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pselect6 of an empty pipe with a short timeout returns 0")]
 fn pselect6_timeout() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     let mut rfds = FdSet::zero();
@@ -46,7 +46,7 @@ fn pselect6_timeout() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pselect6 with a zero timeout on an empty pipe returns 0")]
 fn pselect6_zero_timeout() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     let mut rfds = FdSet::zero();
@@ -65,7 +65,7 @@ fn pselect6_zero_timeout() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "pselect6 reports an empty pipe write end as writable")]
 fn pselect6_writefds_pipe() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe2");
     let mut wfds = FdSet::zero();
@@ -85,7 +85,7 @@ fn pselect6_writefds_pipe() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pselect6 with all fd sets NULL and a short timeout returns 0")]
 fn pselect6_null_sets() -> TestResult {
     let ts = Timespec {
         tv_sec: 0,

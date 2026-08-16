@@ -25,7 +25,7 @@ fn restore_sig(sig: i32) -> TestResult {
 
 macro_rules! errno_bad_fd {
     ($name:ident, $call:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = failure, case = concat!(stringify!($call), " on an invalid file descriptor returns EBADF"))]
         fn $name() -> TestResult {
             check_err!($call, Errno::EBADF, "ebadf");
             Ok(())
@@ -38,26 +38,26 @@ errno_bad_fd!(d3_ebadf_fsync, syscall::fsync(-1));
 errno_bad_fd!(d3_ebadf_fdatasync, syscall::fdatasync(-1));
 errno_bad_fd!(d3_ebadf_fstat, syscall::fstat(-1));
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "read() on file descriptor -1 returns EBADF")]
 fn d3_ebadf_read() -> TestResult {
     let mut b = [0u8; 4];
     check_err!(syscall::read(-1, &mut b), Errno::EBADF, "ebadf");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "write() on file descriptor -1 returns EBADF")]
 fn d3_ebadf_write() -> TestResult {
     check_err!(syscall::write(-1, b"x"), Errno::EBADF, "ebadf");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "lseek() on file descriptor -1 returns EBADF")]
 fn d3_ebadf_lseek() -> TestResult {
     check_err!(syscall::lseek(-1, 0, 0), Errno::EBADF, "ebadf");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a path that does not exist returns ENOENT")]
 fn d3_enoent_open() -> TestResult {
     check_err!(
         syscall::open(b"/tmp/lctp-posix-d3-missing\0", oflag::O_RDONLY, 0),
@@ -67,7 +67,7 @@ fn d3_enoent_open() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "stat() of a path that does not exist returns ENOENT")]
 fn d3_enoent_stat() -> TestResult {
     check_err!(
         syscall::stat(b"/tmp/lctp-posix-d3-missing\0"),
@@ -77,7 +77,7 @@ fn d3_enoent_stat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "unlink() of a path that does not exist returns ENOENT")]
 fn d3_enoent_unlink() -> TestResult {
     check_err!(
         syscall::unlink(b"/tmp/lctp-posix-d3-missing\0"),
@@ -87,7 +87,7 @@ fn d3_enoent_unlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "access(F_OK) of a path that does not exist returns ENOENT")]
 fn d3_enoent_access() -> TestResult {
     check_err!(
         syscall::access(b"/tmp/lctp-posix-d3-missing\0", F_OK),
@@ -97,7 +97,7 @@ fn d3_enoent_access() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a regular file with O_DIRECTORY returns ENOTDIR")]
 fn d3_enotdir_open_file_as_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -109,7 +109,7 @@ fn d3_enotdir_open_file_as_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a directory with O_WRONLY returns EISDIR")]
 fn d3_eisdir_write_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -130,7 +130,7 @@ fn chdir_restore(saved: &[u8], n: usize) -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat(.) after chdir() into a directory reports a directory")]
 fn d3_path_dot() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -144,7 +144,7 @@ fn d3_path_dot() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat(..) after chdir() into a subdirectory reports a directory")]
 fn d3_path_dotdot() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -158,7 +158,7 @@ fn d3_path_dotdot() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "stat(//tmp) succeeds as a directory or returns ENOENT")]
 fn d3_path_slash_slash() -> TestResult {
     // //tmp should resolve like /tmp on Linux
     match syscall::stat(b"//tmp\0") {
@@ -169,7 +169,7 @@ fn d3_path_slash_slash() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat(./f) after chdir() into the file's directory succeeds")]
 fn d3_path_dot_slash() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let _ = create_empty(&mut tmp, b"f")?;
@@ -181,7 +181,7 @@ fn d3_path_dot_slash() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat(../f) after chdir() into a subdirectory succeeds")]
 fn d3_path_dotdot_slash() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let sub = create_dir(&mut tmp, b"sub", 0o755)?;
@@ -195,7 +195,7 @@ fn d3_path_dotdot_slash() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat() of a path with three consecutive slashes succeeds")]
 fn d3_path_multi_slash() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -219,7 +219,7 @@ fn d3_path_multi_slash() -> TestResult {
 
 macro_rules! access_ok {
     ($name:ident, $chmod:expr, $mode:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = concat!("access() succeeds after chmod ", stringify!($chmod), " for mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let path = create_empty(&mut tmp, b"f")?;
@@ -263,7 +263,7 @@ access_ok!(d3_acc_rwx_777, 0o777, R_OK | W_OK | X_OK);
 
 macro_rules! access_eacces {
     ($name:ident, $chmod:expr, $mode:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = failure, case = concat!("access() after chmod ", stringify!($chmod), " for mode ", stringify!($mode), " returns EACCES"))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let path = create_empty(&mut tmp, b"f")?;
@@ -292,7 +292,7 @@ access_eacces!(d3_e_rwx_000, 0o000, R_OK | W_OK | X_OK);
 
 macro_rules! faccessat_ok {
     ($name:ident, $chmod:expr, $mode:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = concat!("faccessat() succeeds after chmod ", stringify!($chmod), " for mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let path = create_empty(&mut tmp, b"f")?;
@@ -319,7 +319,7 @@ faccessat_ok!(d3_fa_rwx_777, 0o777, R_OK | W_OK | X_OK);
 
 macro_rules! faccessat_eacces {
     ($name:ident, $chmod:expr, $mode:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = failure, case = concat!("faccessat() after chmod ", stringify!($chmod), " for mode ", stringify!($mode), " returns EACCES"))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let path = create_empty(&mut tmp, b"f")?;
@@ -346,7 +346,7 @@ faccessat_eacces!(d3_fae_rx_600, 0o600, R_OK | X_OK);
 
 macro_rules! cnsleep {
     ($name:ident, $clk:expr, $nsec:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = concat!("clock_nanosleep() on ", stringify!($clk), " for ", stringify!($nsec), " ns succeeds"))]
         fn $name() -> TestResult {
             let req = syscall::Timespec {
                 tv_sec: 0,
@@ -375,7 +375,7 @@ cnsleep!(d3_cns_rt_2ms, clock::CLOCK_REALTIME, 2_000_000);
 cnsleep!(d3_cns_rt_5ms, clock::CLOCK_REALTIME, 5_000_000);
 cnsleep!(d3_cns_rt_10ms, clock::CLOCK_REALTIME, 10_000_000);
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_nanosleep(CLOCK_MONOTONIC) with a zero relative timeout succeeds")]
 fn d3_cns_zero() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: 0,
@@ -388,7 +388,7 @@ fn d3_cns_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "clock_nanosleep() with tv_nsec equal to 1e9 returns EINVAL")]
 fn d3_cns_bad_nsec() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: 0,
@@ -402,7 +402,7 @@ fn d3_cns_bad_nsec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "clock_nanosleep() with a negative tv_nsec returns EINVAL")]
 fn d3_cns_neg_nsec() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: 0,
@@ -418,7 +418,7 @@ fn d3_cns_neg_nsec() -> TestResult {
 
 macro_rules! mmap_anon {
     ($name:ident, $flags:expr, $prot:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = concat!("anonymous mmap() with ", stringify!($flags), " and ", stringify!($prot), " succeeds"))]
         fn $name() -> TestResult {
             let addr = check_ok!(
                 syscall::mmap(0, PAGE, $prot, $flags, -1, 0),
@@ -471,7 +471,7 @@ mmap_anon!(
     prot::PROT_READ | prot::PROT_WRITE
 );
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "mmap(MAP_PRIVATE) of a regular file succeeds and munmap() releases it")]
 fn d3_mmap_file_private() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"m", 0o644), "c");
@@ -485,7 +485,7 @@ fn d3_mmap_file_private() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "mmap(MAP_SHARED) of a regular file allows a store and munmap() releases it")]
 fn d3_mmap_file_shared() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let fd = check_ok!(tmp.create_file(b"m", 0o644), "c");
@@ -509,7 +509,7 @@ fn d3_mmap_file_shared() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a store in a fork() child is visible to the parent in MAP_SHARED anonymous memory")]
 fn d3_mmap_shared_fork_visible() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -540,7 +540,7 @@ fn d3_mmap_shared_fork_visible() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a store in a fork() child is not visible to the parent in MAP_PRIVATE anonymous memory")]
 fn d3_mmap_private_fork_cow() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -573,7 +573,7 @@ fn d3_mmap_private_fork_cow() -> TestResult {
 
 macro_rules! sig_ign_dfl {
     ($name:ident, $sig:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = concat!("signal disposition for ", stringify!($sig), " can be set to ignore and restored to default"))]
         fn $name() -> TestResult {
             check_ok!(syscall::signal_ignore($sig), "ign");
             check_ok!(syscall::signal_default($sig), "dfl");
@@ -590,7 +590,7 @@ sig_ign_dfl!(d3_sig_ign_dfl_int, SIGINT);
 
 macro_rules! sig_block {
     ($name:ident, $sig:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = concat!("rt_sigprocmask blocks ", stringify!($sig), " and a query shows it blocked"))]
         fn $name() -> TestResult {
             let mut old = 0u64;
             check_ok!(
@@ -619,7 +619,7 @@ sig_block!(d3_blk_int, SIGINT);
 
 macro_rules! sig_pending {
     ($name:ident, $sig:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = concat!("a blocked ", stringify!($sig), " sent to the process appears in rt_sigpending"))]
         fn $name() -> TestResult {
             check_ok!(syscall::signal_ignore($sig), "ign");
             check_ok!(
@@ -645,7 +645,7 @@ sig_pending!(d3_pend_usr2, SIGUSR2);
 sig_pending!(d3_pend_term, SIGTERM);
 sig_pending!(d3_pend_int, SIGINT);
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rt_sigprocmask blocks SIGUSR1 and SIGUSR2 together")]
 fn d3_sig_block_two() -> TestResult {
     let mut old = 0u64;
     let set = sigmask(SIGUSR1) | sigmask(SIGUSR2);
@@ -667,7 +667,7 @@ fn d3_sig_block_two() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "rt_sigprocmask SIG_SETMASK of an empty mask clears the process signal mask")]
 fn d3_sig_setmask_empty() -> TestResult {
     let mut old = 0u64;
     check_ok!(
@@ -687,7 +687,7 @@ fn d3_sig_setmask_empty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "faccessat() with F_OK and R_OK succeeds for a file relative to a directory fd")]
 fn d3_faccessat_dirfd() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let _ = create_empty(&mut tmp, b"f")?;
@@ -701,7 +701,7 @@ fn d3_faccessat_dirfd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "access(X_OK) succeeds on a searchable directory")]
 fn d3_access_dir_x() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -710,7 +710,7 @@ fn d3_access_dir_x() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "access(R_OK|W_OK) succeeds on a newly written regular file")]
 fn d3_write_then_access() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = copy_child(&mut tmp, b"w")?;

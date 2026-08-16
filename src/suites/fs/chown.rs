@@ -8,7 +8,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::create_empty;
 use crate::syscall::{self, Errno};
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "chown to another uid returns EPERM for an unprivileged caller")]
 fn chown_other_uid_eperm() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -21,7 +21,7 @@ fn chown_other_uid_eperm() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "chown to uid 0 returns EPERM for an unprivileged caller")]
 fn chown_root_uid_eperm() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;

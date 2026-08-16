@@ -6,7 +6,7 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, clock, oflag, Errno, P_PID, Siginfo, wait};
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "clock_getres() with an invalid clock id returns EINVAL")]
 fn errno_einval_clock_getres_bad_id() -> TestResult {
     check_err!(
         syscall::clock_getres(9999),
@@ -16,20 +16,20 @@ fn errno_einval_clock_getres_bad_id() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "timerfd_gettime() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_timerfd_gettime() -> TestResult {
     check_err!(syscall::timerfd_gettime(-1), Errno::EBADF, "bad timerfd");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "timerfd_settime() on file descriptor -1 returns EBADF")]
 fn errno_einval_timerfd_settime_bad_fd() -> TestResult {
     let its = syscall::Itimerspec::default();
     check_err!(syscall::timerfd_settime(-1, 0, &its), Errno::EBADF, "bad fd");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "memfd_create() with an empty name buffer returns EFAULT or EINVAL")]
 fn errno_einval_memfd_empty_slice() -> TestResult {
     // Empty slice has no trailing NUL; kernel typically returns EFAULT (or EINVAL).
     match syscall::memfd_create(&[], 0) {
@@ -39,13 +39,13 @@ fn errno_einval_memfd_empty_slice() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "flock() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_flock() -> TestResult {
     check_err!(syscall::flock(-1, syscall::LOCK_EX), Errno::EBADF, "flock bad fd");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "statfs() of a path that does not exist returns ENOENT")]
 fn errno_enoent_statfs() -> TestResult {
     check_err!(
         syscall::statfs(b"/tmp/lctp-no-such-dir-xyz\0"),
@@ -55,19 +55,19 @@ fn errno_enoent_statfs() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "fstatfs() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_fstatfs() -> TestResult {
     check_err!(syscall::fstatfs(-1), Errno::EBADF, "fstatfs bad fd");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "syncfs() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_syncfs() -> TestResult {
     check_err!(syscall::syncfs(-1), Errno::EBADF, "syncfs bad fd");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "getsockopt() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_getsockopt() -> TestResult {
     let mut val = [0u8; 4];
     check_err!(
@@ -78,7 +78,7 @@ fn errno_ebadf_getsockopt() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "setsockopt() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_setsockopt() -> TestResult {
     let val = 1i32.to_ne_bytes();
     check_err!(
@@ -89,19 +89,19 @@ fn errno_ebadf_setsockopt() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "getpgid() of a process that does not exist returns ESRCH")]
 fn errno_esrch_getpgid() -> TestResult {
     check_err!(syscall::getpgid(999_999_999), Errno::ESRCH, "getpgid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "getsid() of a process that does not exist returns ESRCH")]
 fn errno_esrch_getsid() -> TestResult {
     check_err!(syscall::getsid(999_999_999), Errno::ESRCH, "getsid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "waitid() for a process that does not exist returns ECHILD or ESRCH")]
 fn errno_esrch_waitid() -> TestResult {
     let mut info = Siginfo::default();
     match syscall::waitid(P_PID, 999_999_999, &mut info, wait::WEXITED) {
@@ -111,7 +111,7 @@ fn errno_esrch_waitid() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "sched_getscheduler() of a process that does not exist returns ESRCH")]
 fn errno_einval_sched_getscheduler_bad_pid() -> TestResult {
     check_err!(
         syscall::sched_getscheduler(999_999_999),
@@ -121,7 +121,7 @@ fn errno_einval_sched_getscheduler_bad_pid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "sendfile() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_sendfile() -> TestResult {
     let mut off = 0i64;
     check_err!(
@@ -132,7 +132,7 @@ fn errno_ebadf_sendfile() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "mremap() of an invalid mapping returns EINVAL, ENOMEM, or EFAULT")]
 fn errno_einval_mremap_zero_len() -> TestResult {
     // Invalid old mapping: kernels may return EINVAL, ENOMEM, or EFAULT.
     match syscall::mremap(0, 0, 4096, 0, 0) {
@@ -142,7 +142,7 @@ fn errno_einval_mremap_zero_len() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "mincore() with a null address and empty vector returns EFAULT, EINVAL, or ENOMEM")]
 fn errno_efault_mincore_null() -> TestResult {
     match syscall::mincore(0, 4096, &mut []) {
         Err(Errno::EFAULT) | Err(Errno::EINVAL) | Err(Errno::ENOMEM) => Ok(()),
@@ -151,7 +151,7 @@ fn errno_efault_mincore_null() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = failure, case = "timerfd_gettime() after close() returns EBADF")]
 fn errno_ebadf_timerfd_create_close_twice() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "create");
     check_ok!(syscall::close(fd), "close");
@@ -159,7 +159,7 @@ fn errno_ebadf_timerfd_create_close_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "getpriority() with an invalid which argument returns EINVAL")]
 fn errno_einval_getpriority_bad_which() -> TestResult {
     check_err!(
         syscall::getpriority(99, 0),
@@ -169,7 +169,7 @@ fn errno_einval_getpriority_bad_which() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a path that does not exist returns ENOENT")]
 fn errno_enoent_flock_path_via_open() -> TestResult {
     check_err!(
         syscall::open(b"/tmp/lctp-flock-missing\0", oflag::O_RDWR, 0),
@@ -179,7 +179,7 @@ fn errno_enoent_flock_path_via_open() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = failure, case = "getpriority() of a process that does not exist returns ESRCH")]
 fn errno_ebadf_prctl_get_name() -> TestResult {
     // prctl with invalid option should fail EINVAL not EBADF; test bad buffer is hard.
     // Use closed memfd path: N/A. Just verify getpriority esrch.
@@ -187,7 +187,7 @@ fn errno_ebadf_prctl_get_name() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "getpeername() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_getpeername() -> TestResult {
     let mut addr = [0u8; 128];
     let mut len = addr.len() as u32;
@@ -199,7 +199,7 @@ fn errno_ebadf_getpeername() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "getsockname() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_getsockname() -> TestResult {
     let mut addr = [0u8; 128];
     let mut len = addr.len() as u32;
@@ -211,7 +211,7 @@ fn errno_ebadf_getsockname() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "ioctl() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_ioctl() -> TestResult {
     let mut ws = syscall::Winsize::default();
     check_err!(
@@ -222,13 +222,13 @@ fn errno_ebadf_ioctl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "tee() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_tee() -> TestResult {
     check_err!(syscall::tee(-1, -1, 1, 0), Errno::EBADF, "tee");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "signalfd() with fd -2 returns EBADF")]
 fn errno_ebadf_signalfd_read() -> TestResult {
     check_err!(
         syscall::signalfd(-2, 0, 0),
@@ -238,13 +238,13 @@ fn errno_ebadf_signalfd_read() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "pidfd_open() with pid -1 returns EINVAL")]
 fn errno_einval_pidfd_open() -> TestResult {
     check_err!(syscall::pidfd_open(-1, 0), Errno::EINVAL, "pidfd_open");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "pidfd_send_signal() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_pidfd_send_signal() -> TestResult {
     check_err!(
         syscall::pidfd_send_signal(-1, 0, None, 0),
@@ -254,7 +254,7 @@ fn errno_ebadf_pidfd_send_signal() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "inotify_add_watch() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_inotify_add_watch() -> TestResult {
     check_err!(
         syscall::inotify_add_watch(-1, b".\0", syscall::IN_CREATE),
@@ -264,20 +264,20 @@ fn errno_ebadf_inotify_add_watch() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "preadv() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_close_range_via_write() -> TestResult {
     // close_range itself with absurd range still succeeds (no fds); probe via bad ioctl.
     check_err!(syscall::preadv(-1, &mut [], 0), Errno::EBADF, "preadv");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "pwritev() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_pwritev() -> TestResult {
     check_err!(syscall::pwritev(-1, &mut [], 0), Errno::EBADF, "pwritev");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "renameat2() of a path that does not exist returns ENOENT")]
 fn errno_enoent_renameat2() -> TestResult {
     check_err!(
         syscall::renameat2(
@@ -293,7 +293,7 @@ fn errno_enoent_renameat2() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "sendto() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_sendto() -> TestResult {
     check_err!(
         syscall::sendto(-1, b"x", 0, None),
@@ -303,7 +303,7 @@ fn errno_ebadf_sendto() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "recvfrom() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_recvfrom() -> TestResult {
     let mut buf = [0u8; 4];
     check_err!(
@@ -314,27 +314,27 @@ fn errno_ebadf_recvfrom() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "sendmsg() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_sendmsg() -> TestResult {
     let msg = syscall::MsgHdr::default();
     check_err!(syscall::sendmsg(-1, &msg, 0), Errno::EBADF, "sendmsg");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "recvmsg() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_recvmsg() -> TestResult {
     let mut msg = syscall::MsgHdr::default();
     check_err!(syscall::recvmsg(-1, &mut msg, 0), Errno::EBADF, "recvmsg");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "vmsplice() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_vmsplice() -> TestResult {
     check_err!(syscall::vmsplice(-1, &[], 0), Errno::EBADF, "vmsplice");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "setitimer() with an invalid which argument returns EINVAL")]
 fn errno_einval_setitimer_bad_which() -> TestResult {
     let its = syscall::Itimerval::default();
     check_err!(
@@ -345,7 +345,7 @@ fn errno_einval_setitimer_bad_which() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "getitimer() with an invalid which argument returns EINVAL")]
 fn errno_einval_getitimer_bad_which() -> TestResult {
     let mut its = syscall::Itimerval::default();
     check_err!(
@@ -356,13 +356,13 @@ fn errno_einval_getitimer_bad_which() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "dup2() from file descriptor -1 returns EBADF")]
 fn errno_ebadf_dup2() -> TestResult {
     check_err!(syscall::dup2(-1, 10), Errno::EBADF, "dup2");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "sigaltstack() with a too-small stack returns ENOMEM, EINVAL, or EFAULT")]
 fn errno_einval_sigaltstack_small() -> TestResult {
     // ss_size below MINSIGSTKSZ should fail with ENOMEM (or EINVAL on some kernels).
     let ss = syscall::Stack {
@@ -377,7 +377,7 @@ fn errno_einval_sigaltstack_small() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "pselect6() with nfds -1 returns EINVAL")]
 fn errno_einval_pselect6_bad_nfds() -> TestResult {
     check_err!(
         syscall::pselect6(-1, None, None, None, None, None),
@@ -387,7 +387,7 @@ fn errno_einval_pselect6_bad_nfds() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "statx() with dirfd -1 returns EBADF")]
 fn errno_ebadf_statx() -> TestResult {
     let mut sx = syscall::Statx::default();
     check_err!(
@@ -398,7 +398,7 @@ fn errno_ebadf_statx() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "statx() of a path that does not exist returns ENOENT")]
 fn errno_enoent_statx() -> TestResult {
     let mut sx = syscall::Statx::default();
     check_err!(
@@ -415,7 +415,7 @@ fn errno_enoent_statx() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "sync_file_range() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_sync_file_range() -> TestResult {
     check_err!(
         syscall::sync_file_range(-1, 0, 0, syscall::SYNC_FILE_RANGE_WRITE),
@@ -425,7 +425,7 @@ fn errno_ebadf_sync_file_range() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "fadvise64() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_fadvise64() -> TestResult {
     check_err!(
         syscall::fadvise64(-1, 0, 0, syscall::POSIX_FADV_NORMAL),
@@ -435,13 +435,13 @@ fn errno_ebadf_fadvise64() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "readahead() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_readahead() -> TestResult {
     check_err!(syscall::readahead(-1, 0, 1), Errno::EBADF, "readahead");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "openat2() of a path that does not exist returns ENOENT")]
 fn errno_enoent_openat2() -> TestResult {
     let how = syscall::OpenHow {
         flags: oflag::O_RDONLY as u64,
@@ -456,13 +456,13 @@ fn errno_enoent_openat2() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "dup3() with the same old and new fd returns EINVAL")]
 fn errno_einval_dup3_same() -> TestResult {
     check_err!(syscall::dup3(1, 1, 0), Errno::EINVAL, "dup3 same");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "membarrier(MEMBARRIER_CMD_QUERY) with nonzero flags returns EINVAL")]
 fn errno_einval_membarrier_bad_flags() -> TestResult {
     // Non-zero flags with QUERY should fail EINVAL on modern kernels.
     match syscall::membarrier(syscall::MEMBARRIER_CMD_QUERY, 1) {
@@ -472,7 +472,7 @@ fn errno_einval_membarrier_bad_flags() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "openat2() with dirfd -1 returns EBADF")]
 fn errno_ebadf_openat2_dirfd() -> TestResult {
     let how = syscall::OpenHow {
         flags: oflag::O_RDONLY as u64,
@@ -487,7 +487,7 @@ fn errno_ebadf_openat2_dirfd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mlock() of an unmapped address succeeds or is rejected as unsupported")]
 fn errno_ebadf_mlock_via_bad_addr() -> TestResult {
     // mlock on unmapped address — soft EINVAL/ENOMEM/EPERM/EFAULT.
     match syscall::mlock(0usize, 4096) {
@@ -502,7 +502,7 @@ fn errno_ebadf_mlock_via_bad_addr() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "timer_create() with an invalid clock id returns EINVAL or is rejected as unsupported")]
 fn errno_einval_timer_create_bad_clock() -> TestResult {
     let mut sev = syscall::Sigevent::default();
     sev.sigev_notify = syscall::SIGEV_NONE;
@@ -517,7 +517,7 @@ fn errno_einval_timer_create_bad_clock() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "semget() with a negative nsems returns EINVAL or is rejected as unsupported")]
 fn errno_einval_semget_neg_nsems() -> TestResult {
     match syscall::semget(syscall::IPC_PRIVATE, -1, syscall::IPC_CREAT | 0o600) {
         Err(Errno::EINVAL) | Err(Errno::ENOSYS) | Err(Errno::EPERM) | Err(Errno::EACCES) => Ok(()),
@@ -529,7 +529,7 @@ fn errno_einval_semget_neg_nsems() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "io_uring_enter() on file descriptor -1 returns EBADF or is rejected as unsupported")]
 fn errno_ebadf_io_uring_enter() -> TestResult {
     match syscall::io_uring_enter(-1, 0, 0, 0, 0) {
         Err(Errno::EBADF) | Err(Errno::ENOSYS) | Err(Errno::EINVAL) | Err(Errno::EPERM) => Ok(()),
@@ -538,7 +538,7 @@ fn errno_ebadf_io_uring_enter() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "msgget() with IPC_EXCL and no IPC_CREAT succeeds or is rejected as unsupported")]
 fn errno_einval_msgget_bad_flags() -> TestResult {
     // IPC_EXCL without CREAT is typically EINVAL or ignored; soft-accept.
     match syscall::msgget(syscall::IPC_PRIVATE, syscall::IPC_EXCL) {
@@ -555,7 +555,7 @@ fn errno_einval_msgget_bad_flags() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "fsopen() of an unknown filesystem type fails or is rejected as unsupported")]
 fn errno_enoent_fsopen_bogus() -> TestResult {
     match syscall::fsopen(b"lctp-no-such-fs\0", 0) {
         Err(Errno::ENODEV)
@@ -572,7 +572,7 @@ fn errno_enoent_fsopen_bogus() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "shutdown() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_shutdown() -> TestResult {
     check_err!(
         syscall::shutdown(-1, syscall::SHUT_RD),
@@ -582,7 +582,7 @@ fn errno_ebadf_shutdown() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "prctl() with an invalid option returns EINVAL")]
 fn errno_einval_prctl_bad_option() -> TestResult {
     match syscall::prctl(999_999, 0, 0, 0, 0) {
         Err(Errno::EINVAL) => Ok(()),
@@ -591,7 +591,7 @@ fn errno_einval_prctl_bad_option() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of /tmp with O_WRONLY returns EISDIR")]
 fn errno_eisdir_open_write_dir() -> TestResult {
     check_err!(
         syscall::open(b"/tmp\0", oflag::O_WRONLY, 0),
@@ -601,7 +601,7 @@ fn errno_eisdir_open_write_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "unlink() of /tmp returns EISDIR, EPERM, EACCES, or EBUSY")]
 fn errno_eisdir_unlink_tmp() -> TestResult {
     match syscall::unlink(b"/tmp\0") {
         Err(Errno::EISDIR) | Err(Errno::EPERM) | Err(Errno::EACCES) | Err(Errno::EBUSY) => Ok(()),
@@ -610,14 +610,14 @@ fn errno_eisdir_unlink_tmp() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "read() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_eventfd_via_read() -> TestResult {
     let mut buf = [0u8; 8];
     check_err!(syscall::read(-1, &mut buf), Errno::EBADF, "read -1");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "waitpid() with invalid option bits returns EINVAL or ECHILD")]
 fn errno_einval_waitpid_bad_options() -> TestResult {
     let mut status = 0;
     // Absurd option bits — kernels typically return EINVAL.
@@ -628,7 +628,7 @@ fn errno_einval_waitpid_bad_options() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "waitpid(-1, WNOHANG) with no children returns ECHILD")]
 fn errno_echild_waitpid_no_children() -> TestResult {
     let mut status = 0;
     check_err!(
@@ -639,7 +639,7 @@ fn errno_echild_waitpid_no_children() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "wait4(-1, WNOHANG) with no children returns ECHILD")]
 fn errno_echild_wait4_no_children() -> TestResult {
     let mut status = 0;
     check_err!(
@@ -650,7 +650,7 @@ fn errno_echild_wait4_no_children() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "kill() of a process that does not exist returns ESRCH")]
 fn errno_esrch_kill() -> TestResult {
     check_err!(
         syscall::kill(999_999_999, 0),
@@ -660,7 +660,7 @@ fn errno_esrch_kill() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "shutdown() on a pipe file descriptor returns ENOTSOCK")]
 fn errno_enotsock_shutdown_pipe() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     check_err!(
@@ -673,7 +673,7 @@ fn errno_enotsock_shutdown_pipe() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "shutdown() on a regular file descriptor returns ENOTSOCK")]
 fn errno_enotsock_shutdown_file() -> TestResult {
     let mut tmp = check_ok!(crate::harness::TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -686,7 +686,7 @@ fn errno_enotsock_shutdown_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "write() to a pipe after the reader is closed returns EPIPE")]
 fn errno_epipe_after_pipe_reader_gone() -> TestResult {
     check_ok!(syscall::signal_ignore(syscall::SIGPIPE), "ign SIGPIPE");
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
@@ -697,7 +697,7 @@ fn errno_epipe_after_pipe_reader_gone() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "write() on a socket after shutdown(SHUT_WR) returns EPIPE")]
 fn errno_epipe_after_socket_shutdown_wr() -> TestResult {
     check_ok!(syscall::signal_ignore(syscall::SIGPIPE), "ign");
     let (a, b) = check_ok!(
@@ -712,7 +712,7 @@ fn errno_epipe_after_socket_shutdown_wr() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "read() on an empty non-blocking pipe returns EAGAIN")]
 fn errno_eagain_pipe_nonblock_read() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(oflag::O_NONBLOCK), "pipe");
     let mut buf = [0u8; 1];
@@ -722,7 +722,7 @@ fn errno_eagain_pipe_nonblock_read() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "write() to a full non-blocking pipe returns EAGAIN")]
 fn errno_eagain_pipe_nonblock_write_full() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(oflag::O_NONBLOCK), "pipe");
     // Fill the pipe until EAGAIN (soft bound).
@@ -744,7 +744,7 @@ fn errno_eagain_pipe_nonblock_write_full() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "memfd_create() with an empty name buffer returns EFAULT or EINVAL")]
 fn errno_efault_write_empty_name_memfd_soft() -> TestResult {
     match syscall::memfd_create(&[], 0) {
         Err(Errno::EFAULT) | Err(Errno::EINVAL) => Ok(()),
@@ -756,7 +756,7 @@ fn errno_efault_write_empty_name_memfd_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "getcwd() with a zero-length buffer returns EFAULT, EINVAL, or ERANGE")]
 fn errno_efault_getcwd_null_soft() -> TestResult {
     // Empty buffer: kernels return ERANGE/EINVAL; soft-accept EFAULT too.
     let mut buf: [u8; 0] = [];
@@ -767,13 +767,13 @@ fn errno_efault_getcwd_null_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "listen() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_listen() -> TestResult {
     check_err!(syscall::listen(-1, 1), Errno::EBADF, "listen");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "accept4() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_accept() -> TestResult {
     check_err!(
         syscall::accept4(-1, None, None, 0),
@@ -783,21 +783,21 @@ fn errno_ebadf_accept() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "bind() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_bind() -> TestResult {
     let addr = syscall::SockAddrIn::default();
     check_err!(syscall::bind(-1, &addr), Errno::EBADF, "bind");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "connect() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_connect() -> TestResult {
     let addr = syscall::SockAddrIn::default();
     check_err!(syscall::connect(-1, &addr), Errno::EBADF, "connect");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "getsockopt() on a pipe file descriptor returns ENOTSOCK")]
 fn errno_enotsock_getsockopt() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let mut val = [0u8; 4];
@@ -811,7 +811,7 @@ fn errno_enotsock_getsockopt() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "epoll_ctl() adding file descriptor -1 returns EBADF")]
 fn errno_ebadf_epoll_ctl() -> TestResult {
     let ep = check_ok!(syscall::epoll_create1(0), "epoll");
     let mut ev = syscall::epoll::EpollEvent {
@@ -827,7 +827,7 @@ fn errno_ebadf_epoll_ctl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "socket() with an invalid domain returns EINVAL or EAFNOSUPPORT")]
 fn errno_einval_socket_domain() -> TestResult {
     match syscall::socket(99999, syscall::SOCK_STREAM, 0) {
         Err(Errno::EINVAL) | Err(Errno::EAFNOSUPPORT) => Ok(()),
@@ -839,7 +839,7 @@ fn errno_einval_socket_domain() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "fcntl(F_SETFL) on file descriptor -1 returns EBADF")]
 fn errno_ebadf_fcntl_setfl() -> TestResult {
     check_err!(
         syscall::fcntl(-1, syscall::fcntl_cmd::F_SETFL, 0),
@@ -849,7 +849,7 @@ fn errno_ebadf_fcntl_setfl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "fcntl(F_GETFD) on file descriptor -1 returns EBADF")]
 fn errno_ebadf_fcntl_getfd() -> TestResult {
     check_err!(
         syscall::fcntl(-1, syscall::fcntl_cmd::F_GETFD, 0),
@@ -859,7 +859,7 @@ fn errno_ebadf_fcntl_getfd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "kill() with an invalid signal number returns EINVAL")]
 fn errno_einval_kill_bad_sig() -> TestResult {
     check_err!(
         syscall::kill(syscall::getpid(), 99999),
@@ -869,20 +869,20 @@ fn errno_einval_kill_bad_sig() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "send() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_send() -> TestResult {
     check_err!(syscall::send(-1, b"x", 0), Errno::EBADF, "send");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "recv() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_recv() -> TestResult {
     let mut buf = [0u8; 4];
     check_err!(syscall::recv(-1, &mut buf, 0), Errno::EBADF, "recv");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "read() on a non-blocking eventfd with counter 0 returns EAGAIN")]
 fn errno_eagain_eventfd_nonblock() -> TestResult {
     let efd = check_ok!(
         syscall::eventfd(0, syscall::EFD_NONBLOCK),
@@ -894,13 +894,13 @@ fn errno_eagain_eventfd_nonblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "write() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_eventfd_write() -> TestResult {
     check_err!(syscall::write(-1, &[1u8; 8]), Errno::EBADF, "write");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "mmap() with length 0 returns EINVAL")]
 fn errno_einval_mmap_zero() -> TestResult {
     check_err!(
         syscall::mmap(
@@ -917,7 +917,7 @@ fn errno_einval_mmap_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "mmap(MAP_SHARED) on file descriptor -1 returns EBADF")]
 fn errno_ebadf_mmap_shared() -> TestResult {
     check_err!(
         syscall::mmap(
@@ -934,7 +934,7 @@ fn errno_ebadf_mmap_shared() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "unlinkat() of a path that does not exist returns ENOENT")]
 fn errno_enoent_unlinkat() -> TestResult {
     check_err!(
         syscall::unlinkat(syscall::AT_FDCWD, b"/tmp/lctp-no-unlinkat\0", 0),
@@ -944,7 +944,7 @@ fn errno_enoent_unlinkat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "mkdirat() with dirfd -1 returns EBADF")]
 fn errno_ebadf_mkdirat() -> TestResult {
     check_err!(
         syscall::mkdirat(-1, b"x\0", 0o755),
@@ -954,7 +954,7 @@ fn errno_ebadf_mkdirat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "unlinkat() with dirfd -1 returns EBADF")]
 fn errno_ebadf_unlinkat() -> TestResult {
     check_err!(
         syscall::unlinkat(-1, b"x\0", 0),
@@ -964,13 +964,13 @@ fn errno_ebadf_unlinkat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "clock_gettime() with an invalid clock id returns EINVAL")]
 fn errno_einval_clock_gettime() -> TestResult {
     check_err!(syscall::clock_gettime(123456), Errno::EINVAL, "clock");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "faccessat() with dirfd -1 returns EBADF")]
 fn errno_ebadf_faccessat() -> TestResult {
     check_err!(
         syscall::faccessat(-1, b"x\0", syscall::F_OK, 0),
@@ -980,7 +980,7 @@ fn errno_ebadf_faccessat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "faccessat() of a path that does not exist returns ENOENT")]
 fn errno_enoent_faccessat() -> TestResult {
     check_err!(
         syscall::faccessat(syscall::AT_FDCWD, b"/tmp/lctp-no-faccess\0", syscall::F_OK, 0),
@@ -990,7 +990,7 @@ fn errno_enoent_faccessat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "link() of a directory returns EPERM, EACCES, EISDIR, or EXDEV")]
 fn errno_eisdir_link_dir_soft() -> TestResult {
     let mut tmp = check_ok!(crate::harness::TempDir::create(), "tempdir");
     let linkdst = crate::suites::common::copy_child(&mut tmp, b"linkdst")?;
@@ -1004,7 +1004,7 @@ fn errno_eisdir_link_dir_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "ioctl(TIOCGWINSZ) on file descriptor -1 returns EBADF")]
 fn errno_ebadf_ioctl_tiocgwinsz() -> TestResult {
     let mut ws = syscall::Winsize::default();
     check_err!(
@@ -1015,7 +1015,7 @@ fn errno_ebadf_ioctl_tiocgwinsz() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "recv() on an empty non-blocking socketpair endpoint returns EAGAIN")]
 fn errno_eagain_socketpair_nonblock_recv() -> TestResult {
     let (a, b) = check_ok!(
         syscall::socketpair(
@@ -1032,7 +1032,7 @@ fn errno_eagain_socketpair_nonblock_recv() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "listen() on a regular file descriptor returns ENOTSOCK")]
 fn errno_enotsock_listen_file() -> TestResult {
     let mut tmp = check_ok!(crate::harness::TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -1041,7 +1041,7 @@ fn errno_enotsock_listen_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "poll() with fd -1 succeeds with POLLNVAL or is rejected with EINTR or EINVAL")]
 fn errno_ebadf_poll_via_negative_soft() -> TestResult {
     // poll with bad fd sets POLLNVAL in revents rather than failing; soft check.
     let mut pfd = [syscall::poll::PollFd {
@@ -1056,7 +1056,7 @@ fn errno_ebadf_poll_via_negative_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "rt_sigprocmask() with an invalid how argument returns EINVAL")]
 fn errno_einval_sigprocmask_how() -> TestResult {
     check_err!(
         syscall::rt_sigprocmask(99, Some(0), None),
@@ -1066,7 +1066,7 @@ fn errno_einval_sigprocmask_how() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "splice() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_splice() -> TestResult {
     check_err!(
         syscall::splice(-1, None, -1, None, 1, 0),
@@ -1076,7 +1076,7 @@ fn errno_ebadf_splice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "symlink() whose parent directory does not exist returns ENOENT")]
 fn errno_enoent_symlink_missing_parent() -> TestResult {
     check_err!(
         syscall::symlink(b"t\0", b"/tmp/lctp-no-parent-sy/link\0"),
@@ -1086,7 +1086,7 @@ fn errno_enoent_symlink_missing_parent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "symlink() onto an existing path returns EEXIST")]
 fn errno_eexist_symlink() -> TestResult {
     let mut tmp = check_ok!(crate::harness::TempDir::create(), "tempdir");
     let path = crate::suites::common::create_empty(&mut tmp, b"f")?;
@@ -1098,13 +1098,13 @@ fn errno_eexist_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "fchdir() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_fchdir() -> TestResult {
     check_err!(syscall::fchdir(-1), Errno::EBADF, "fchdir");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "fchdir() on a regular file descriptor returns ENOTDIR")]
 fn errno_enotdir_fchdir_file() -> TestResult {
     let mut tmp = check_ok!(crate::harness::TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -1113,20 +1113,20 @@ fn errno_enotdir_fchdir_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "getdents64() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_getdents64() -> TestResult {
     let mut buf = [0u8; 64];
     check_err!(syscall::getdents64(-1, &mut buf), Errno::EBADF, "getdents");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "dup2() to a negative new fd returns EBADF")]
 fn errno_einval_dup2_neg_new() -> TestResult {
     check_err!(syscall::dup2(0, -2), Errno::EBADF, "dup2");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "read() on a non-blocking timerfd that has not expired returns EAGAIN")]
 fn errno_eagain_timerfd_nonblock() -> TestResult {
     let fd = check_ok!(
         syscall::timerfd_create(clock::CLOCK_MONOTONIC, syscall::TFD_NONBLOCK),
@@ -1138,7 +1138,7 @@ fn errno_eagain_timerfd_nonblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "timerfd_settime() on file descriptor -1 returns EBADF")]
 fn errno_ebadf_timerfd_settime() -> TestResult {
     let its = syscall::Itimerspec::default();
     check_err!(
@@ -1149,7 +1149,7 @@ fn errno_ebadf_timerfd_settime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "access(X_OK) of a path that does not exist returns ENOENT")]
 fn errno_enoent_execve_soft() -> TestResult {
     // Soft: we do not actually exec; probe via access on missing binary path.
     check_err!(
@@ -1160,7 +1160,7 @@ fn errno_enoent_execve_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "read() on an unused high-numbered file descriptor returns EBADF")]
 fn errno_ebadf_pselect6_set_soft() -> TestResult {
     // nfds=1 with no sets is fine; use bad nfds already covered. Probe closed fd via read.
     let mut buf = [0u8; 1];
@@ -1168,7 +1168,7 @@ fn errno_ebadf_pselect6_set_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "nanosleep() with tv_nsec >= 1e9 returns EINVAL")]
 fn errno_einval_nanosleep_nsec() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: 0,
@@ -1178,7 +1178,7 @@ fn errno_einval_nanosleep_nsec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "waitid() for pid 1 with WNOHANG succeeds or returns ECHILD or ESRCH")]
 fn errno_echild_waitid_none() -> TestResult {
     let mut info = Siginfo::default();
     match syscall::waitid(P_PID, 1, &mut info, wait::WEXITED | wait::WNOHANG) {
@@ -1188,7 +1188,7 @@ fn errno_echild_waitid_none() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "write() on a socketpair after the peer is closed returns EPIPE")]
 fn errno_epipe_socketpair_peer_closed() -> TestResult {
     check_ok!(syscall::signal_ignore(syscall::SIGPIPE), "ign");
     let (a, b) = check_ok!(
@@ -1202,7 +1202,7 @@ fn errno_epipe_socketpair_peer_closed() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "getpeername() on a pipe file descriptor returns ENOTSOCK")]
 fn errno_enotsock_getpeername_pipe() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let mut addr = [0u8; 128];
@@ -1217,7 +1217,7 @@ fn errno_enotsock_getpeername_pipe() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "fstatat() with dirfd -1 returns EBADF")]
 fn errno_ebadf_fstatat() -> TestResult {
     check_err!(
         syscall::fstatat(-1, b"x\0", 0),
@@ -1227,7 +1227,7 @@ fn errno_ebadf_fstatat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "fstatat() of a path that does not exist returns ENOENT")]
 fn errno_enoent_fstatat() -> TestResult {
     check_err!(
         syscall::fstatat(syscall::AT_FDCWD, b"/tmp/lctp-no-fstatat\0", 0),

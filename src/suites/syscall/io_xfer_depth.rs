@@ -23,7 +23,7 @@ fn soft_falloc(e: Errno) -> bool {
     )
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sendfile copies 1 byte from a file into a pipe")]
 fn sendfile_sizes_1() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = b"1";
@@ -39,7 +39,7 @@ fn sendfile_sizes_1() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sendfile copies 16 bytes from a file into a pipe")]
 fn sendfile_sizes_16() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = b"0123456789abcdef";
@@ -56,7 +56,7 @@ fn sendfile_sizes_16() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "sendfile copies 256 bytes from a file into a pipe")]
 fn sendfile_sizes_256() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let mut data = [b'A'; 256];
@@ -77,7 +77,7 @@ fn sendfile_sizes_256() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "sendfile copies 1024 bytes from a file to another file")]
 fn sendfile_sizes_1024() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = [0x5Au8; 1024];
@@ -96,7 +96,7 @@ fn sendfile_sizes_1024() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sendfile from offset 2 copies 3 bytes and advances the offset to 5")]
 fn sendfile_offset_advance() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let in_fd = make_in(&mut tmp, b"soa", b"ABCDEFGH")?;
@@ -113,7 +113,7 @@ fn sendfile_offset_advance() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "splice moves 8 bytes from one pipe to another")]
 fn splice_sizes_8() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -129,7 +129,7 @@ fn splice_sizes_8() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "splice moves 1 byte from one pipe to another")]
 fn splice_sizes_1() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -143,7 +143,7 @@ fn splice_sizes_1() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "splice moves 64 bytes from one pipe to another")]
 fn splice_sizes_64() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -160,7 +160,7 @@ fn splice_sizes_64() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "tee copies 1 byte from one pipe to another without consuming it")]
 fn tee_sizes_1() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -173,7 +173,7 @@ fn tee_sizes_1() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "tee duplicates 16 pipe bytes so both pipes read the same payload")]
 fn tee_sizes_16() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -193,7 +193,7 @@ fn tee_sizes_16() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "tee copies 32 bytes from one pipe to another")]
 fn tee_sizes_32() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -207,7 +207,7 @@ fn tee_sizes_32() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sync_file_range with SYNC_FILE_RANGE_WRITE succeeds on a written file")]
 fn sync_file_range_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"sfr", 0o644), "create");
@@ -220,7 +220,7 @@ fn sync_file_range_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sync_file_range with SYNC_FILE_RANGE_WAIT_BEFORE succeeds on a written file")]
 fn sync_file_range_wait_before() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"sfb", 0o644), "create");
@@ -233,7 +233,7 @@ fn sync_file_range_wait_before() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sync_file_range with SYNC_FILE_RANGE_WAIT_AFTER succeeds on a written file")]
 fn sync_file_range_wait_after() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"sfa", 0o644), "create");
@@ -246,7 +246,7 @@ fn sync_file_range_wait_after() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sync_file_range with wait-before, write, and wait-after flags succeeds")]
 fn sync_file_range_all_flags() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"sfall", 0o644), "create");
@@ -257,7 +257,7 @@ fn sync_file_range_all_flags() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sync_file_range with nbytes 0 meaning through EOF succeeds")]
 fn sync_file_range_zero_len() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"sfz", 0o644), "create");
@@ -271,7 +271,7 @@ fn sync_file_range_zero_len() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sync_file_range on a mid-file offset and length succeeds")]
 fn sync_file_range_offset() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"sfo", 0o644), "create");
@@ -284,7 +284,7 @@ fn sync_file_range_offset() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "fallocate with mode 0 extends a file to 4096 bytes")]
 fn fallocate_allocate_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"fa", 0o644), "create");
@@ -300,7 +300,7 @@ fn fallocate_allocate_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "fallocate FALLOC_FL_KEEP_SIZE preallocates without changing st_size")]
 fn fallocate_keep_size_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"fks", 0o644), "create");
@@ -317,7 +317,7 @@ fn fallocate_keep_size_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "fallocate FALLOC_FL_PUNCH_HOLE|FALLOC_FL_KEEP_SIZE punches a hole")]
 fn fallocate_punch_hole_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"fph", 0o644), "create");
@@ -332,7 +332,7 @@ fn fallocate_punch_hole_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "fallocate FALLOC_FL_ZERO_RANGE zeroes a byte range in place")]
 fn fallocate_zero_range_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"fzr", 0o644), "create");
@@ -350,7 +350,7 @@ fn fallocate_zero_range_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "fallocate at offset 1024 extends the file to at least 2048 bytes")]
 fn fallocate_offset_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"fo", 0o644), "create");
@@ -366,7 +366,7 @@ fn fallocate_offset_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "copy_file_range with length 0 returns 0 or EINVAL/ENOSYS/EXDEV")]
 fn copy_file_range_zero_len() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let in_fd = make_in(&mut tmp, b"cz", b"data")?;
@@ -388,7 +388,7 @@ fn copy_file_range_zero_len() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "copy_file_range copies 4 bytes from offset 2 and advances both offsets")]
 fn copy_file_range_offsets() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let in_fd = make_in(&mut tmp, b"co", b"0123456789")?;
@@ -414,7 +414,7 @@ fn copy_file_range_offsets() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "copy_file_range with null offsets copies 3 bytes using the file positions")]
 fn copy_file_range_null_offs() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let in_fd = make_in(&mut tmp, b"cn", b"abcdef")?;
@@ -430,7 +430,7 @@ fn copy_file_range_null_offs() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "copy_file_range copies 4096 bytes between two files")]
 fn copy_file_range_large_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = [0xABu8; 4096];
@@ -452,7 +452,7 @@ fn copy_file_range_large_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sendfile from an offset past EOF returns 0")]
 fn sendfile_past_eof() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let in_fd = make_in(&mut tmp, b"pe", b"xy")?;
@@ -466,7 +466,7 @@ fn sendfile_past_eof() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "splice of 3 bytes from a 6-byte pipe leaves the remaining 3 bytes")]
 fn splice_partial_consume() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -483,7 +483,7 @@ fn splice_partial_consume() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "tee copies pipe data without consuming the source pipe")]
 fn tee_does_not_consume() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -499,7 +499,7 @@ fn tee_does_not_consume() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "repeated 4-byte sendfile calls copy a 16-byte file in full")]
 fn sendfile_chunked() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = b"ABCDEFGHIJKLMNOP";
@@ -524,7 +524,7 @@ fn sendfile_chunked() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "fallocate on fd -1 returns EBADF")]
 fn fallocate_bad_fd() -> TestResult {
     match syscall::fallocate(-1, 0, 0, 1) {
         Err(Errno::EBADF) => {}
@@ -535,7 +535,7 @@ fn fallocate_bad_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "sync_file_range on fd -1 returns EBADF, EINVAL, or ESPIPE")]
 fn sync_file_range_bad_fd() -> TestResult {
     match syscall::sync_file_range(-1, 0, 1, SYNC_FILE_RANGE_WRITE) {
         Err(Errno::EBADF) => {}
@@ -546,7 +546,7 @@ fn sync_file_range_bad_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "two sequential copy_file_range calls advance shared offsets across the file")]
 fn copy_file_range_same_off_progress() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let in_fd = make_in(&mut tmp, b"sp", b"hello-world")?;
@@ -572,7 +572,7 @@ fn copy_file_range_same_off_progress() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "splice from a file offset copies 3 bytes and advances the offset to 4")]
 fn splice_file_offset_advance() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let in_fd = make_in(&mut tmp, b"sfa2", b"01234567")?;
@@ -590,7 +590,7 @@ fn splice_file_offset_advance() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "fallocate then FALLOC_FL_PUNCH_HOLE succeeds on the allocated file")]
 fn fallocate_then_punch_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"fp2", 0o644), "create");
@@ -609,7 +609,7 @@ fn fallocate_then_punch_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "two sendfile calls of 2 bytes each copy a 4-byte file into a pipe")]
 fn sendfile_null_like_via_pipe_capacity() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let in_fd = make_in(&mut tmp, b"cap", b"abcd")?;
@@ -626,7 +626,7 @@ fn sendfile_null_like_via_pipe_capacity() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sync_file_range with nbytes 0 and WRITE|WAIT_AFTER syncs the whole file")]
 fn sync_file_range_whole_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"sfw", 0o644), "create");

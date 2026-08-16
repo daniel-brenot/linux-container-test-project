@@ -18,7 +18,7 @@ fn soft_ipc(e: Errno) -> bool {
     )
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "shmget IPC_PRIVATE creates a segment that shmctl IPC_RMID removes")]
 fn ipc_shm_create_rmid() -> TestResult {
     match syscall::shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0o600) {
         Ok(id) => {
@@ -33,7 +33,7 @@ fn ipc_shm_create_rmid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "shmat maps IPC_PRIVATE shared memory so a write is visible at the attached address")]
 fn ipc_shm_attach_write() -> TestResult {
     let id = match syscall::shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0o600) {
         Ok(i) => i,
@@ -62,7 +62,7 @@ fn ipc_shm_attach_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "shmat with SHM_RDONLY attaches a shared memory segment read-only")]
 fn ipc_shm_rdonly_attach_soft() -> TestResult {
     let id = match syscall::shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0o600) {
         Ok(i) => i,
@@ -86,7 +86,7 @@ fn ipc_shm_rdonly_attach_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "semctl SETVAL then GETVAL round-trips a System V semaphore value")]
 fn ipc_sem_get_setval() -> TestResult {
     let id = match syscall::semget(IPC_PRIVATE, 1, IPC_CREAT | 0o600) {
         Ok(i) => i,
@@ -108,7 +108,7 @@ fn ipc_sem_get_setval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "semop decrements then increments a System V semaphore")]
 fn ipc_semop_add_sub() -> TestResult {
     let id = match syscall::semget(IPC_PRIVATE, 1, IPC_CREAT | 0o600) {
         Ok(i) => i,
@@ -139,7 +139,7 @@ fn ipc_semop_add_sub() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "msgsnd then msgrcv round-trips a typed System V message")]
 fn ipc_msg_send_recv() -> TestResult {
     let id = match syscall::msgget(IPC_PRIVATE, IPC_CREAT | 0o600) {
         Ok(i) => i,
@@ -166,7 +166,7 @@ fn ipc_msg_send_recv() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "msgrcv with a type filter receives the matching System V message first")]
 fn ipc_msg_two_types() -> TestResult {
     let id = match syscall::msgget(IPC_PRIVATE, IPC_CREAT | 0o600) {
         Ok(i) => i,
@@ -198,7 +198,7 @@ fn ipc_msg_two_types() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "poll with timeout 0 on an empty pipe returns 0")]
 fn ipc_pipe_poll_timeout_0() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let mut fds = [poll::PollFd {
@@ -213,7 +213,7 @@ fn ipc_pipe_poll_timeout_0() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "poll with a 1 ms timeout on an empty pipe returns 0")]
 fn ipc_pipe_poll_timeout_1ms() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let mut fds = [poll::PollFd {
@@ -228,7 +228,7 @@ fn ipc_pipe_poll_timeout_1ms() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "poll reports POLLIN on a pipe after a write")]
 fn ipc_pipe_poll_readable() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     check_ok!(syscall::write(w, b"x"), "w");
@@ -245,7 +245,7 @@ fn ipc_pipe_poll_readable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "poll reports POLLOUT on a pipe write end")]
 fn ipc_pipe_poll_pollout() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let mut fds = [poll::PollFd {
@@ -260,7 +260,7 @@ fn ipc_pipe_poll_pollout() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_wait with timeout 0 on an idle pipe returns 0")]
 fn ipc_epoll_timeout_0() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -278,7 +278,7 @@ fn ipc_epoll_timeout_0() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_wait with a 1 ms timeout on an idle pipe returns 0")]
 fn ipc_epoll_timeout_1() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -296,7 +296,7 @@ fn ipc_epoll_timeout_1() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_wait reports the registered data after a pipe write")]
 fn ipc_epoll_ready_after_write() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -316,7 +316,7 @@ fn ipc_epoll_ready_after_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_ctl MOD then DEL succeeds on a pipe fd")]
 fn ipc_epoll_mod_del() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -334,7 +334,7 @@ fn ipc_epoll_mod_del() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "nonblocking eventfd read of an empty counter returns EAGAIN")]
 fn ipc_eventfd_nonblock_eagain() -> TestResult {
     let efd = check_ok!(syscall::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK), "efd");
     let mut buf = [0u8; 8];
@@ -343,7 +343,7 @@ fn ipc_eventfd_nonblock_eagain() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "EFD_SEMAPHORE eventfd initialized to 2 returns 1 on the first read")]
 fn ipc_eventfd_semaphore_soft() -> TestResult {
     let efd = match syscall::eventfd(2, EFD_SEMAPHORE | EFD_CLOEXEC) {
         Ok(f) => f,
@@ -357,7 +357,7 @@ fn ipc_eventfd_semaphore_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "eventfd write of 7 is read back as 7")]
 fn ipc_eventfd_write_read_roundtrip() -> TestResult {
     let efd = check_ok!(syscall::eventfd(0, EFD_CLOEXEC), "efd");
     let v = 7u64.to_le_bytes();
@@ -369,7 +369,7 @@ fn ipc_eventfd_write_read_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_wait reports an event after the pipe write end is closed")]
 fn ipc_pipe_epoll_hup_on_close_write() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -387,7 +387,7 @@ fn ipc_pipe_epoll_hup_on_close_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "poll on a readable pipe and writable pipe reports at least one ready fd")]
 fn ipc_poll_two_fds() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     check_ok!(syscall::write(w, b"a"), "w");
@@ -410,7 +410,7 @@ fn ipc_poll_two_fds() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "shmget creates a 65536-byte IPC_PRIVATE segment that IPC_RMID removes")]
 fn ipc_shm_large_soft() -> TestResult {
     match syscall::shmget(IPC_PRIVATE, 65536, IPC_CREAT | 0o600) {
         Ok(id) => {
@@ -425,7 +425,7 @@ fn ipc_shm_large_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "semget creates a two-semaphore set that can be SETVAL then IPC_RMID")]
 fn ipc_sem_nsems_2() -> TestResult {
     match syscall::semget(IPC_PRIVATE, 2, IPC_CREAT | 0o600) {
         Ok(id) => {
@@ -439,7 +439,7 @@ fn ipc_sem_nsems_2() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "eventfd initialized to 9 is read back as 9")]
 fn ipc_eventfd_init_nonzero() -> TestResult {
     let efd = check_ok!(syscall::eventfd(9, EFD_CLOEXEC), "efd");
     let mut out = [0u8; 8];
@@ -449,7 +449,7 @@ fn ipc_eventfd_init_nonzero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_create1 with O_CLOEXEC sets FD_CLOEXEC")]
 fn ipc_epoll_create1_cloexec() -> TestResult {
     let ep = check_ok!(syscall::epoll_create1(syscall::oflag::O_CLOEXEC), "ep");
     let flags = check_ok!(syscall::fcntl(ep, syscall::fcntl_cmd::F_GETFD, 0), "fd");
@@ -458,7 +458,7 @@ fn ipc_epoll_create1_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "pipe2 write then read round-trips three bytes")]
 fn ipc_pipe2_direct_roundtrip() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     check_ok!(syscall::write(w, b"ipc"), "w");
@@ -470,7 +470,7 @@ fn ipc_pipe2_direct_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "poll with a 10 ms timeout on an empty pipe returns 0")]
 fn ipc_poll_timeout_10ms() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let mut fds = [poll::PollFd {
@@ -485,7 +485,7 @@ fn ipc_poll_timeout_10ms() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "msgget IPC_PRIVATE creates a queue that msgctl IPC_RMID removes")]
 fn ipc_msg_rmid() -> TestResult {
     match syscall::msgget(IPC_PRIVATE, IPC_CREAT | 0o600) {
         Ok(id) => {

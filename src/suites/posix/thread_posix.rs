@@ -158,7 +158,7 @@ unsafe extern "C" fn thr_read_shared_then_add(arg: *mut u8) -> i32 {
     0
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a freestanding thread can be spawned and joined")]
 fn thread_spawn_join() -> TestResult {
     let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
         return Ok(());
@@ -166,7 +166,7 @@ fn thread_spawn_join() -> TestResult {
     soft_join(t)
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a thread that returns a nonzero status can still be joined")]
 fn thread_spawn_join_nonzero_exit() -> TestResult {
     // Exit status is not observed via wait4 for CLONE_THREAD; just ensure join.
     let Some(t) = soft_spawn(thr_return_7, core::ptr::null_mut())? else {
@@ -175,7 +175,7 @@ fn thread_spawn_join_nonzero_exit() -> TestResult {
     soft_join(t)
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a child thread store is visible in the parent after join")]
 fn thread_shared_store() -> TestResult {
     let cell = AtomicU32::new(0);
     let Some(t) = soft_spawn(thr_store_u32, &cell as *const AtomicU32 as *mut u8)? else {
@@ -186,7 +186,7 @@ fn thread_shared_store() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a child thread has a tid distinct from the process pid")]
 fn thread_gettid_ne_getpid() -> TestResult {
     let cell = AtomicI32::new(0);
     let parent_pid = syscall::getpid();
@@ -204,7 +204,7 @@ fn thread_gettid_ne_getpid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a child thread shares the parent process id")]
 fn thread_getpid_same_as_parent() -> TestResult {
     let cell = AtomicI32::new(0);
     let parent_pid = syscall::getpid();
@@ -216,7 +216,7 @@ fn thread_getpid_same_as_parent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a child thread observes gettid distinct from getpid")]
 fn thread_tid_check_in_child() -> TestResult {
     let cell = AtomicU32::new(0);
     let Some(t) = soft_spawn(thr_check_tid_ne_pid, &cell as *const AtomicU32 as *mut u8)? else {
@@ -227,7 +227,7 @@ fn thread_tid_check_in_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "one thread can atomically increment a shared counter")]
 fn thread_atomic_inc_one() -> TestResult {
     let cell = AtomicU32::new(0);
     let Some(t) = soft_spawn(thr_inc, &cell as *const AtomicU32 as *mut u8)? else {
@@ -238,7 +238,7 @@ fn thread_atomic_inc_one() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "two threads can each increment a shared counter")]
 fn thread_atomic_inc_two() -> TestResult {
     let cell = AtomicU32::new(0);
     let Some(t1) = soft_spawn(thr_inc, &cell as *const AtomicU32 as *mut u8)? else {
@@ -255,7 +255,7 @@ fn thread_atomic_inc_two() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "one thread can add many times to a shared counter")]
 fn thread_atomic_add_loop() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -274,7 +274,7 @@ fn thread_atomic_add_loop() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "two threads can add concurrently to a shared counter")]
 fn thread_two_add_loops() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -298,7 +298,7 @@ fn thread_two_add_loops() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "two threads can serialize increments with a futex mutex")]
 fn thread_mutex_like_two() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -322,7 +322,7 @@ fn thread_mutex_like_two() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a thread waiting on a futex wakes when the parent signals")]
 fn thread_condvar_like_futex() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -354,7 +354,7 @@ fn thread_condvar_like_futex() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a thread can yield then store a value the parent observes")]
 fn thread_yield_then_store() -> TestResult {
     let cell = AtomicU32::new(0);
     let Some(t) = soft_spawn(thr_yield_then_store, &cell as *const AtomicU32 as *mut u8)? else {
@@ -365,7 +365,7 @@ fn thread_yield_then_store() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a child thread can fill a shared byte buffer")]
 fn thread_shared_byte_buffer() -> TestResult {
     let mut buf = [0u8; 16];
     let Some(t) = soft_spawn(thr_write_bytes, buf.as_mut_ptr())? else {
@@ -378,7 +378,7 @@ fn thread_shared_byte_buffer() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a thread can increment a shared counter twice around a yield")]
 fn thread_nested_inc() -> TestResult {
     let cell = AtomicU32::new(0);
     let Some(t) = soft_spawn(thr_nested_inc_twice, &cell as *const AtomicU32 as *mut u8)? else {
@@ -389,7 +389,7 @@ fn thread_nested_inc() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a child thread can read a parent-published value and store the sum")]
 fn thread_read_shared_add() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -408,7 +408,7 @@ fn thread_read_shared_add() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "threads can be spawned and joined sequentially")]
 fn thread_sequential_spawns() -> TestResult {
     for expected in 1u32..=4 {
         let cell = AtomicU32::new(0);
@@ -423,7 +423,7 @@ fn thread_sequential_spawns() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a spawned thread handle reports a positive tid")]
 fn thread_tid_positive() -> TestResult {
     let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
         return Ok(());
@@ -432,7 +432,7 @@ fn thread_tid_positive() -> TestResult {
     soft_join(t)
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "spawning a thread leaves the parent tid unchanged")]
 fn thread_parent_tid_unchanged() -> TestResult {
     let before = syscall::gettid();
     let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
@@ -444,7 +444,7 @@ fn thread_parent_tid_unchanged() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "three sequential threads can each increment a cell")]
 fn thread_three_sequential_stores() -> TestResult {
     for magic in [1u32, 2, 3] {
         let cell = AtomicU32::new(0);
@@ -460,7 +460,7 @@ fn thread_three_sequential_stores() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "two sequential spawn-join cycles restore a single-threaded tid")]
 fn thread_spawn_join_twice() -> TestResult {
     for _ in 0..2 {
         let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
@@ -472,7 +472,7 @@ fn thread_spawn_join_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a child thread can wake a parent waiting on a futex")]
 fn thread_futex_wake_from_child() -> TestResult {
     // Parent waits; child stores and wakes (condvar-like reverse).
     static READY: AtomicU32 = AtomicU32::new(0);
@@ -503,7 +503,7 @@ fn thread_futex_wake_from_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a cell left untouched by a nop thread stays zero")]
 fn thread_shared_zero_init_visible() -> TestResult {
     let cell = AtomicU32::new(0);
     let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
@@ -514,7 +514,7 @@ fn thread_shared_zero_init_visible() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "two threads can write distinct shared cells")]
 fn thread_two_shared_cells() -> TestResult {
     let a = AtomicU32::new(0);
     let b = AtomicU32::new(0);
@@ -532,7 +532,7 @@ fn thread_two_shared_cells() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "joining the last thread restores gettid equal to getpid")]
 fn thread_join_restores_single_thread() -> TestResult {
     let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
         return Ok(());
@@ -542,7 +542,7 @@ fn thread_join_restores_single_thread() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "one thread can increment a shared counter many times")]
 fn thread_many_incs_one_thread() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -561,7 +561,7 @@ fn thread_many_incs_one_thread() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a thread can be spawned with a null argument and joined")]
 fn thread_arg_null_ok() -> TestResult {
     let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
         return Ok(());
@@ -569,7 +569,7 @@ fn thread_arg_null_ok() -> TestResult {
     soft_join(t)
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a parent can do work while a child increments a counter")]
 fn thread_overlap_parent_work() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -593,7 +593,7 @@ fn thread_overlap_parent_work() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a child store overwrites a parent-initialized cell after join")]
 fn thread_store_then_parent_sees() -> TestResult {
     let cell = AtomicU32::new(123);
     let Some(t) = soft_spawn(thr_store_u32, &cell as *const AtomicU32 as *mut u8)? else {
@@ -604,7 +604,7 @@ fn thread_store_then_parent_sees() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "two threads can be spawned and joined one after the other")]
 fn thread_double_join_pattern() -> TestResult {
     let c1 = AtomicU32::new(0);
     let c2 = AtomicU32::new(0);
@@ -621,7 +621,7 @@ fn thread_double_join_pattern() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "getpid stays stable while a child thread runs")]
 fn thread_pid_stable_across_thread() -> TestResult {
     let pid0 = syscall::getpid();
     let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
@@ -633,7 +633,7 @@ fn thread_pid_stable_across_thread() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "one thread can take a futex mutex and increment a counter")]
 fn thread_mutex_like_one() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -652,7 +652,7 @@ fn thread_mutex_like_one() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a thread can run without thread-local storage being set")]
 fn thread_tls_less_smoke() -> TestResult {
     // Document TLS-less: we never set CLONE_SETTLS; thread still runs.
     let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
@@ -662,7 +662,7 @@ fn thread_tls_less_smoke() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "four parallel threads can each increment a shared counter")]
 fn thread_four_parallel_incs() -> TestResult {
     let cell = AtomicU32::new(0);
     let mut handles = [None, None, None, None];
@@ -687,7 +687,7 @@ fn thread_four_parallel_incs() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a join makes a child store fully visible to the parent")]
 fn thread_shared_store_order() -> TestResult {
     let cell = AtomicU32::new(0);
     let Some(t) = soft_spawn(thr_store_u32, &cell as *const AtomicU32 as *mut u8)? else {
@@ -700,7 +700,7 @@ fn thread_shared_store_order() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a parent can wake a child waiting on a futex condition")]
 fn thread_cond_parent_waits_child_sets() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -724,7 +724,7 @@ fn thread_cond_parent_waits_child_sets() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a child tid handle differs from the parent tid")]
 fn thread_gettid_differs_from_handle_parent() -> TestResult {
     let parent = syscall::gettid();
     let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
@@ -734,7 +734,7 @@ fn thread_gettid_differs_from_handle_parent() -> TestResult {
     soft_join(t)
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a thread add loop followed by an increment yields the expected total")]
 fn thread_add_then_inc() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -757,7 +757,7 @@ fn thread_add_then_inc() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a child overwrite of a shared buffer is visible after join")]
 fn thread_byte_buffer_partial() -> TestResult {
     let mut buf = [0u8; 16];
     buf[0] = 1;
@@ -770,7 +770,7 @@ fn thread_byte_buffer_partial() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "ten sequential spawn-join cycles restore a single-threaded tid")]
 fn thread_stress_ten_joins() -> TestResult {
     for _ in 0..10 {
         let cell = AtomicU32::new(0);
@@ -784,7 +784,7 @@ fn thread_stress_ten_joins() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a child thread sees a value published before spawn")]
 fn thread_clone_vm_visibility_parent_write() -> TestResult {
     // Parent publishes a value before spawn; child must observe it (CLONE_VM).
     #[repr(C)]
@@ -804,7 +804,7 @@ fn thread_clone_vm_visibility_parent_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a parent store before spawn is visible to the child")]
 fn thread_parent_write_visible_to_child() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -824,7 +824,7 @@ fn thread_parent_write_visible_to_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "three threads can serialize increments with a futex mutex")]
 fn thread_mutex_three() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -854,7 +854,7 @@ fn thread_mutex_three() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "two threads can rendezvous on a futex barrier")]
 fn thread_barrier_like_two() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -896,7 +896,7 @@ fn thread_barrier_like_two() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "two threads run a once-style gate exactly once")]
 fn thread_once_like_two() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -945,7 +945,7 @@ fn thread_once_like_two() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "six sequential threads can reuse stacks after join")]
 fn thread_stack_reuse_six() -> TestResult {
     for _ in 0..6 {
         let cell = AtomicU32::new(0);
@@ -958,7 +958,7 @@ fn thread_stack_reuse_six() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a thread that sleeps briefly can still be joined")]
 fn thread_detach_like_sleep() -> TestResult {
     unsafe extern "C" fn sleepy(arg: *mut u8) -> i32 {
         let _ = syscall::nanosleep(&Timespec {
@@ -980,7 +980,7 @@ fn thread_detach_like_sleep() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "two threads can increment a shared 64-bit counter")]
 fn thread_u64_counter_two() -> TestResult {
     use core::sync::atomic::AtomicU64;
     #[repr(C)]
@@ -1012,7 +1012,7 @@ fn thread_u64_counter_two() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "eight sequential spawn-join cycles restore a single-threaded tid")]
 fn thread_spawn_join_eight() -> TestResult {
     for _ in 0..8 {
         let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
@@ -1024,7 +1024,7 @@ fn thread_spawn_join_eight() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "two waiters can be woken by a futex broadcast")]
 fn thread_cond_broadcast_two() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -1075,7 +1075,7 @@ fn thread_cond_broadcast_two() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "gettid equals getpid after several sequential joins")]
 fn thread_gettid_after_many_joins() -> TestResult {
     for _ in 0..5 {
         let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
@@ -1087,7 +1087,7 @@ fn thread_gettid_after_many_joins() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "two threads can make progress with a trylock-style mutex")]
 fn thread_trylock_like() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -1127,7 +1127,7 @@ fn thread_trylock_like() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "two threads can take shared reader locks and increment a sum")]
 fn thread_rwlock_shared_like() -> TestResult {
     #[repr(C)]
     struct Arg {
@@ -1182,7 +1182,7 @@ fn thread_rwlock_shared_like() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "three sequential nop threads can be spawned and joined")]
 fn thread_three_seq_nops() -> TestResult {
     for _ in 0..3 {
         let Some(t) = soft_spawn(thr_nop, core::ptr::null_mut())? else {
@@ -1193,7 +1193,7 @@ fn thread_three_seq_nops() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "five threads can increment a shared counter across two waves")]
 fn thread_five_parallel_incs() -> TestResult {
     // Cap at 4 concurrent (stack pressure); do 5 via 4+1.
     let cell = AtomicU32::new(0);

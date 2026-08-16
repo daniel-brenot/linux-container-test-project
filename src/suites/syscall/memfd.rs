@@ -6,7 +6,7 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, fcntl_cmd, F_ADD_SEALS, F_GET_SEALS, F_SEAL_WRITE, FD_CLOEXEC, MFD_ALLOW_SEALING, MFD_CLOEXEC};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "memfd_create returns a usable file descriptor")]
 fn memfd_create_basic() -> TestResult {
     let fd = check_ok!(syscall::memfd_create(b"lctp\0", 0), "create");
     check!(fd >= 0, "bad fd");
@@ -14,7 +14,7 @@ fn memfd_create_basic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "memfd_create with MFD_CLOEXEC sets FD_CLOEXEC")]
 fn memfd_create_cloexec() -> TestResult {
     let fd = check_ok!(syscall::memfd_create(b"x\0", MFD_CLOEXEC as u32), "create");
     let fl = check_ok!(syscall::fcntl(fd, fcntl_cmd::F_GETFD, 0), "F_GETFD");
@@ -23,7 +23,7 @@ fn memfd_create_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "write and read round-trip bytes on a memfd")]
 fn memfd_write_read() -> TestResult {
     let fd = check_ok!(syscall::memfd_create(b"wr\0", 0), "create");
     let msg = b"memfd-data";
@@ -36,7 +36,7 @@ fn memfd_write_read() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "ftruncate grows a memfd to 4096 bytes")]
 fn memfd_ftruncate_grow() -> TestResult {
     let fd = check_ok!(syscall::memfd_create(b"grow\0", 0), "create");
     check_ok!(syscall::ftruncate(fd, 4096), "ftruncate");
@@ -46,7 +46,7 @@ fn memfd_ftruncate_grow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "ftruncate shrinks a memfd and read returns the remaining prefix")]
 fn memfd_ftruncate_shrink() -> TestResult {
     let fd = check_ok!(syscall::memfd_create(b"shrink\0", 0), "create");
     check_ok!(syscall::write(fd, b"0123456789"), "write");
@@ -60,7 +60,7 @@ fn memfd_ftruncate_shrink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "pwrite and pread at offset 100 round-trip bytes on a memfd")]
 fn memfd_pwrite_pread() -> TestResult {
     let fd = check_ok!(syscall::memfd_create(b"pp\0", 0), "create");
     check_ok!(syscall::pwrite(fd, b"ABCD", 100), "pwrite");
@@ -71,7 +71,7 @@ fn memfd_pwrite_pread() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "F_ADD_SEALS with F_SEAL_WRITE is visible via F_GET_SEALS")]
 fn memfd_seal_write() -> TestResult {
     let fd = check_ok!(
         syscall::memfd_create(b"seal\0", MFD_ALLOW_SEALING as u32),
@@ -85,14 +85,14 @@ fn memfd_seal_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "memfd_create with an empty name succeeds")]
 fn memfd_empty_name() -> TestResult {
     let fd = check_ok!(syscall::memfd_create(b"\0", 0), "create empty name");
     check_ok!(syscall::close(fd), "close");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fstat size of a memfd matches the number of bytes written")]
 fn memfd_size_after_write() -> TestResult {
     let fd = check_ok!(syscall::memfd_create(b"sz\0", 0), "create");
     let data = [0xCDu8; 512];
@@ -103,7 +103,7 @@ fn memfd_size_after_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "pwrite at the last byte of a grown memfd is readable back")]
 fn memfd_grow_then_write() -> TestResult {
     let fd = check_ok!(syscall::memfd_create(b"gw\0", 0), "create");
     check_ok!(syscall::ftruncate(fd, 8192), "grow");
@@ -115,7 +115,7 @@ fn memfd_grow_then_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a cloexec memfd can be written")]
 fn memfd_cloexec_and_write() -> TestResult {
     let fd = check_ok!(syscall::memfd_create(b"ce\0", MFD_CLOEXEC as u32), "create");
     check_ok!(syscall::write(fd, b"ok"), "write");

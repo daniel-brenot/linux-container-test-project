@@ -6,7 +6,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_dir, create_empty, join_path, truncate_cstr};
 use crate::syscall::{self, oflag, Errno, S_IFIFO};
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rmdir of an empty directory succeeds and the path is gone")]
 fn rmdir_empty_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -15,7 +15,7 @@ fn rmdir_empty_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir of a directory that contains a file returns ENOTEMPTY")]
 fn rmdir_notempty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -32,7 +32,7 @@ fn rmdir_notempty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir of a regular file returns ENOTDIR")]
 fn rmdir_file_enotdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -42,7 +42,7 @@ fn rmdir_file_enotdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir of '.' returns EINVAL")]
 fn rmdir_dot_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -53,7 +53,7 @@ fn rmdir_dot_fails() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir of '..' returns ENOTEMPTY, EINVAL, or ENOTDIR")]
 fn rmdir_dotdot_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -76,7 +76,7 @@ fn rmdir_dotdot_fails() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir of a missing path returns ENOENT")]
 fn rmdir_enoent() -> TestResult {
     check_err!(
         syscall::rmdir(b"/tmp/lctp-no-dir\0"),
@@ -86,7 +86,7 @@ fn rmdir_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rmdir of a nested empty directory then its parent succeeds")]
 fn rmdir_nested_empty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let outer = create_dir(&mut tmp, b"outer", 0o755)?;
@@ -98,7 +98,7 @@ fn rmdir_nested_empty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "rmdir succeeds after unlinking the directory contents")]
 fn rmdir_after_unlink_contents() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -114,7 +114,7 @@ fn rmdir_after_unlink_contents() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir of a directory that contains a subdirectory returns ENOTEMPTY")]
 fn rmdir_notempty_subdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let outer = create_dir(&mut tmp, b"o", 0o755)?;
@@ -127,7 +127,7 @@ fn rmdir_notempty_subdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir of a symlink to a directory returns ENOTDIR")]
 fn rmdir_symlink_enotdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -139,7 +139,7 @@ fn rmdir_symlink_enotdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir of a FIFO returns ENOTDIR")]
 fn rmdir_fifo_enotdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -152,7 +152,7 @@ fn rmdir_fifo_enotdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir of an already-removed directory returns ENOENT")]
 fn rmdir_twice_enoent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -161,7 +161,7 @@ fn rmdir_twice_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir in a parent without write permission returns EACCES")]
 fn rmdir_parent_no_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let outer = create_dir(&mut tmp, b"o", 0o755)?;
@@ -176,7 +176,7 @@ fn rmdir_parent_no_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlinkat with AT_REMOVEDIR removes an empty directory")]
 fn rmdir_unlinkat_removedir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let outer = create_dir(&mut tmp, b"o", 0o755)?;
@@ -194,7 +194,7 @@ fn rmdir_unlinkat_removedir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rmdir of a mode 0000 directory succeeds when the parent is writable")]
 fn rmdir_mode_000_still_ok_if_writable_parent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -203,7 +203,7 @@ fn rmdir_mode_000_still_ok_if_writable_parent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir through a non-directory path component returns ENOTDIR")]
 fn rmdir_enotdir_component() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -213,7 +213,7 @@ fn rmdir_enotdir_component() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir of a directory that contains a symlink returns ENOTEMPTY")]
 fn rmdir_notempty_with_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -226,7 +226,7 @@ fn rmdir_notempty_with_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "rmdir of a three-level empty directory chain succeeds from the inside out")]
 fn rmdir_chain_three() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_dir(&mut tmp, b"a", 0o755)?;
@@ -242,7 +242,7 @@ fn rmdir_chain_three() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir with a missing parent component returns ENOENT")]
 fn rmdir_missing_parent_component() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let mut path = [0u8; 160];

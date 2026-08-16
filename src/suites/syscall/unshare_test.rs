@@ -6,7 +6,7 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, CLONE_FILES, CLONE_NEWUSER, Errno};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a child unshare of CLONE_FILES succeeds")]
 fn unshare_clone_files_in_child() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -22,7 +22,7 @@ fn unshare_clone_files_in_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "a child unshare of CLONE_NEWUSER succeeds, or is rejected with EPERM or EINVAL")]
 fn unshare_newuser_soft_eperm() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -39,7 +39,7 @@ fn unshare_newuser_soft_eperm() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a child can unshare CLONE_FILES twice")]
 fn unshare_clone_files_twice_child() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {

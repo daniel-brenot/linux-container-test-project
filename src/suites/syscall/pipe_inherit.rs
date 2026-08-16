@@ -38,7 +38,7 @@ fn wait_exit_status(pid: i32) -> Result<i32, crate::harness::AssertFail> {
     Err(crate::harness::AssertFail::msg("child hung (pipe/wait deadlock?)"))
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a child reading a pipe whose writers are closed receives EOF")]
 fn pipe_eof_when_writer_closed() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let pid = check_ok!(syscall::fork(), "fork");
@@ -58,7 +58,7 @@ fn pipe_eof_when_writer_closed() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a child poll of an empty pipe times out while the parent holds the write end")]
 fn pipe_poll_timeout_writer_held() -> TestResult {
     // Parent keeps the write end open (empty pipe). Child `poll`s with a short
     // timeout, then exits. Must complete — yielding the child into the parent's
@@ -86,7 +86,7 @@ fn pipe_poll_timeout_writer_held() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "after poll times out on an inherited empty pipe, exec of true exits 0, or true is absent")]
 fn pipe_poll_then_exec_writer_held() -> TestResult {
     // Same as above, but the child must reach `execve` after the timed poll —
     // shells fork, probe fds, then exec the external command.
@@ -121,7 +121,7 @@ fn pipe_poll_then_exec_writer_held() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "after setsid and a timed poll on an inherited empty pipe, exec of true exits 0, or true is absent")]
 fn pipe_setsid_poll_then_exec() -> TestResult {
     // Detached session + empty inherited pipe + exec (PTY shell spawn shape).
     let true_path: &[u8] = if syscall::access(b"/bin/true\0", F_OK).is_ok() {
@@ -155,7 +155,7 @@ fn pipe_setsid_poll_then_exec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "exec of true with an inherited empty pipe unread exits 0, or true is absent")]
 fn pipe_inherit_exec_without_touching() -> TestResult {
     // Child inherits an empty pipe and execs without reading it.
     let true_path: &[u8] = if syscall::access(b"/bin/true\0", F_OK).is_ok() {
@@ -183,7 +183,7 @@ fn pipe_inherit_exec_without_touching() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a /bin/sh pipeline printf | cat completes and writes xy")]
 fn pipe_shell_pipeline_completes() -> TestResult {
     // Pipeline needs both sides to run; wrong yield on the empty pipe side
     // deadlocks the shell's wait.
@@ -236,7 +236,7 @@ fn pipe_shell_pipeline_completes() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a /bin/sh spawn of ls / completes and lists a rootfs entry")]
 fn pipe_shell_external_ls_completes() -> TestResult {
     // Shell forks an external binary (`ls`); must reap without hanging.
     check_ok!(syscall::access(b"/bin/sh\0", F_OK), "sh");

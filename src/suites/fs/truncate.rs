@@ -8,7 +8,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_dir, create_empty, join_path, write_file};
 use crate::syscall::{self, oflag, Errno};
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "ftruncate shrinks a regular file to the requested size")]
 fn ftruncate_shrink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -21,7 +21,7 @@ fn ftruncate_shrink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "ftruncate grows a regular file to the requested size")]
 fn ftruncate_grow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -34,7 +34,7 @@ fn ftruncate_grow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "ftruncate to 0 sets the file size to 0")]
 fn ftruncate_zero() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -47,7 +47,7 @@ fn ftruncate_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "truncate shrinks a regular file to the requested size")]
 fn truncate_path_shrink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -58,7 +58,7 @@ fn truncate_path_shrink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "truncate grows a regular file to the requested size")]
 fn truncate_path_grow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -69,7 +69,7 @@ fn truncate_path_grow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "ftruncate to 1000000 sets the logical file size")]
 fn truncate_sparseness() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"sparse", 0o644), "create");
@@ -81,7 +81,7 @@ fn truncate_sparseness() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "ftruncate to the current size leaves the size unchanged")]
 fn ftruncate_idempotent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -95,7 +95,7 @@ fn ftruncate_idempotent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "read after truncate returns the remaining prefix")]
 fn truncate_then_read() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -109,7 +109,7 @@ fn truncate_then_read() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "truncate that grows a file fills the extension with zeros")]
 fn truncate_grows_zeros() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -124,7 +124,7 @@ fn truncate_grows_zeros() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "ftruncate that grows a file fills the extension with zeros")]
 fn ftruncate_grows_zeros() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -141,7 +141,7 @@ fn ftruncate_grows_zeros() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "truncate of a missing path returns ENOENT")]
 fn truncate_enoent() -> TestResult {
     check_err!(
         syscall::truncate(b"/tmp/lctp-trunc-missing\0", 0),
@@ -151,7 +151,7 @@ fn truncate_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "truncate of a directory returns EISDIR")]
 fn truncate_dir_eisdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -160,13 +160,13 @@ fn truncate_dir_eisdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "ftruncate on fd -1 returns EBADF")]
 fn ftruncate_bad_fd() -> TestResult {
     check_err!(syscall::ftruncate(-1, 0), Errno::EBADF, "ebadf");
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "ftruncate on a read-only fd returns EINVAL or EBADF")]
 fn ftruncate_rdonly_einval() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -181,7 +181,7 @@ fn ftruncate_rdonly_einval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "truncate to the current size leaves the size unchanged")]
 fn truncate_to_same_size() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -191,7 +191,7 @@ fn truncate_to_same_size() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "truncate to 1 byte leaves the first byte")]
 fn truncate_one_byte() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -203,7 +203,7 @@ fn truncate_one_byte() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "truncate of a symlink follows it and shrinks the target")]
 fn truncate_via_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -215,7 +215,7 @@ fn truncate_via_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "truncate through a non-directory path component returns ENOTDIR")]
 fn truncate_enotdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -225,7 +225,7 @@ fn truncate_enotdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "ftruncate grows a file to 10000 bytes")]
 fn ftruncate_large_grow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -236,7 +236,7 @@ fn ftruncate_large_grow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "append after truncate writes after the truncated prefix")]
 fn truncate_then_append() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -254,7 +254,7 @@ fn truncate_then_append() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "ftruncate that shrinks a file preserves the remaining prefix")]
 fn ftruncate_shrink_preserves_prefix() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -268,7 +268,7 @@ fn ftruncate_shrink_preserves_prefix() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "truncate of an empty file to 8 bytes reads as zeros")]
 fn truncate_empty_file_grow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -281,7 +281,7 @@ fn truncate_empty_file_grow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "truncate of a mode 0000 file succeeds or returns EACCES")]
 fn truncate_chmod0_still_ok() -> TestResult {
     // truncate uses path; owner can still truncate on Linux even if mode is 000.
     let mut tmp = check_ok!(TempDir::create(), "tempdir");

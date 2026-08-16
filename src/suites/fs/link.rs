@@ -8,7 +8,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_dir, create_empty, join_path, write_file};
 use crate::syscall::{self, oflag, Errno, S_IFIFO};
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "link creates a second name that shares inode and device")]
 fn link_same_inode() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -21,7 +21,7 @@ fn link_same_inode() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "link raises the hard-link count to 2")]
 fn link_nlink_two() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -32,7 +32,7 @@ fn link_nlink_two() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "link with a missing source path returns ENOENT")]
 fn link_missing_enoent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dst = copy_child(&mut tmp, b"dst")?;
@@ -44,7 +44,7 @@ fn link_missing_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "link of a directory returns EPERM or EACCES")]
 fn link_to_directory_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"dir", 0o755)?;
@@ -58,7 +58,7 @@ fn link_to_directory_fails() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "link onto an existing path returns EEXIST")]
 fn link_existing_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -67,7 +67,7 @@ fn link_existing_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "reading a hard link returns the same bytes as the original name")]
 fn link_share_content() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"a", 0o644), "create");
@@ -84,7 +84,7 @@ fn link_share_content() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "unlink of one hard-link name leaves the other name intact")]
 fn link_unlink_one_remaining() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -96,7 +96,7 @@ fn link_unlink_one_remaining() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "two extra hard links raise nlink to 3")]
 fn link_multiple_hardlinks() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -109,7 +109,7 @@ fn link_multiple_hardlinks() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "linkat with AT_EMPTY_PATH creates a hard link when the interface is supported")]
 fn linkat_empty_path() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -128,7 +128,7 @@ fn linkat_empty_path() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "linkat with AT_SYMLINK_FOLLOW hard-links the symlink target")]
 fn linkat_symlink_follow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let target = create_empty(&mut tmp, b"target")?;
@@ -151,7 +151,7 @@ fn linkat_symlink_follow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "chmod through one hard-link name changes the mode seen via the other")]
 fn link_then_chmod_shared() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -163,7 +163,7 @@ fn link_then_chmod_shared() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "link of '.' returns EPERM, EACCES, EISDIR, or EINVAL")]
 fn link_dot_fails() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dst = copy_child(&mut tmp, b"dotlink")?;
@@ -175,7 +175,7 @@ fn link_dot_fails() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "unlink of one hard-link name restores nlink to 1")]
 fn link_nlink_after_unlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -187,7 +187,7 @@ fn link_nlink_after_unlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "link of a FIFO creates a second FIFO name with nlink 2")]
 fn link_fifo() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -205,7 +205,7 @@ fn link_fifo() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "link into a subdirectory raises nlink to 2")]
 fn link_into_subdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -219,7 +219,7 @@ fn link_into_subdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "link with a non-directory destination component returns ENOTDIR")]
 fn link_enotdir_dst() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -230,7 +230,7 @@ fn link_enotdir_dst() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "link into a directory without write permission returns EACCES")]
 fn link_parent_no_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -244,7 +244,7 @@ fn link_parent_no_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat through a hard link reports the same file size")]
 fn link_share_size() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -255,7 +255,7 @@ fn link_share_size() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "write through a hard-link name is visible via the original name")]
 fn link_write_via_second() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -268,7 +268,7 @@ fn link_write_via_second() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "link onto an existing directory returns EEXIST")]
 fn link_eexist_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -278,7 +278,7 @@ fn link_eexist_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "link of a symlink follows it and hard-links the target file")]
 fn link_to_symlink_nofollow_creates_link_to_target() -> TestResult {
     // link(2) follows symlinks by default on Linux for oldpath.
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
@@ -293,7 +293,7 @@ fn link_to_symlink_nofollow_creates_link_to_target() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "link into a missing destination directory returns ENOENT")]
 fn link_missing_dst_parent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -311,7 +311,7 @@ fn link_missing_dst_parent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "three extra hard links raise nlink to 4")]
 fn link_four_names() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;

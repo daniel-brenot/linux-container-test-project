@@ -92,7 +92,7 @@ fn close_pair(master: i32, slave: i32) {
     let _ = syscall::close(master);
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "opening /dev/ptmx yields a character device")]
 fn pty_ptmx_open_chr() -> TestResult {
     let fd = check_ok!(
         syscall::open(PTMX, oflag::O_RDWR | oflag::O_NOCTTY, 0),
@@ -110,7 +110,7 @@ fn pty_ptmx_open_chr() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "opening ptmx, TIOCGPTN, unlock, and opening /dev/pts/N yields distinct character fds")]
 fn pty_openpty_pair() -> TestResult {
     let (master, slave, ptyno) = openpty_pair()?;
     check!(master >= 0, "master");
@@ -125,7 +125,7 @@ fn pty_openpty_pair() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "opening /dev/pts/999999 returns ENOENT")]
 fn pty_unused_index_enoent() -> TestResult {
     // No live pty at a high index → ENOENT.
     check_err!(
@@ -136,7 +136,7 @@ fn pty_unused_index_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "after TIOCSPTLCK unlock, the /dev/pts/N path from TIOCGPTN can be opened")]
 fn pty_slave_open_after_unlock() -> TestResult {
     let master = check_ok!(
         syscall::open(PTMX, oflag::O_RDWR | oflag::O_NOCTTY | oflag::O_CLOEXEC, 0),
@@ -166,7 +166,7 @@ fn pty_slave_open_after_unlock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "bytes written to a pty slave are readable on the master")]
 fn pty_master_slave_byte_io() -> TestResult {
     let (master, slave, _) = openpty_pair()?;
     check_ok!(syscall::write(slave, b"ping\n"), "write slave");
@@ -188,7 +188,7 @@ fn pty_master_slave_byte_io() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a /bin/sh echo on a pty slave writes ok that the parent reads from the master")]
 fn pty_shell_echo_via_master() -> TestResult {
     // openpty + fork/exec `/bin/sh -c 'echo ok'` with slave as stdio; parent
     // reads "ok" from the master — exercises the full terminal spawn path.
@@ -279,7 +279,7 @@ fn pty_shell_echo_via_master() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "with a live pty, /dev/pts is a directory or the slave path remains openable")]
 fn pty_dev_pts_usable_with_live_pair() -> TestResult {
     // With a live pair, `/dev/pts` must resolve as a directory *or* the concrete
     // `/dev/pts/N` slave path must remain openable — covering synthetic pts.
@@ -310,7 +310,7 @@ fn pty_dev_pts_usable_with_live_pair() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "two pty pairs have distinct indices and independent master/slave byte streams")]
 fn pty_two_pairs_independent() -> TestResult {
     let (m1, s1, n1) = openpty_pair()?;
     let (m2, s2, n2) = openpty_pair()?;
@@ -328,7 +328,7 @@ fn pty_two_pairs_independent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "reopening a pty slave path after both ends are closed fails or is harmless")]
 fn pty_slave_gone_after_close_soft() -> TestResult {
     let (master, slave, ptyno) = openpty_pair()?;
     let mut path = [0u8; 64];
@@ -457,7 +457,7 @@ fn pty_spawn_shell_cmd(shell: &[u8], arg0: &[u8], cmd: &[u8]) -> Result<(i32, i3
     Ok((master, pid))
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a /bin/sh ls / on a pty lists a rootfs entry and exits 0")]
 fn pty_shell_ls_root() -> TestResult {
     // Shell forks an external `ls` with the PTY as stdio — must list and exit
     // (deadlock if a child pipe read wrongly yields into the waiting parent).
@@ -483,7 +483,7 @@ fn pty_shell_ls_root() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "a /bin/bash ls / on a pty lists a rootfs entry, or bash is absent")]
 fn pty_bash_ls_root_soft() -> TestResult {
     if syscall::access(b"/bin/bash\0", F_OK).is_err() {
         return Ok(());
@@ -509,7 +509,7 @@ fn pty_bash_ls_root_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a /bin/sh printf | cat pipeline on a pty writes ab and exits 0")]
 fn pty_shell_pipeline_on_pty() -> TestResult {
     check_ok!(syscall::access(b"/bin/sh\0", F_OK), "sh");
     let (master, pid) = pty_spawn_shell_cmd(b"/bin/sh\0", b"sh\0", b"printf ab | cat\0")?;
@@ -523,7 +523,7 @@ fn pty_shell_pipeline_on_pty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "writing ls / then exit to an interactive /bin/sh on a pty produces a rootfs listing")]
 fn pty_interactive_ls_line() -> TestResult {
     // Drive a shell over the PTY like a terminal: write `ls /\n`, read listing.
     check_ok!(syscall::access(b"/bin/sh\0", F_OK), "sh");

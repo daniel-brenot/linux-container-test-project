@@ -8,7 +8,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_dir, create_empty, join_path, write_file};
 use crate::syscall::{self, oflag, Errno};
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "readlink returns the target string of a newly created symlink")]
 fn symlink_create_readlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"target")?;
@@ -20,7 +20,7 @@ fn symlink_create_readlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "lstat reports a symlink and stat follows it to a regular file")]
 fn symlink_lstat_vs_stat() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"file")?;
@@ -33,7 +33,7 @@ fn symlink_lstat_vs_stat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a symlink reports the target file size")]
 fn symlink_stat_follows_size() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"file")?;
@@ -45,7 +45,7 @@ fn symlink_stat_follows_size() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "readlink returns a relative symlink target unchanged")]
 fn symlink_relative_target() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"file")?;
@@ -57,7 +57,7 @@ fn symlink_relative_target() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open of a symlink follows it and reads the target contents")]
 fn symlink_open_follows() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"file")?;
@@ -72,7 +72,7 @@ fn symlink_open_follows() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "readlink into a short buffer returns a truncated target")]
 fn symlink_readlink_buffer() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"link")?;
@@ -83,7 +83,7 @@ fn symlink_readlink_buffer() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "stat through a two-symlink chain reports the target inode")]
 fn symlink_chain() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"file")?;
@@ -97,7 +97,7 @@ fn symlink_chain() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = soft, case = "symlink with an empty target succeeds or returns EINVAL or ENOENT")]
 fn symlink_empty_target() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"link")?;
@@ -115,7 +115,7 @@ fn symlink_empty_target() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "stat through a two-symlink loop returns ELOOP")]
 fn symlink_loop_stat_eloop() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = copy_child(&mut tmp, b"a")?;
@@ -126,7 +126,7 @@ fn symlink_loop_stat_eloop() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open through a two-symlink loop returns ELOOP")]
 fn symlink_loop_open_eloop() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = copy_child(&mut tmp, b"la")?;
@@ -141,7 +141,7 @@ fn symlink_loop_open_eloop() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "symlink onto an existing file returns EEXIST")]
 fn symlink_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -153,7 +153,7 @@ fn symlink_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "lstat of a dangling symlink succeeds and stat returns ENOENT")]
 fn symlink_dangling_lstat_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"dangle")?;
@@ -164,7 +164,7 @@ fn symlink_dangling_lstat_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a symlink to a directory reports a directory")]
 fn symlink_to_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -176,7 +176,7 @@ fn symlink_to_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "readlink returns an absolute-style symlink target")]
 fn symlink_absolute_style_target() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"l")?;
@@ -187,7 +187,7 @@ fn symlink_absolute_style_target() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "symlink in a directory without write permission returns EACCES")]
 fn symlink_parent_no_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -204,7 +204,7 @@ fn symlink_parent_no_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "readlink of a 63-byte target returns the full length")]
 fn symlink_long_target() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"l")?;
@@ -220,7 +220,7 @@ fn symlink_long_target() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "lstat of a symlink reports nlink 1")]
 fn symlink_nlink_is_one() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"l")?;
@@ -230,7 +230,7 @@ fn symlink_nlink_is_one() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "readlink of a missing path returns ENOENT")]
 fn symlink_readlink_enoent() -> TestResult {
     check_err!(
         syscall::readlink(b"/tmp/lctp-no-symlink\0", &mut [0u8; 8]),
@@ -240,7 +240,7 @@ fn symlink_readlink_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "readlink of a regular file returns EINVAL")]
 fn symlink_readlink_on_file_einval() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -252,7 +252,7 @@ fn symlink_readlink_on_file_einval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open through a three-symlink chain reads the target contents")]
 fn symlink_chain_three() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -271,7 +271,7 @@ fn symlink_chain_three() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "stat of a self-referential symlink returns ELOOP")]
 fn symlink_self_loop() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"self")?;
@@ -280,7 +280,7 @@ fn symlink_self_loop() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "unlink and recreate a symlink replaces the target string")]
 fn symlink_unlink_and_recreate() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"l")?;
@@ -293,7 +293,7 @@ fn symlink_unlink_and_recreate() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "symlink onto an existing directory returns EEXIST")]
 fn symlink_eexist_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;

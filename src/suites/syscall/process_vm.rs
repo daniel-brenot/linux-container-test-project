@@ -6,7 +6,7 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, IoVec};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "process_vm_readv from the calling process copies a local buffer into another local buffer")]
 fn process_vm_readv_self() -> TestResult {
     let src = b"vm-readv-payload";
     let mut dst = [0u8; 16];
@@ -27,7 +27,7 @@ fn process_vm_readv_self() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "process_vm_writev into the calling process copies a local buffer into another local buffer")]
 fn process_vm_writev_self() -> TestResult {
     let local_data = b"vm-writev-out";
     let mut remote_buf = [0u8; 16];
@@ -48,7 +48,7 @@ fn process_vm_writev_self() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "process_vm_readv from a child copies the child's payload into the parent")]
 fn process_vm_readv_parent_child() -> TestResult {
     let (addr_r, addr_w) = check_ok!(syscall::pipe2(0), "addr pipe");
     let (hold_r, hold_w) = check_ok!(syscall::pipe2(0), "hold pipe");
@@ -93,7 +93,7 @@ fn process_vm_readv_parent_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "process_vm_writev into a child buffer is observed by the child")]
 fn process_vm_writev_to_child_buf() -> TestResult {
     let (addr_r, addr_w) = check_ok!(syscall::pipe2(0), "addr pipe");
     let (done_r, done_w) = check_ok!(syscall::pipe2(0), "done pipe");

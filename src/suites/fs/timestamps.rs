@@ -9,7 +9,7 @@ use crate::suites::common::{
 };
 use crate::syscall::{self, oflag};
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "write advances ctime on a regular file")]
 fn ts_ctime_on_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -29,7 +29,7 @@ fn ts_ctime_on_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "write advances mtime on a regular file")]
 fn ts_mtime_on_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -49,7 +49,7 @@ fn ts_mtime_on_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "chmod advances ctime on a regular file")]
 fn ts_ctime_on_chmod() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -69,7 +69,7 @@ fn ts_ctime_on_chmod() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "fchmod advances ctime on a regular file")]
 fn ts_ctime_on_fchmod() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -91,7 +91,7 @@ fn ts_ctime_on_fchmod() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "link advances ctime on the source file")]
 fn ts_ctime_on_link() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -112,7 +112,7 @@ fn ts_ctime_on_link() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "unlink of one hard-link name advances ctime on the remaining name")]
 fn ts_ctime_on_unlink_sibling_link() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -134,7 +134,7 @@ fn ts_ctime_on_unlink_sibling_link() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "truncate advances mtime on a regular file")]
 fn ts_mtime_on_truncate() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -155,7 +155,7 @@ fn ts_mtime_on_truncate() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "truncate advances ctime on a regular file")]
 fn ts_ctime_on_truncate() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -176,7 +176,7 @@ fn ts_ctime_on_truncate() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "ftruncate that grows a file advances mtime")]
 fn ts_mtime_on_ftruncate_grow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -198,7 +198,7 @@ fn ts_mtime_on_ftruncate_grow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "creating a file in a directory advances the directory ctime")]
 fn ts_dir_ctime_on_creat() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -226,7 +226,7 @@ fn ts_dir_ctime_on_creat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "creating a file in a directory advances the directory mtime")]
 fn ts_dir_mtime_on_creat() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -254,7 +254,7 @@ fn ts_dir_mtime_on_creat() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "unlinking a file from a directory advances the directory ctime")]
 fn ts_dir_ctime_on_unlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -282,7 +282,7 @@ fn ts_dir_ctime_on_unlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "rename does not move ctime earlier")]
 fn ts_ctime_on_rename() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -301,7 +301,7 @@ fn ts_ctime_on_rename() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "chmod leaves mtime unchanged")]
 fn ts_mtime_unchanged_on_chmod() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -315,7 +315,7 @@ fn ts_mtime_unchanged_on_chmod() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "open O_RDONLY leaves mtime unchanged")]
 fn ts_open_rdonly_no_mtime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -329,7 +329,7 @@ fn ts_open_rdonly_no_mtime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "append write advances mtime")]
 fn ts_append_updates_mtime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -355,7 +355,7 @@ fn ts_append_updates_mtime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "mkdir sets positive mtime and ctime on the new directory")]
 fn ts_mkdir_sets_timestamps() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = copy_child(&mut tmp, b"d")?;
@@ -367,7 +367,7 @@ fn ts_mkdir_sets_timestamps() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "symlink sets positive ctime and mtime on the new link")]
 fn ts_symlink_ctime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"l")?;
@@ -378,7 +378,7 @@ fn ts_symlink_ctime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "ftruncate that shrinks a file advances mtime")]
 fn ts_ftruncate_shrink_mtime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -401,7 +401,7 @@ fn ts_ftruncate_shrink_mtime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "chmod on a directory advances ctime")]
 fn ts_chmod_dir_ctime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;

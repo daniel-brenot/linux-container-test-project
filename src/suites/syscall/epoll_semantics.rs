@@ -20,7 +20,7 @@ fn close_all(fds: &[i32]) {
     }
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_create1 with EPOLL_CLOEXEC returns a fd with FD_CLOEXEC set")]
 fn epoll_create1_cloexec() -> TestResult {
     let ep = check_ok!(syscall::epoll_create1(EPOLL_CLOEXEC), "create1");
     let flags = check_ok!(syscall::fcntl(ep, fcntl_cmd::F_GETFD, 0), "getfd");
@@ -29,7 +29,7 @@ fn epoll_create1_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "a second EPOLL_CTL_ADD of the same fd returns EEXIST")]
 fn epoll_ctl_add_duplicate_eexist() -> TestResult {
     // Duplicate ADD must fail with EEXIST; success here means registration is
     // not tracking membership (e.g. a no-op epoll_ctl).
@@ -49,7 +49,7 @@ fn epoll_ctl_add_duplicate_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "EPOLL_CTL_MOD of a fd that was never added returns ENOENT")]
 fn epoll_ctl_mod_without_add_enoent() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -66,7 +66,7 @@ fn epoll_ctl_mod_without_add_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "EPOLL_CTL_DEL of a fd that was never added returns ENOENT")]
 fn epoll_ctl_del_without_add_enoent() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -83,7 +83,7 @@ fn epoll_ctl_del_without_add_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_ctl ADD, MOD, DEL, then re-ADD succeeds and a duplicate ADD returns EEXIST")]
 fn epoll_ctl_add_mod_del_add() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -112,7 +112,7 @@ fn epoll_ctl_add_mod_del_add() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "epoll_ctl with epfd -1 returns EBADF")]
 fn epoll_ctl_bad_epfd_ebadf() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let mut ev = epoll::EpollEvent {
@@ -128,7 +128,7 @@ fn epoll_ctl_bad_epfd_ebadf() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "epoll_ctl ADD of fd -1 returns EBADF")]
 fn epoll_ctl_bad_fd_ebadf() -> TestResult {
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
     let mut ev = epoll::EpollEvent {
@@ -144,7 +144,7 @@ fn epoll_ctl_bad_fd_ebadf() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_wait reports EPOLLIN and the registered user data after writing an eventfd")]
 fn epoll_ctl_eventfd_add_wait() -> TestResult {
     let efd = check_ok!(
         syscall::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK),
@@ -172,7 +172,7 @@ fn epoll_ctl_eventfd_add_wait() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_wait reports the user data last set by EPOLL_CTL_MOD")]
 fn epoll_wait_data_preserved_across_mod() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -192,7 +192,7 @@ fn epoll_wait_data_preserved_across_mod() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "epoll_wait reports both pipe fds that have pending data")]
 fn epoll_wait_two_ready() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -225,7 +225,7 @@ fn epoll_wait_two_ready() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "an empty pipe write end registered with EPOLLOUT is immediately ready")]
 fn epoll_ctl_pipe_write_epollout() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -243,7 +243,7 @@ fn epoll_ctl_pipe_write_epollout() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "level-triggered epoll_wait reports the same unread pipe data on a second wait")]
 fn epoll_level_rearms_without_mod() -> TestResult {
     // Level-triggered: unread data stays ready across waits.
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
@@ -261,7 +261,7 @@ fn epoll_level_rearms_without_mod() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "EPOLLONESHOT delivers once then stays silent until EPOLL_CTL_MOD rearms it")]
 fn epoll_oneshot_needs_rearm() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -281,7 +281,7 @@ fn epoll_oneshot_needs_rearm() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "edge-triggered epoll_wait reports a new write and stays silent until another write")]
 fn epoll_et_edge_then_silent() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -301,7 +301,7 @@ fn epoll_et_edge_then_silent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = failure, case = "duplicate EPOLL_CTL_ADD of either of two independently added fds returns EEXIST")]
 fn epoll_ctl_two_fds_independent_eexist() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "p1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "p2");
@@ -329,7 +329,7 @@ fn epoll_ctl_two_fds_independent_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "closing a pipe writer makes the reader ready with EPOLLIN or EPOLLHUP")]
 fn epoll_hup_after_peer_close() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");
@@ -351,7 +351,7 @@ fn epoll_hup_after_peer_close() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "after EPOLL_CTL_DEL, writing the pipe does not produce an epoll_wait event")]
 fn epoll_del_then_no_event() -> TestResult {
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
     let ep = check_ok!(syscall::epoll_create1(0), "ep");

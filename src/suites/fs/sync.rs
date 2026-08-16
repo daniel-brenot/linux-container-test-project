@@ -5,13 +5,13 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::create_empty;
 use crate::syscall::{self, oflag};
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "sync returns success")]
 fn fs_sync_returns() -> TestResult {
     check_ok!(syscall::sync(), "sync");
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "syncfs on a file fd after write succeeds")]
 fn fs_syncfs_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"s")?;
@@ -22,7 +22,7 @@ fn fs_syncfs_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "syncfs after ftruncate succeeds")]
 fn fs_syncfs_after_ftruncate() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"st", 0o644), "create");
@@ -32,7 +32,7 @@ fn fs_syncfs_after_ftruncate() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "syncfs on an empty file fd succeeds")]
 fn fs_syncfs_empty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"e")?;
@@ -42,7 +42,7 @@ fn fs_syncfs_empty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "sync then syncfs on a written file fd succeeds")]
 fn fs_sync_then_syncfs() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"b", 0o644), "create");
@@ -53,7 +53,7 @@ fn fs_sync_then_syncfs() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "syncfs on a directory fd succeeds")]
 fn fs_syncfs_dir() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(syscall::open(tmp.path(), oflag::O_RDONLY | oflag::O_DIRECTORY, 0), "open");
@@ -62,7 +62,7 @@ fn fs_syncfs_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "syncfs after a multi-block write succeeds")]
 fn fs_syncfs_large_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"big", 0o644), "create");
@@ -75,14 +75,14 @@ fn fs_syncfs_large_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "calling sync twice succeeds")]
 fn fs_sync_twice() -> TestResult {
     check_ok!(syscall::sync(), "sync1");
     check_ok!(syscall::sync(), "sync2");
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "syncfs after fsync succeeds")]
 fn fs_syncfs_after_fsync() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"fs", 0o644), "create");
@@ -93,7 +93,7 @@ fn fs_syncfs_after_fsync() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "syncfs on a read-only file fd succeeds")]
 fn fs_syncfs_rdonly() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"ro")?;

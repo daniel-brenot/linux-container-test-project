@@ -10,7 +10,7 @@ use crate::syscall::{
     self, oflag, Errno, FALLOC_FL_KEEP_SIZE, FALLOC_FL_PUNCH_HOLE, FALLOC_FL_ZERO_RANGE,
 };
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fallocate grows a regular file to 4096 bytes")]
 fn fallocate_basic_grow() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -21,7 +21,7 @@ fn fallocate_basic_grow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fallocate at a nonzero offset extends the file size")]
 fn fallocate_offset_extend() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -33,7 +33,7 @@ fn fallocate_offset_extend() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fallocate with FALLOC_FL_KEEP_SIZE leaves the file size unchanged")]
 fn fallocate_keep_size() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -48,7 +48,7 @@ fn fallocate_keep_size() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "fallocate with FALLOC_FL_ZERO_RANGE zeros the range when supported")]
 fn fallocate_zero_range_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -75,7 +75,7 @@ fn fallocate_zero_range_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "fallocate with FALLOC_FL_PUNCH_HOLE punches a hole when supported")]
 fn fallocate_punch_hole_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -95,13 +95,13 @@ fn fallocate_punch_hole_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "fallocate on fd -1 returns EBADF")]
 fn fallocate_bad_fd() -> TestResult {
     check_err!(syscall::fallocate(-1, 0, 0, 1), Errno::EBADF, "ebadf");
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "fallocate with length 0 returns EINVAL")]
 fn fallocate_zero_len_einval() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -111,7 +111,7 @@ fn fallocate_zero_len_einval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "fallocate with a negative offset returns EINVAL")]
 fn fallocate_negative_offset() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -121,7 +121,7 @@ fn fallocate_negative_offset() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "fallocate on a read-only fd returns EBADF or EINVAL")]
 fn fallocate_rdonly_ebadf_or_einval() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -135,7 +135,7 @@ fn fallocate_rdonly_ebadf_or_einval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fallocate of the same range twice leaves size 2048")]
 fn fallocate_idempotent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -147,7 +147,7 @@ fn fallocate_idempotent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fallocate that extends a file preserves the existing prefix")]
 fn fallocate_preserves_prefix() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -162,7 +162,7 @@ fn fallocate_preserves_prefix() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "fallocate grows a regular file to 1 MiB")]
 fn fallocate_large() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -177,7 +177,7 @@ fn fallocate_large() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fallocate past EOF extends the file to offset plus length")]
 fn fallocate_beyond_current() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -188,7 +188,7 @@ fn fallocate_beyond_current() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat after fallocate reports the allocated size")]
 fn fallocate_then_stat_path() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -199,7 +199,7 @@ fn fallocate_then_stat_path() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fallocate on a write-only fd grows the file")]
 fn fallocate_wronly_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -210,7 +210,7 @@ fn fallocate_wronly_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fallocate with length 1 sets the file size to 1")]
 fn fallocate_small_len() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -221,7 +221,7 @@ fn fallocate_small_len() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fallocate after ftruncate grows the file to the allocated size")]
 fn fallocate_after_trunc() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -234,7 +234,7 @@ fn fallocate_after_trunc() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fallocate with FALLOC_FL_KEEP_SIZE beyond EOF leaves the size unchanged")]
 fn fallocate_keep_size_beyond_eof() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -249,7 +249,7 @@ fn fallocate_keep_size_beyond_eof() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fallocate of adjacent regions sets the combined file size")]
 fn fallocate_multiple_regions() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -261,7 +261,7 @@ fn fallocate_multiple_regions() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fallocate leaves the path as a regular file")]
 fn fallocate_path_still_reg() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;

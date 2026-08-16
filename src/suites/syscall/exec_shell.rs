@@ -41,7 +41,7 @@ fn exec_wait_full(path: &[u8], argv: &[*const u8]) -> Result<i32, crate::harness
     Ok(syscall::wexitstatus(status))
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "execve of /bin/sh -c 'exit 0' waits with exit status 0")]
 fn sh_exec_exit_zero() -> TestResult {
     check_ok!(syscall::access(b"/bin/sh\0", F_OK), "/bin/sh missing");
     let arg0 = b"sh\0";
@@ -58,7 +58,7 @@ fn sh_exec_exit_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "execve of /bin/sh -c 'echo ok' writes ok to a redirected stdout pipe")]
 fn sh_exec_echo_ok() -> TestResult {
     check_ok!(syscall::access(b"/bin/sh\0", F_OK), "/bin/sh missing");
     let (r, w) = check_ok!(syscall::pipe2(0), "pipe");
@@ -96,7 +96,7 @@ fn sh_exec_echo_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "/bin/sh -c 'test -c /dev/urandom' exits 0, or /bin/sh is absent")]
 fn sh_test_urandom_chr_soft() -> TestResult {
     if syscall::access(b"/bin/sh\0", F_OK).is_err() {
         return Ok(());
@@ -115,7 +115,7 @@ fn sh_test_urandom_chr_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "execve of /bin/bash -c 'exit 0' exits 0, or bash is absent")]
 fn bash_exec_exit_zero_soft() -> TestResult {
     if syscall::access(b"/bin/bash\0", F_OK).is_err() {
         return Ok(());
@@ -134,7 +134,7 @@ fn bash_exec_exit_zero_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "execve of true exits 0, or the true binary is absent")]
 fn true_exec_exit_zero_soft() -> TestResult {
     // Busybox/coreutils `true` is a tiny dynamically linked (or applet) binary.
     for path in [b"/usr/bin/true\0" as &[u8], b"/bin/true\0"] {
@@ -155,7 +155,7 @@ struct SoftInterp {
     argv: [&'static [u8]; 3],
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "an installed python, perl, or node one-liner exits 0, or none of those interpreters are present")]
 fn soft_interpreter_eval_exit_zero() -> TestResult {
     // Soft: if a common interpreter is installed, a one-liner must exit 0
     // (covers early runtime init / crypto / loader failures as SIGABRT or 134).
@@ -201,7 +201,7 @@ fn soft_interpreter_eval_exit_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "clone3 with SIGCHLD creates a child that exits 0, or is rejected as unsupported")]
 fn clone3_fork_like_soft() -> TestResult {
     let mut args = CloneArgs {
         exit_signal: SIGCHLD,

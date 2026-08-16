@@ -128,10 +128,10 @@ pub fn print_help(prog: &str) {
     crate::println!("  --bootstrap       Prerequisite / self-hosting tests");
     crate::println!("  --syscall         Linux syscall behaviour tests");
     crate::println!("  --posix           POSIX semantics tests");
-    crate::println!("  --fs              Filesystem semantics (pjdfstest-like)");
+    crate::println!("  --fs              Filesystem semantics tests");
     crate::println!();
     crate::println!("Other:");
-    crate::println!("  --list            List tests that would run, then exit");
+    crate::println!("  --list            List tests (suite, mode, expect, name, case)");
     crate::println!("  --no-color        Disable ANSI colors on pass/fail/skip");
     crate::println!("  -h, --help        Show this help");
 }

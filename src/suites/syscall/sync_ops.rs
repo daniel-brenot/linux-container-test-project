@@ -5,13 +5,13 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::create_empty;
 use crate::syscall::{self};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sync succeeds")]
 fn sync_returns() -> TestResult {
     check_ok!(syscall::sync(), "sync");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "syncfs on a written temporary file succeeds")]
 fn syncfs_temp_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"syncf")?;
@@ -22,7 +22,7 @@ fn syncfs_temp_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "syncfs after ftruncate succeeds")]
 fn syncfs_after_truncate() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"st", 0o644), "create");
@@ -32,14 +32,14 @@ fn syncfs_after_truncate() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sync can be called twice in a row")]
 fn sync_twice() -> TestResult {
     check_ok!(syscall::sync(), "sync1");
     check_ok!(syscall::sync(), "sync2");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "syncfs on a memfd succeeds")]
 fn syncfs_memfd() -> TestResult {
     let fd = check_ok!(syscall::memfd_create(b"syncm\0", 0), "memfd");
     check_ok!(syscall::write(fd, b"x"), "write");
@@ -48,7 +48,7 @@ fn syncfs_memfd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "syncfs on a directory fd succeeds")]
 fn syncfs_dir_fd() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(syscall::open(tmp.path(), crate::syscall::oflag::O_RDONLY | crate::syscall::oflag::O_DIRECTORY, 0), "open dir");
@@ -57,7 +57,7 @@ fn syncfs_dir_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "sync followed by syncfs on a file fd both succeed")]
 fn sync_then_syncfs() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"both")?;
@@ -68,7 +68,7 @@ fn sync_then_syncfs() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "syncfs on an empty file succeeds")]
 fn syncfs_empty_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"empty")?;

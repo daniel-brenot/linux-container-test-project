@@ -7,7 +7,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::create_empty;
 use crate::syscall::{self, oflag, KCMP_FILE};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kcmp KCMP_FILE of the same fd against itself returns 0")]
 fn kcmp_same_fd_equal() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"k")?;
@@ -22,7 +22,7 @@ fn kcmp_same_fd_equal() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kcmp KCMP_FILE of a fd and its dup returns 0")]
 fn kcmp_dup_fds_equal() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"kd")?;
@@ -39,7 +39,7 @@ fn kcmp_dup_fds_equal() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "kcmp KCMP_FILE of two distinct files returns nonzero")]
 fn kcmp_distinct_files_unequal() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;
@@ -57,7 +57,7 @@ fn kcmp_distinct_files_unequal() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "two kcmp KCMP_FILE comparisons of the same distinct fds return the same nonzero order")]
 fn kcmp_order_stable() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_empty(&mut tmp, b"a")?;

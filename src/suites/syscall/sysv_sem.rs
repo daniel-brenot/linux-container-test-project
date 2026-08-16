@@ -12,7 +12,7 @@ fn soft(e: Errno) -> bool {
     )
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "semctl SETVAL then GETVAL round-trips value 3 on an IPC_PRIVATE semaphore")]
 fn sysv_sem_ipc_private_setval_getval() -> TestResult {
     let semid = match syscall::semget(IPC_PRIVATE, 1, IPC_CREAT | 0o600) {
         Ok(id) => id,
@@ -44,7 +44,7 @@ fn sysv_sem_ipc_private_setval_getval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "semop -1 then +1 moves a System V semaphore from 1 to 0 then back to 1")]
 fn sysv_sem_op_down_up() -> TestResult {
     let semid = match syscall::semget(IPC_PRIVATE, 1, IPC_CREAT | 0o600) {
         Ok(id) => id,
@@ -84,7 +84,7 @@ fn sysv_sem_op_down_up() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = failure, case = "a second semctl IPC_RMID returns EINVAL, EPERM, or EIDRM")]
 fn sysv_sem_rmid_idempotent() -> TestResult {
     let semid = match syscall::semget(IPC_PRIVATE, 1, IPC_CREAT | 0o600) {
         Ok(id) => id,

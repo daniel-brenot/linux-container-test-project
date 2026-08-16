@@ -14,7 +14,7 @@ fn make_data_file(tmp: &mut TempDir, name: &[u8], data: &[u8]) -> Result<i32, cr
     Ok(fd)
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sendfile copies a regular file into another regular file")]
 fn sendfile_file_to_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = b"sendfile-payload-12345";
@@ -36,7 +36,7 @@ fn sendfile_file_to_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sendfile copies a regular file into a pipe")]
 fn sendfile_file_to_pipe() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = b"pipe-via-sendfile";
@@ -54,7 +54,7 @@ fn sendfile_file_to_pipe() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sendfile with a count of 4 copies the first four bytes of a file into a pipe")]
 fn sendfile_partial() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = b"0123456789";
@@ -72,7 +72,7 @@ fn sendfile_partial() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sendfile from a nonzero offset copies those bytes and advances the offset")]
 fn sendfile_with_offset() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = b"ABCDEFGH";
@@ -91,7 +91,7 @@ fn sendfile_with_offset() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "splice moves bytes from one pipe into another")]
 fn splice_pipe_to_pipe() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "pipe1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "pipe2");
@@ -109,7 +109,7 @@ fn splice_pipe_to_pipe() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "splice copies a regular file into a pipe")]
 fn splice_file_to_pipe() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = b"file-to-pipe-splice";
@@ -127,7 +127,7 @@ fn splice_file_to_pipe() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "splice copies a pipe into a regular file")]
 fn splice_pipe_to_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = b"pipe-to-file-splice";
@@ -149,7 +149,7 @@ fn splice_pipe_to_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "copy_file_range copies a whole regular file into another file")]
 fn copy_file_range_basic() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = b"copy_file_range_payload";
@@ -174,7 +174,7 @@ fn copy_file_range_basic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "copy_file_range from a nonzero input offset copies a six-byte slice")]
 fn copy_file_range_partial() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = b"0123456789ABCDEF";
@@ -199,7 +199,7 @@ fn copy_file_range_partial() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "copy_file_range with NULL offsets copies between two fds on the same filesystem")]
 fn copy_file_range_fd_to_fd() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let data = b"fd-to-fd-copy";
@@ -224,7 +224,7 @@ fn copy_file_range_fd_to_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sendfile with a count of zero copies zero bytes")]
 fn sendfile_zero_count() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let in_fd = make_data_file(&mut tmp, b"z", b"x")?;
@@ -238,7 +238,7 @@ fn sendfile_zero_count() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "tee copies pipe data into another pipe without consuming the input")]
 fn tee_pipe_to_pipe() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "pipe1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "pipe2");
@@ -260,7 +260,7 @@ fn tee_pipe_to_pipe() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "tee of four bytes copies the prefix and leaves the input pipe intact")]
 fn tee_partial() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "pipe1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "pipe2");
@@ -280,7 +280,7 @@ fn tee_partial() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "tee with a length of zero copies zero bytes")]
 fn tee_zero_len() -> TestResult {
     let (r1, w1) = check_ok!(syscall::pipe2(0), "pipe1");
     let (r2, w2) = check_ok!(syscall::pipe2(0), "pipe2");

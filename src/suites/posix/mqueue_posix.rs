@@ -81,7 +81,7 @@ fn cleanup(fd: i32, name: &[u8]) {
 
 macro_rules! mq_open_soft {
     ($name:ident, $tag:expr, $flags:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a named queue")]
         fn $name() -> TestResult {
             let mut buf = [0u8; 48];
             let name = mq_name(&mut buf, $tag);
@@ -101,7 +101,7 @@ mq_open_soft!(mq_posix_open_wronly, 3, oflag::O_CREAT | oflag::O_EXCL | oflag::O
 mq_open_soft!(mq_posix_open_nonblock, 4, oflag::O_CREAT | oflag::O_EXCL | oflag::O_RDWR | oflag::O_NONBLOCK);
 mq_open_soft!(mq_posix_open_cloexec, 5, oflag::O_CREAT | oflag::O_EXCL | oflag::O_RDWR | oflag::O_CLOEXEC);
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_unlink removes a queue that was just created")]
 fn mq_posix_unlink_soft() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 10);
@@ -117,7 +117,7 @@ fn mq_posix_unlink_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open with O_CREAT|O_EXCL on an existing queue returns EEXIST")]
 fn mq_posix_eexist_excl() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 11);
@@ -147,7 +147,7 @@ fn mq_posix_eexist_excl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload")]
 fn mq_posix_send_receive() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 12);
@@ -182,7 +182,7 @@ fn mq_posix_send_receive() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "higher-priority messages are received before lower-priority ones")]
 fn mq_posix_send_prio_order() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 13);
@@ -212,7 +212,7 @@ fn mq_posix_send_prio_order() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr reports positive maxmsg and msgsize")]
 fn mq_posix_getattr() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 14);
@@ -235,7 +235,7 @@ fn mq_posix_getattr() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_setattr can set O_NONBLOCK on a queue")]
 fn mq_posix_setattr_nonblock() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 15);
@@ -266,7 +266,7 @@ fn mq_posix_setattr_nonblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "nonblocking mq_receive on an empty queue returns EAGAIN")]
 fn mq_posix_nonblock_eagain_recv() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 16);
@@ -291,7 +291,7 @@ fn mq_posix_nonblock_eagain_recv() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_timedsend with a current timeout can enqueue a message")]
 fn mq_posix_timedsend_now() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 17);
@@ -323,7 +323,7 @@ fn mq_posix_timedsend_now() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_timedreceive on an empty queue times out or is unsupported")]
 fn mq_posix_timedreceive_timeout() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 18);
@@ -352,7 +352,7 @@ fn mq_posix_timedreceive_timeout() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a forked child can receive a message the parent sent")]
 fn mq_posix_fork_child_receive() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 19);
@@ -385,7 +385,7 @@ fn mq_posix_fork_child_receive() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_open of a missing name returns ENOENT or is unsupported")]
 fn mq_posix_missing_enoent_soft() -> TestResult {
     match syscall::mq_open(b"/lctp-mq-absent-posix\0", oflag::O_RDONLY, 0, None) {
         Err(e) if e == Errno::ENOENT || mq_unavailable(e) => Ok(()),
@@ -397,7 +397,7 @@ fn mq_posix_missing_enoent_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a second close of a message-queue fd is rejected or ignored")]
 fn mq_posix_close_twice_soft() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 20);
@@ -416,7 +416,7 @@ fn mq_posix_close_twice_soft() -> TestResult {
 
 macro_rules! mq_send_payload {
     ($name:ident, $tag:expr, $payload:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = soft, case = "mq_send then mq_receive round-trips a payload")]
         fn $name() -> TestResult {
             let mut buf = [0u8; 48];
             let name = mq_name(&mut buf, $tag);
@@ -454,7 +454,7 @@ mq_send_payload!(mq_posix_payload_emptyish, 37, b"x");
 
 macro_rules! mq_open_tag {
     ($name:ident, $tag:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = soft, case = "mq_open can create a uniquely named queue")]
         fn $name() -> TestResult {
             let mut buf = [0u8; 48];
             let name = mq_name(&mut buf, $tag);
@@ -488,7 +488,7 @@ mq_open_tag!(mq_posix_open_t57, 57);
 mq_open_tag!(mq_posix_open_t58, 58);
 mq_open_tag!(mq_posix_open_t59, 59);
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "several messages can be sent and received in order")]
 fn mq_posix_multi_send_recv() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 60);
@@ -516,7 +516,7 @@ fn mq_posix_multi_send_recv() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr curmsgs increases after a successful send")]
 fn mq_posix_getattr_curmsgs() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 61);
@@ -535,7 +535,7 @@ fn mq_posix_getattr_curmsgs() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a name can be reused after mq_unlink")]
 fn mq_posix_reopen_after_unlink_soft() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 62);
@@ -554,7 +554,7 @@ fn mq_posix_reopen_after_unlink_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send with priority zero can be received")]
 fn mq_posix_send_prio_zero() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 63);
@@ -579,7 +579,7 @@ fn mq_posix_send_prio_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_setattr can clear O_NONBLOCK on a queue")]
 fn mq_posix_setattr_clear_nonblock() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 64);
@@ -604,7 +604,7 @@ fn mq_posix_setattr_clear_nonblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "two named queues can be created at once")]
 fn mq_posix_two_queues() -> TestResult {
     let mut b1 = [0u8; 48];
     let mut b2 = [0u8; 48];
@@ -623,7 +623,7 @@ fn mq_posix_two_queues() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_timedsend with a past timeout succeeds or returns ETIMEDOUT")]
 fn mq_posix_timedsend_expired_soft() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 72);
@@ -653,7 +653,7 @@ fn mq_posix_timedsend_expired_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_unlink of a missing name returns ENOENT or is unsupported")]
 fn mq_posix_unlink_absent_soft() -> TestResult {
     match syscall::mq_unlink(b"/lctp-mq-never-existed\0") {
         Err(e) if e == Errno::ENOENT || mq_unavailable(e) => Ok(()),
@@ -662,7 +662,7 @@ fn mq_posix_unlink_absent_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "two send/receive round-trips succeed on the same queue")]
 fn mq_posix_send_receive_roundtrip_twice() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 73);
@@ -684,7 +684,7 @@ fn mq_posix_send_receive_roundtrip_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "two mq_getattr calls succeed on the same queue")]
 fn mq_posix_getattr_twice() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 74);
@@ -701,7 +701,7 @@ fn mq_posix_getattr_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mq_open with O_CREAT without O_EXCL can reopen an existing queue")]
 fn mq_posix_creat_without_excl() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 75);
@@ -721,7 +721,7 @@ fn mq_posix_creat_without_excl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send of an empty payload succeeds or is rejected")]
 fn mq_posix_send_empty_msg_soft() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 76);
@@ -740,7 +740,7 @@ fn mq_posix_send_empty_msg_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a parent can send a message a forked child receives")]
 fn mq_posix_fork_parent_send_child_recv() -> TestResult {
     let mut buf = [0u8; 48];
     let name = mq_name(&mut buf, 77);
@@ -781,7 +781,7 @@ fn mq_posix_fork_parent_send_child_recv() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_send on fd -1 returns EBADF or is unsupported")]
 fn mq_posix_bad_fd_send_soft() -> TestResult {
     match syscall::mq_send(-1, b"x", 0) {
         Err(e) if e == Errno::EBADF || mq_unavailable(e) => Ok(()),
@@ -790,7 +790,7 @@ fn mq_posix_bad_fd_send_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_receive on fd -1 returns EBADF or is unsupported")]
 fn mq_posix_bad_fd_recv_soft() -> TestResult {
     let mut msg = [0u8; 8];
     match syscall::mq_receive(-1, &mut msg, None) {
@@ -800,7 +800,7 @@ fn mq_posix_bad_fd_recv_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mq_getattr on fd -1 returns EBADF or is unsupported")]
 fn mq_posix_bad_fd_getattr_soft() -> TestResult {
     let mut attr = MqAttr::default();
     match syscall::mq_getattr(-1, &mut attr) {

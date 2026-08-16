@@ -27,28 +27,28 @@ fn is_ascii_digit(b: u8) -> bool {
     b.is_ascii_digit()
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "stat of /dev/urandom reports a character device")]
 fn urandom_stat_is_chr() -> TestResult {
     let st = check_ok!(syscall::stat(b"/dev/urandom\0"), "stat /dev/urandom");
     check!(st.is_chr(), "not character device");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "lstat of /dev/urandom reports a character device")]
 fn urandom_lstat_is_chr() -> TestResult {
     let st = check_ok!(syscall::lstat(b"/dev/urandom\0"), "lstat /dev/urandom");
     check!(st.is_chr(), "not character device");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "access of /dev/urandom succeeds for F_OK and R_OK")]
 fn urandom_access_rw() -> TestResult {
     check_ok!(syscall::access(b"/dev/urandom\0", F_OK), "F_OK");
     check_ok!(syscall::access(b"/dev/urandom\0", R_OK), "R_OK");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "opening /dev/urandom yields a character device that reads 32 bytes")]
 fn urandom_open_fstat_read() -> TestResult {
     let fd = check_ok!(
         syscall::open(b"/dev/urandom\0", oflag::O_RDONLY, 0),
@@ -78,7 +78,7 @@ fn urandom_open_fstat_read() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "two 64-byte reads from /dev/urandom return distinct buffers")]
 fn urandom_two_reads_differ() -> TestResult {
     let mut a = [0u8; 64];
     let mut b = [0u8; 64];
@@ -90,7 +90,7 @@ fn urandom_two_reads_differ() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "stat of /dev/random reports a character device, or the path is absent")]
 fn random_stat_is_chr_soft() -> TestResult {
     match syscall::stat(b"/dev/random\0") {
         Ok(st) => check!(st.is_chr(), "not character device"),
@@ -100,7 +100,7 @@ fn random_stat_is_chr_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "a nonblocking read of /dev/random returns data or EAGAIN, or the path is absent")]
 fn random_open_read_soft() -> TestResult {
     match syscall::open(b"/dev/random\0", oflag::O_RDONLY | oflag::O_NONBLOCK, 0) {
         Ok(fd) => {
@@ -122,7 +122,7 @@ fn random_open_read_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getdents64 of /dev includes an entry named urandom")]
 fn dev_dir_lists_urandom() -> TestResult {
     let fd = check_ok!(
         syscall::open(b"/dev\0", oflag::O_RDONLY | oflag::O_DIRECTORY, 0),
@@ -164,7 +164,7 @@ fn dev_dir_lists_urandom() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "reading /proc/sys/kernel/random/entropy_avail returns a decimal integer")]
 fn proc_random_entropy_avail() -> TestResult {
     let mut buf = [0u8; 64];
     let n = read_all_small(b"/proc/sys/kernel/random/entropy_avail\0", &mut buf)?;
@@ -176,7 +176,7 @@ fn proc_random_entropy_avail() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "reading /proc/sys/kernel/random/uuid returns a 36-character UUID")]
 fn proc_random_uuid() -> TestResult {
     let mut buf = [0u8; 64];
     let n = read_all_small(b"/proc/sys/kernel/random/uuid\0", &mut buf)?;
@@ -195,7 +195,7 @@ fn proc_random_uuid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "reading /proc/sys/kernel/random/poolsize returns a decimal integer")]
 fn proc_random_poolsize() -> TestResult {
     let mut buf = [0u8; 64];
     let n = read_all_small(b"/proc/sys/kernel/random/poolsize\0", &mut buf)?;
@@ -205,7 +205,7 @@ fn proc_random_poolsize() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "boot_id is readable and at least 36 bytes, or the path is absent")]
 fn proc_random_boot_id_soft() -> TestResult {
     match syscall::access(b"/proc/sys/kernel/random/boot_id\0", R_OK) {
         Ok(()) => {
@@ -219,7 +219,7 @@ fn proc_random_boot_id_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getrandom and /dev/urandom each fill a 32-byte buffer")]
 fn getrandom_matches_urandom_surface() -> TestResult {
     // Both entropy paths must produce full buffers.
     let mut g = [0u8; 32];

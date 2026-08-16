@@ -19,7 +19,7 @@ fn soft(e: Errno) -> bool {
     )
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "landlock_create_ruleset with VERSION returns an ABI of at least 1, or is rejected as unsupported")]
 fn landlock_create_ruleset_version_soft() -> TestResult {
     match syscall::landlock_create_ruleset(None, 0, LANDLOCK_CREATE_RULESET_VERSION) {
         Ok(v) => {
@@ -31,7 +31,7 @@ fn landlock_create_ruleset_version_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "landlock_create_ruleset with an EXECUTE ruleset attr returns a fd, or is rejected as unsupported")]
 fn landlock_create_ruleset_attr_soft() -> TestResult {
     let attr = LandlockRulesetAttr {
         handled_access_fs: LANDLOCK_ACCESS_FS_EXECUTE,
@@ -51,7 +51,7 @@ fn landlock_create_ruleset_attr_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "a child can create a landlock ruleset and call restrict_self, or skip if unsupported")]
 fn landlock_restrict_self_in_child_soft() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {

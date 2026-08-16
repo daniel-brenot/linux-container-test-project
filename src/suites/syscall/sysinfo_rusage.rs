@@ -5,35 +5,35 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, RUSAGE_CHILDREN, RUSAGE_SELF};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sysinfo reports a positive uptime")]
 fn sysinfo_uptime_positive() -> TestResult {
     let info = check_ok!(syscall::sysinfo(), "sysinfo");
     check!(info.uptime > 0, "uptime");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sysinfo reports a positive totalram")]
 fn sysinfo_totalram_positive() -> TestResult {
     let info = check_ok!(syscall::sysinfo(), "sysinfo");
     check!(info.totalram > 0, "totalram");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sysinfo reports freeram less than or equal to totalram")]
 fn sysinfo_freeram_le_total() -> TestResult {
     let info = check_ok!(syscall::sysinfo(), "sysinfo");
     check!(info.freeram <= info.totalram, "free <= total");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sysinfo reports a positive process count")]
 fn sysinfo_procs_positive() -> TestResult {
     let info = check_ok!(syscall::sysinfo(), "sysinfo");
     check!(info.procs > 0, "procs");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getrusage RUSAGE_SELF reports non-negative user and system time")]
 fn getrusage_self() -> TestResult {
     let ru = check_ok!(syscall::getrusage(RUSAGE_SELF), "getrusage");
     check!(ru.ru_utime.tv_sec >= 0, "utime sec");
@@ -41,7 +41,7 @@ fn getrusage_self() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getrusage RUSAGE_SELF reports non-negative minor and major fault counts")]
 fn getrusage_self_non_negative_faults() -> TestResult {
     let ru = check_ok!(syscall::getrusage(RUSAGE_SELF), "getrusage");
     check!(ru.ru_minflt >= 0, "minflt");
@@ -49,7 +49,7 @@ fn getrusage_self_non_negative_faults() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "getrusage RUSAGE_CHILDREN after wait4 reports non-negative child times")]
 fn getrusage_children_after_wait() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -62,7 +62,7 @@ fn getrusage_children_after_wait() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "times reports non-negative tms_utime and tms_stime")]
 fn times_self() -> TestResult {
     let t = check_ok!(syscall::times(), "times");
     check!(t.tms_utime >= 0, "utime");
@@ -70,7 +70,7 @@ fn times_self() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "times reports non-negative tms_cutime and tms_cstime")]
 fn times_cutime_cstime() -> TestResult {
     let t = check_ok!(syscall::times(), "times");
     check!(t.tms_cutime >= 0, "cutime");
@@ -78,7 +78,7 @@ fn times_cutime_cstime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "times tms_utime does not decrease after a burst of getpid calls")]
 fn times_after_work() -> TestResult {
     let t1 = check_ok!(syscall::times(), "times1");
     for _ in 0..1000 {
@@ -89,14 +89,14 @@ fn times_after_work() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sysinfo reports mem_unit of at least 1")]
 fn sysinfo_mem_unit() -> TestResult {
     let info = check_ok!(syscall::sysinfo(), "sysinfo");
     check!(info.mem_unit >= 1, "mem_unit");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sysinfo load averages are readable finite values")]
 fn sysinfo_loads_non_negative() -> TestResult {
     let info = check_ok!(syscall::sysinfo(), "sysinfo");
     for l in info.loads {
@@ -106,7 +106,7 @@ fn sysinfo_loads_non_negative() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "getrusage RUSAGE_SELF reports non-negative inblock and oublock counts")]
 fn getrusage_inblock_oublock() -> TestResult {
     let ru = check_ok!(syscall::getrusage(RUSAGE_SELF), "getrusage");
     check!(ru.ru_inblock >= 0, "inblock");

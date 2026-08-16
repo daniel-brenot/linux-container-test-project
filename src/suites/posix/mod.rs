@@ -1,4 +1,4 @@
-//! POSIX semantics tests (Open POSIX–inspired, unprivileged-only).
+//! POSIX semantics tests (unprivileged-only).
 
 mod aio_posix;
 mod errno;

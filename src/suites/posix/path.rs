@@ -8,7 +8,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_dir, create_empty, join_path, truncate_cstr, write_file};
 use crate::syscall::{self, oflag, Errno};
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_CREAT|O_EXCL creates a new file and a second call returns EEXIST")]
 fn open_creat_excl() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"file")?;
@@ -25,7 +25,7 @@ fn open_creat_excl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_DIRECTORY succeeds on a directory and returns ENOTDIR on a regular file")]
 fn open_directory_flag() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(
@@ -43,7 +43,7 @@ fn open_directory_flag() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() with O_NOFOLLOW on a symlink returns ELOOP")]
 fn open_nofollow_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"file")?;
@@ -57,7 +57,7 @@ fn open_nofollow_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat() of a subdirectory's .. reports the same inode as the parent directory")]
 fn path_dot_dotdot() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let sub = copy_child(&mut tmp, b"subdir")?;
@@ -72,7 +72,7 @@ fn path_dot_dotdot() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat() of a directory's . reports the same inode as the directory")]
 fn path_dot_current() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let sub = copy_child(&mut tmp, b"sub")?;
@@ -86,7 +86,7 @@ fn path_dot_current() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a regular file path with a trailing slash returns ENOTDIR")]
 fn trailing_slash_on_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"file")?;
@@ -103,7 +103,7 @@ fn trailing_slash_on_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() of a directory path with a trailing slash and O_DIRECTORY succeeds")]
 fn trailing_slash_on_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = copy_child(&mut tmp, b"dir")?;
@@ -122,7 +122,7 @@ fn trailing_slash_on_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_TRUNC of an existing file sets the file size to 0")]
 fn open_trunc_zeros_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -134,7 +134,7 @@ fn open_trunc_zeros_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "write() on a file opened O_APPEND appends even after lseek() to offset 0")]
 fn open_append_at_eof() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -151,7 +151,7 @@ fn open_append_at_eof() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "open() with O_CREAT|O_EXCL creates a regular file with owner-read permission")]
 fn open_creat_mode() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"modefile")?;
@@ -166,7 +166,7 @@ fn open_creat_mode() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_RDWR of an existing file allows write()")]
 fn open_rdwr_existing() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -176,7 +176,7 @@ fn open_rdwr_existing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat() of a directory path with a trailing extra slash reports the same inode")]
 fn path_multiple_slashes() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let sub = copy_child(&mut tmp, b"sub")?;
@@ -194,7 +194,7 @@ fn path_multiple_slashes() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat() of a directory path with three trailing slashes reports the same inode")]
 fn path_triple_slashes() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let sub = copy_child(&mut tmp, b"t")?;
@@ -213,7 +213,7 @@ fn path_triple_slashes() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat() of a path containing repeated ./ components reports the same inode as the file")]
 fn path_dot_slash_chains() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -225,7 +225,7 @@ fn path_dot_slash_chains() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat() of a path through a subdirectory's ../file reports the same inode as the file")]
 fn path_dotdot_chains() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let sub = create_dir(&mut tmp, b"s", 0o755)?;
@@ -238,7 +238,7 @@ fn path_dotdot_chains() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a pair of mutually recursive symlinks returns ELOOP")]
 fn path_symlink_loop_eloop() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = copy_child(&mut tmp, b"a")?;
@@ -253,7 +253,7 @@ fn path_symlink_loop_eloop() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a symlink that points to itself returns ELOOP")]
 fn path_symlink_self_loop_eloop() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = copy_child(&mut tmp, b"self")?;
@@ -266,7 +266,7 @@ fn path_symlink_self_loop_eloop() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "openat(AT_FDCWD) opens a relative path after chdir() to its directory")]
 fn path_openat_at_fdcwd_relative() -> TestResult {
     let mut saved = [0u8; 256];
     let n = check_ok!(syscall::getcwd(&mut saved), "save");
@@ -282,7 +282,7 @@ fn path_openat_at_fdcwd_relative() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "openat() opens a relative path against a directory file descriptor")]
 fn path_openat_dirfd_relative() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"inside")?;
@@ -299,7 +299,7 @@ fn path_openat_dirfd_relative() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "openat(AT_FDCWD) of a relative path that does not exist returns ENOENT")]
 fn path_openat_at_fdcwd_missing() -> TestResult {
     check_err!(
         syscall::openat(syscall::AT_FDCWD, b"lctp-no-such-rel-path\0", oflag::O_RDONLY, 0),
@@ -309,7 +309,7 @@ fn path_openat_at_fdcwd_missing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "mkdir() of a path with a trailing slash creates the directory")]
 fn path_trailing_slash_mkdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = copy_child(&mut tmp, b"ts")?;
@@ -323,7 +323,7 @@ fn path_trailing_slash_mkdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() of a directory path with two trailing slashes and O_DIRECTORY succeeds")]
 fn path_trailing_double_slash_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"dd", 0o755)?;
@@ -342,7 +342,7 @@ fn path_trailing_double_slash_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() with O_CREAT creates a relative name of 119 bytes after chdir()")]
 fn path_long_relative_name() -> TestResult {
     let mut saved = [0u8; 256];
     let n = check_ok!(syscall::getcwd(&mut saved), "save");
@@ -362,7 +362,7 @@ fn path_long_relative_name() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "open() of a relative path with repeated ./ components succeeds after chdir()")]
 fn path_long_relative_nested_dots() -> TestResult {
     let mut saved = [0u8; 256];
     let n = check_ok!(syscall::getcwd(&mut saved), "save");
@@ -378,7 +378,7 @@ fn path_long_relative_nested_dots() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat() of a path with an empty component between slashes reports the same inode as the file")]
 fn path_empty_component_slashes() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"g")?;
@@ -396,7 +396,7 @@ fn path_empty_component_slashes() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat() of a directory via ../dirname reports the same inode as the directory")]
 fn path_dotdot_to_same_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let sub = create_dir(&mut tmp, b"x", 0o755)?;
@@ -409,7 +409,7 @@ fn path_dotdot_to_same_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "openat() with O_CREAT|O_EXCL creates a relative file and a second call returns EEXIST")]
 fn path_openat_creat_excl() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let dirfd = check_ok!(
@@ -441,7 +441,7 @@ fn path_openat_creat_excl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat(.) after chdir() reports the same inode as the absolute directory path")]
 fn path_stat_dot_equals_cwd_dir() -> TestResult {
     let mut saved = [0u8; 256];
     let n = check_ok!(syscall::getcwd(&mut saved), "save");
@@ -454,7 +454,7 @@ fn path_stat_dot_equals_cwd_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "lstat() of a symlink reports a symbolic link rather than the target")]
 fn path_lstat_symlink_is_lnk() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"t")?;
@@ -465,7 +465,7 @@ fn path_lstat_symlink_is_lnk() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "stat() of a symlink reports the same inode as the target file")]
 fn path_stat_follows_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"t")?;
@@ -477,7 +477,7 @@ fn path_stat_follows_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() of a directory with O_DIRECTORY|O_CLOEXEC sets FD_CLOEXEC")]
 fn path_open_cloexec_directory() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(
@@ -494,7 +494,7 @@ fn path_open_cloexec_directory() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() of a symlink-to-directory path with a trailing slash and O_DIRECTORY succeeds")]
 fn path_trailing_slash_symlink_to_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -514,7 +514,7 @@ fn path_trailing_slash_symlink_to_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "open() of a symlink-to-file path with a trailing slash returns ENOTDIR")]
 fn path_trailing_slash_symlink_to_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let _ = create_empty(&mut tmp, b"f")?;
@@ -533,7 +533,7 @@ fn path_trailing_slash_symlink_to_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "stat() of a path with nested ../ components reports the same inode as the target file")]
 fn path_deep_dotdot_chain() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = create_dir(&mut tmp, b"a", 0o755)?;
@@ -549,7 +549,7 @@ fn path_deep_dotdot_chain() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "openat() with dirfd -1 returns EBADF")]
 fn path_openat_bad_dirfd_ebadf() -> TestResult {
     check_err!(
         syscall::openat(-1, b"x\0", oflag::O_RDONLY, 0),
@@ -559,7 +559,7 @@ fn path_openat_bad_dirfd_ebadf() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() of a relative filename succeeds after chdir() to that directory")]
 fn path_relative_open_after_chdir() -> TestResult {
     let mut saved = [0u8; 256];
     let n = check_ok!(syscall::getcwd(&mut saved), "save");
@@ -572,7 +572,7 @@ fn path_relative_open_after_chdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "open() of a 299-byte filename returns ENAMETOOLONG or succeeds or is rejected as unsupported")]
 fn path_nametoolong_soft() -> TestResult {
     let mut saved = [0u8; 256];
     let n = check_ok!(syscall::getcwd(&mut saved), "save");
@@ -596,7 +596,7 @@ fn path_nametoolong_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "open() of a directory via a trailing . component with O_DIRECTORY succeeds")]
 fn path_dot_component_open() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"z")?;

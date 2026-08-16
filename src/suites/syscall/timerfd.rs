@@ -6,7 +6,7 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self, clock, fcntl_cmd, oflag, FD_CLOEXEC, Itimerspec, TFD_CLOEXEC, Timespec};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "timerfd_create with CLOCK_MONOTONIC succeeds")]
 fn timerfd_create_monotonic() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "create");
     check!(fd >= 0, "bad fd");
@@ -14,14 +14,14 @@ fn timerfd_create_monotonic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "timerfd_create with CLOCK_REALTIME succeeds")]
 fn timerfd_create_realtime() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_REALTIME, 0), "create");
     check_ok!(syscall::close(fd), "close");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "timerfd_create with TFD_CLOEXEC sets FD_CLOEXEC")]
 fn timerfd_create_cloexec() -> TestResult {
     let fd = check_ok!(
         syscall::timerfd_create(clock::CLOCK_MONOTONIC, TFD_CLOEXEC),
@@ -33,7 +33,7 @@ fn timerfd_create_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "timerfd_settime can arm a one-second relative timer")]
 fn timerfd_settime_relative() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "create");
     let new_val = Itimerspec {
@@ -45,7 +45,7 @@ fn timerfd_settime_relative() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "timerfd_gettime reports a nonzero remaining value after arming")]
 fn timerfd_gettime_after_set() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "create");
     let new_val = Itimerspec {
@@ -59,7 +59,7 @@ fn timerfd_gettime_after_set() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "timerfd_gettime on a new timer reports a zero remaining value")]
 fn timerfd_gettime_disarmed() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "create");
     let cur = check_ok!(syscall::timerfd_gettime(fd), "gettime");
@@ -69,7 +69,7 @@ fn timerfd_gettime_disarmed() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "read after a short timerfd expiry returns an expiration count")]
 fn timerfd_read_expiry() -> TestResult {
     let fd = check_ok!(
         syscall::timerfd_create(clock::CLOCK_MONOTONIC, oflag::O_NONBLOCK),
@@ -91,7 +91,7 @@ fn timerfd_read_expiry() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "timerfd_settime with a repeating interval is visible via timerfd_gettime")]
 fn timerfd_short_interval() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "create");
     let new_val = Itimerspec {
@@ -105,7 +105,7 @@ fn timerfd_short_interval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "timerfd_settime with a zero it_value disarms the timer")]
 fn timerfd_disarm_with_zero() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "create");
     let arm = Itimerspec {
@@ -121,7 +121,7 @@ fn timerfd_disarm_with_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "timerfd_create with TFD_CLOEXEC and O_NONBLOCK sets FD_CLOEXEC")]
 fn timerfd_create_cloexec_nonblock() -> TestResult {
     let fd = check_ok!(
         syscall::timerfd_create(clock::CLOCK_MONOTONIC, TFD_CLOEXEC | oflag::O_NONBLOCK),
@@ -133,7 +133,7 @@ fn timerfd_create_cloexec_nonblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "timerfd_settime can arm a 100-millisecond relative timer")]
 fn timerfd_settime_short_relative() -> TestResult {
     let fd = check_ok!(syscall::timerfd_create(clock::CLOCK_MONOTONIC, 0), "create");
     let new_val = Itimerspec {

@@ -1,5 +1,5 @@
-//! pjdfstest-inspired depth4: denser chmod/fchmod/open/unlink/mkdir/rename/link/
-//! symlink/truncate/access/stat/fallocate/utimensat/renameat2 matrices + ctime (full).
+//! Denser chmod/fchmod/open/unlink/mkdir/rename/link/
+//! symlink/truncate/access/stat/fallocate/utimensat/renameat2 matrices and ctime (full).
 
 use crate::check;
 use crate::check_eq;
@@ -25,7 +25,7 @@ fn soft(e: Errno) -> bool {
 
 macro_rules! chmod_file_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("chmod on a regular file sets mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"f")?;
@@ -40,7 +40,7 @@ macro_rules! chmod_file_mode {
 
 macro_rules! fchmod_file_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("fchmod on a regular file sets mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"f")?;
@@ -57,7 +57,7 @@ macro_rules! fchmod_file_mode {
 
 macro_rules! chmod_dir_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("chmod on a directory sets mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -73,7 +73,7 @@ macro_rules! chmod_dir_mode {
 
 macro_rules! eacces_open {
     ($name:ident, $mode:expr, $flags:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "open after chmod without the required permission bits returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"f")?;
@@ -87,7 +87,7 @@ macro_rules! eacces_open {
 
 macro_rules! eacces_access {
     ($name:ident, $mode:expr, $want:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "access with bits not granted by the file mode returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"f")?;
@@ -101,7 +101,7 @@ macro_rules! eacces_access {
 
 macro_rules! eacces_dir_unlink {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "unlink in a directory without write permission returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -125,7 +125,7 @@ macro_rules! eacces_dir_unlink {
 
 macro_rules! eacces_dir_mkdir {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "mkdir in a directory without write permission returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -142,7 +142,7 @@ macro_rules! eacces_dir_mkdir {
 
 macro_rules! eacces_dir_rename_into {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "rename into a directory without write permission returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -160,7 +160,7 @@ macro_rules! eacces_dir_rename_into {
 
 macro_rules! eacces_dir_link_into {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = "link into a directory without write permission returns EACCES")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -178,7 +178,7 @@ macro_rules! eacces_dir_link_into {
 
 macro_rules! open_creat_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("open O_CREAT creates a regular file with mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = copy_child(&mut tmp, b"oc")?;
@@ -197,7 +197,7 @@ macro_rules! open_creat_mode {
 
 macro_rules! trunc_size {
     ($name:ident, $sz:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("truncate sets the file size to ", stringify!($sz)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"t")?;
@@ -212,7 +212,7 @@ macro_rules! trunc_size {
 
 macro_rules! rename_pair {
     ($name:ident, $a:expr, $b:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "rename of a regular file to a new name succeeds and removes the old path")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let s = create_empty(&mut tmp, $a)?;
@@ -228,7 +228,7 @@ macro_rules! rename_pair {
 
 macro_rules! link_pair {
     ($name:ident, $a:expr, $b:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "link creates a second name that shares the source inode")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let s = create_empty(&mut tmp, $a)?;
@@ -247,7 +247,7 @@ macro_rules! link_pair {
 
 macro_rules! symlink_pair {
     ($name:ident, $tgt:expr, $link:expr, $tgt_c:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "symlink creates a symbolic link that lstat reports as a link")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let _ = create_empty(&mut tmp, $tgt)?;
@@ -263,7 +263,7 @@ macro_rules! symlink_pair {
 
 macro_rules! unlink_name {
     ($name:ident, $nm:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "unlink of a regular file succeeds and the path is gone")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, $nm)?;
@@ -276,7 +276,7 @@ macro_rules! unlink_name {
 
 macro_rules! mkdir_rmdir {
     ($name:ident, $nm:expr, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "mkdir creates a directory and rmdir removes it")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let d = create_dir(&mut tmp, $nm, $mode)?;
@@ -291,7 +291,7 @@ macro_rules! mkdir_rmdir {
 
 macro_rules! access_ok {
     ($name:ident, $mode:expr, $want:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = "access with bits granted by the file mode succeeds")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"f")?;
@@ -305,7 +305,7 @@ macro_rules! access_ok {
 
 macro_rules! falloc_soft {
     ($name:ident, $mode:expr, $off:expr, $len:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = soft, case = "fallocate with the requested mode succeeds when the filesystem supports it")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"fa")?;
@@ -327,7 +327,7 @@ macro_rules! falloc_soft {
 
 macro_rules! utimens_explicit {
     ($name:ident, $sec:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("utimensat sets mtime to ", stringify!($sec)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = create_empty(&mut tmp, b"u")?;
@@ -345,7 +345,7 @@ macro_rules! utimens_explicit {
 
 macro_rules! fifo_nb {
     ($name:ident, $flags:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = soft, case = "open of a FIFO with O_NONBLOCK succeeds or returns ENXIO when no peer is present")]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "t");
             let p = copy_child(&mut tmp, b"fifo")?;
@@ -729,7 +729,7 @@ fifo_nb!(d4_fifo_rd_ce, oflag::O_RDONLY | oflag::O_CLOEXEC);
 fifo_nb!(d4_fifo_wr_ce, oflag::O_WRONLY | oflag::O_CLOEXEC);
 fifo_nb!(d4_fifo_rdwr_ce, oflag::O_RDWR | oflag::O_CLOEXEC);
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open with O_CREAT|O_EXCL on an existing file returns EEXIST")]
 fn d4_open_excl_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"e")?;
@@ -741,7 +741,7 @@ fn d4_open_excl_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a missing path returns ENOENT")]
 fn d4_open_enoent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = copy_child(&mut tmp, b"missing")?;
@@ -749,7 +749,7 @@ fn d4_open_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a directory O_WRONLY returns EISDIR")]
 fn d4_open_dir_eisdir_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -758,7 +758,7 @@ fn d4_open_dir_eisdir_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a directory O_RDWR returns EISDIR")]
 fn d4_open_dir_eisdir_rdwr() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -767,7 +767,7 @@ fn d4_open_dir_eisdir_rdwr() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a regular file with a trailing slash returns ENOTDIR")]
 fn d4_open_trailing_slash_file_enotdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -784,7 +784,7 @@ fn d4_open_trailing_slash_file_enotdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open of a directory with O_DIRECTORY succeeds")]
 fn d4_open_directory_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -797,7 +797,7 @@ fn d4_open_directory_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a regular file with O_DIRECTORY returns ENOTDIR")]
 fn d4_open_directory_on_file_enotdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -809,7 +809,7 @@ fn d4_open_directory_on_file_enotdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_CLOEXEC sets FD_CLOEXEC")]
 fn d4_open_cloexec() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -820,7 +820,7 @@ fn d4_open_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "open with O_PATH succeeds when the interface is supported")]
 fn d4_open_path() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -832,7 +832,7 @@ fn d4_open_path() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_APPEND writes after existing data")]
 fn d4_open_append_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -845,7 +845,7 @@ fn d4_open_append_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "open with O_TRUNC sets the file size to 0")]
 fn d4_open_trunc() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -857,7 +857,7 @@ fn d4_open_trunc() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "open of a symlink with O_NOFOLLOW returns ELOOP")]
 fn d4_open_nofollow_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let _t = create_empty(&mut tmp, b"tgt")?;
@@ -872,7 +872,7 @@ fn d4_open_nofollow_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a regular file reports type, nlink 1, and size 0")]
 fn d4_stat_reg_type() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -883,7 +883,7 @@ fn d4_stat_reg_type() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat of a directory reports a directory with nlink at least 2")]
 fn d4_stat_dir_type() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -894,7 +894,7 @@ fn d4_stat_dir_type() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat after write reports the written size")]
 fn d4_stat_size_after_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -905,7 +905,7 @@ fn d4_stat_size_after_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "stat reports nlink 3 after two extra hard links")]
 fn d4_stat_nlink_hardlinks() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -920,7 +920,7 @@ fn d4_stat_nlink_hardlinks() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "renameat2 with RENAME_NOREPLACE onto a missing path succeeds when supported")]
 fn d4_renameat2_noreplace_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -936,7 +936,7 @@ fn d4_renameat2_noreplace_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "renameat2 with RENAME_NOREPLACE over an existing path returns EEXIST when supported")]
 fn d4_renameat2_noreplace_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -950,7 +950,7 @@ fn d4_renameat2_noreplace_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "renameat2 with RENAME_EXCHANGE swaps two files when supported")]
 fn d4_renameat2_exchange() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -975,7 +975,7 @@ fn d4_renameat2_exchange() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = soft, case = "renameat2 with RENAME_EXCHANGE swaps two directories when supported")]
 fn d4_renameat2_exchange_dirs() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_dir(&mut tmp, b"da", 0o755)?;
@@ -998,7 +998,7 @@ fn d4_renameat2_exchange_dirs() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir of a directory that contains a file returns ENOTEMPTY")]
 fn d4_rmdir_notempty() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -1016,7 +1016,7 @@ fn d4_rmdir_notempty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mkdir on an existing directory returns EEXIST")]
 fn d4_mkdir_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let d = create_dir(&mut tmp, b"d", 0o755)?;
@@ -1025,7 +1025,7 @@ fn d4_mkdir_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "link onto an existing path returns EEXIST")]
 fn d4_link_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -1034,7 +1034,7 @@ fn d4_link_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "symlink onto an existing file returns EEXIST")]
 fn d4_symlink_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -1042,7 +1042,7 @@ fn d4_symlink_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "unlink of a missing path returns ENOENT")]
 fn d4_unlink_enoent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = copy_child(&mut tmp, b"gone")?;
@@ -1050,7 +1050,7 @@ fn d4_unlink_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "rmdir of a missing path returns ENOENT")]
 fn d4_rmdir_enoent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = copy_child(&mut tmp, b"gone")?;
@@ -1058,7 +1058,7 @@ fn d4_rmdir_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "utimensat with UTIME_NOW sets a positive mtime")]
 fn d4_ut_now() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"u")?;
@@ -1078,7 +1078,7 @@ fn d4_ut_now() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "utimensat with UTIME_OMIT leaves mtime unchanged")]
 fn d4_ut_omit_both() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"u")?;
@@ -1099,7 +1099,7 @@ fn d4_ut_omit_both() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "utimensat with UTIME_OMIT for atime sets only mtime")]
 fn d4_ut_omit_atime_set_mtime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"u")?;
@@ -1121,7 +1121,7 @@ fn d4_ut_omit_atime_set_mtime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "utimensat with UTIME_OMIT for mtime sets only atime")]
 fn d4_ut_set_atime_omit_mtime() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"u")?;
@@ -1143,7 +1143,7 @@ fn d4_ut_set_atime_omit_mtime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "write advances ctime on a regular file")]
 fn d4_ctime_on_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -1163,7 +1163,7 @@ fn d4_ctime_on_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "write advances mtime on a regular file")]
 fn d4_mtime_on_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -1183,7 +1183,7 @@ fn d4_mtime_on_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "chmod advances ctime on a regular file")]
 fn d4_ctime_on_chmod() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -1204,7 +1204,7 @@ fn d4_ctime_on_chmod() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "fchmod advances ctime on a regular file")]
 fn d4_ctime_on_fchmod() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;
@@ -1227,7 +1227,7 @@ fn d4_ctime_on_fchmod() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "link advances ctime on the source file")]
 fn d4_ctime_on_link() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let a = create_empty(&mut tmp, b"a")?;
@@ -1248,7 +1248,7 @@ fn d4_ctime_on_link() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "truncate advances ctime on a regular file")]
 fn d4_ctime_on_truncate() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "t");
     let p = create_empty(&mut tmp, b"f")?;

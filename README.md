@@ -1,19 +1,18 @@
 # Linux Container Test
 
 Freestanding Rust (`no_std` / `no_main`) suite that verifies Linux container
-runtimes by calling the kernel syscall ABI directly. One musl-static binary
-covers the behaviours previously exercised via LTP, Open POSIX, and pjdfstest —
-without Python, Perl, or a separate glibc build.
+runtimes by calling the kernel syscall ABI directly. One static binary covers
+syscall, POSIX, and filesystem behaviour without a C library.
 
 ## Suites
 
 | Suite | Flag | Role |
 |-------|------|------|
 | **bootstrap** | `--bootstrap` | Prerequisites for everything else. Always runs first; remaining suites are refused if it fails. |
-| **syscall** | `--syscall` | Linux syscall behaviour (LTP-inspired, unprivileged only): files, process, memory, time, IPC, net, signals, inotify, pidfd, … |
-| **posix** | `--posix` | Open POSIX–style groups (SIG/THR/TMR/MSG/SEM/MEM/sched/AIO soft) via raw syscalls and freestanding `clone` threads |
-| **fs** | `--fs` | Filesystem semantics (pjdfstest-inspired): chmod, link, mkdir, mkfifo, open, rename, rmdir, symlink, truncate, unlink, utimensat, flock, statfs, sync, chown-EPERM |
-Only tests that work in a **non-privileged** Docker container are included (~5376 cases in `--full`).
+| **syscall** | `--syscall` | Linux syscall behaviour (unprivileged only): files, process, memory, time, IPC, net, signals, inotify, pidfd, … |
+| **posix** | `--posix` | POSIX semantics (signals, threads, timers, message queues, semaphores, memory, scheduling, AIO) via raw syscalls and freestanding `clone` threads |
+| **fs** | `--fs` | Filesystem semantics: chmod, link, mkdir, mkfifo, open, rename, rmdir, symlink, truncate, unlink, utimensat, flock, statfs, sync, chown-EPERM |
+Only tests that work in a **non-privileged** container are included (~5376 cases in `--full`).
 
 ## Build
 
@@ -71,16 +70,18 @@ lctp-macros/           #[lctp_test] proc-macro
 Tests are registered with attributes instead of static arrays:
 
 ```rust
-#[lctp_test(suite = fs)]
+#[lctp_test(suite = fs, expect = success, case = "chmod on a regular file sets mode 0644")]
 fn chmod_file_644() -> TestResult { ... }
 
-#[lctp_test(suite = fs, full)]
+#[lctp_test(suite = fs, full, expect = success, case = "chmod on a regular file sets mode 0777")]
 fn chmod_file_777() -> TestResult { ... }
 ```
 
+`expect` is `success` (must succeed), `failure` (must fail; errno named in `case`), or `soft` (succeeds if available, otherwise unsupported rejection is accepted).
+
 ## Coverage notes
 
-Privileged-only areas from the old LTP skip list (mount, reboot, modules,
-fanotify-as-root, chown-to-other-uid success paths, etc.) are intentionally
-omitted. Unprivileged equivalents and expected `EPERM`/`EACCES` failures are
-covered where useful.
+Privileged-only areas (mount, reboot, modules, fanotify-as-root,
+chown-to-other-uid success paths, etc.) are intentionally omitted.
+Unprivileged equivalents and expected `EPERM`/`EACCES` failures are covered
+where useful.

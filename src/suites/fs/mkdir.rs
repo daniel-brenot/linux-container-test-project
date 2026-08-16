@@ -10,7 +10,7 @@ use crate::syscall::{self, oflag, Errno};
 
 macro_rules! mkdir_mode {
     ($name:ident, $mode:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("mkdir creates a directory with mode ", stringify!($mode)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "tempdir");
             let dir = copy_child(&mut tmp, b"d")?;
@@ -26,7 +26,7 @@ macro_rules! mkdir_mode {
     };
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "mkdir creates a directory that stat reports as a directory")]
 fn mkdir_basic() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = copy_child(&mut tmp, b"dir")?;
@@ -37,7 +37,7 @@ fn mkdir_basic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "mkdir creates a directory with mode 0755")]
 fn mkdir_mode_755() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -47,7 +47,7 @@ fn mkdir_mode_755() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "mkdir creates a directory with mode 0700")]
 fn mkdir_mode_700() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o700)?;
@@ -57,7 +57,7 @@ fn mkdir_mode_700() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mkdir on an existing directory returns EEXIST")]
 fn mkdir_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -66,7 +66,7 @@ fn mkdir_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mkdir with a missing parent returns ENOENT")]
 fn mkdir_parent_missing() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let base = copy_child(&mut tmp, b"base")?;
@@ -85,7 +85,7 @@ fn mkdir_parent_missing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "mkdir of a subdirectory under an existing parent succeeds")]
 fn mkdir_nested() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let parent = create_dir(&mut tmp, b"p", 0o755)?;
@@ -97,7 +97,7 @@ fn mkdir_nested() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "open of a newly created directory with O_DIRECTORY succeeds")]
 fn mkdir_dot_entries() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -110,7 +110,7 @@ fn mkdir_dot_entries() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "mkdir creates a directory that is not a regular file")]
 fn mkdir_is_directory() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -121,7 +121,7 @@ fn mkdir_is_directory() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "mkdirat with a directory fd creates a child directory")]
 fn mkdirat_relative_dirfd() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let parent = create_dir(&mut tmp, b"p", 0o755)?;
@@ -161,7 +161,7 @@ mkdir_mode!(mkdir_mode_007, 0o007);
 mkdir_mode!(mkdir_mode_505, 0o505);
 mkdir_mode!(mkdir_mode_303, 0o303);
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mkdir on an existing regular file returns EEXIST")]
 fn mkdir_eexist_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -169,7 +169,7 @@ fn mkdir_eexist_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mkdir through a non-directory path component returns ENOTDIR")]
 fn mkdir_enotdir_component() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -179,7 +179,7 @@ fn mkdir_enotdir_component() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mkdir in a directory without write permission returns EACCES")]
 fn mkdir_parent_no_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let parent = create_dir(&mut tmp, b"p", 0o755)?;
@@ -192,7 +192,7 @@ fn mkdir_parent_no_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "mkdir then chmod sets the sticky bit on a directory")]
 fn mkdir_sticky_bit_request() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = copy_child(&mut tmp, b"d")?;
@@ -205,7 +205,7 @@ fn mkdir_sticky_bit_request() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "mkdir then chmod sets the setgid bit on a directory")]
 fn mkdir_setgid_request() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = copy_child(&mut tmp, b"d")?;
@@ -218,7 +218,7 @@ fn mkdir_setgid_request() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mkdir on an existing symlink returns EEXIST")]
 fn mkdir_eexist_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"l")?;
@@ -227,7 +227,7 @@ fn mkdir_eexist_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "mkdirat of an existing child name returns EEXIST")]
 fn mkdirat_eexist() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let parent = create_dir(&mut tmp, b"p", 0o755)?;
@@ -247,7 +247,7 @@ fn mkdirat_eexist() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "mkdir increments the parent directory nlink by 1")]
 fn mkdir_nlink_parent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let parent = create_dir(&mut tmp, b"p", 0o755)?;
@@ -262,7 +262,7 @@ fn mkdir_nlink_parent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "creating a file inside a newly made directory succeeds")]
 fn mkdir_then_creat_inside() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;

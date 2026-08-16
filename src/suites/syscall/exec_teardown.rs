@@ -115,7 +115,7 @@ fn channel_hung_up(fd: i32) -> Result<bool, crate::harness::AssertFail> {
     }
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "SIGKILL of a nested helper holding an IPC socket makes the parent observe hangup")]
 fn exec_kill_helper_hangs_up_channel() -> TestResult {
     // Guest kill of a nested ET_EXEC helper must close its IPC sockets so the
     // parent observes hangup — not a live peer on a "zombie" mapping.
@@ -141,7 +141,7 @@ fn exec_kill_helper_hangs_up_channel() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a second wait4 after reaping a killed helper returns ECHILD or no further status")]
 fn exec_kill_helper_second_wait_echild() -> TestResult {
     // Waiter must not invent a second zombie after kill already reaped.
     let mut exe = [0u8; 256];
@@ -168,7 +168,7 @@ fn exec_kill_helper_second_wait_echild() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "after killing helper A, a new echo helper on a fresh socket round-trips a payload")]
 fn exec_reload_kill_then_new_helper() -> TestResult {
     // Reload shape: tear down helper A (kill), then register helper B with a
     // new channel. Old sockets must be dead; new channel must work.
@@ -232,7 +232,7 @@ fn exec_reload_kill_then_new_helper() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "SIGKILL of an execed sleep that holds a socketpair end hangs up the peer, or sleep is absent")]
 fn exec_sigkill_sleep_peer_eof() -> TestResult {
     // Same hangup property with a plain external binary holding the fd.
     let sleep = if syscall::access(b"/bin/sleep\0", syscall::F_OK).is_ok() {
@@ -264,7 +264,7 @@ fn exec_sigkill_sleep_peer_eof() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "two kill-then-spawn cycles each hang up the old channel and echo on a new one")]
 fn exec_reload_two_cycles() -> TestResult {
     let mut exe = [0u8; 256];
     let exe_len = self_exe(&mut exe)?;
@@ -302,7 +302,7 @@ fn exec_reload_two_cycles() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "closing the parent end of a helper channel lets the holding helper exit")]
 fn exec_parent_close_then_helper_exits() -> TestResult {
     // Parent teardown of the channel (close) should let a holding helper observe
     // EOF and exit cleanly — mirrors host dropping IPC on session end.

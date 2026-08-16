@@ -5,7 +5,7 @@ use crate::check_ok;
 use crate::harness::{TempDir, TestResult};
 use crate::syscall::{self, Errno};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "close_range closes a span of duplicated fds so later writes return EBADF")]
 fn close_range_dup_fds() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -25,7 +25,7 @@ fn close_range_dup_fds() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "close_range of a single fd makes a later close of that fd return EBADF")]
 fn close_range_single_fd() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -36,7 +36,7 @@ fn close_range_single_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "close_range closes high-numbered dup3 fds 80 through 82 so writes return EBADF")]
 fn close_range_high_dups() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"f", 0o644), "create");
@@ -51,7 +51,7 @@ fn close_range_high_dups() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "close_range with first greater than last returns EINVAL")]
 fn close_range_empty_span() -> TestResult {
     // first > last is EINVAL on Linux.
     match syscall::close_range(10, 5, 0) {
@@ -62,7 +62,7 @@ fn close_range_empty_span() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "close_range closes the in-range fd and leaves a fd outside the span writable")]
 fn close_range_preserves_outside() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let keep = check_ok!(tmp.create_file(b"keep", 0o644), "keep");

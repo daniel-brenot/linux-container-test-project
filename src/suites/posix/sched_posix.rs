@@ -8,7 +8,7 @@ use crate::syscall::{self, Errno, PRIO_PROCESS, SCHED_OTHER};
 
 macro_rules! yield_n {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = "repeated sched_yield calls succeed")]
         fn $name() -> TestResult {
             for _ in 0..$n {
                 check_ok!(syscall::sched_yield(), "yield");
@@ -25,7 +25,7 @@ yield_n!(tps_yield_8, 8);
 yield_n!(tps_yield_16, 16);
 yield_n!(tps_yield_32, 32);
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "sched_getaffinity for the calling thread returns a nonempty cpu mask")]
 fn tps_getaffinity_self() -> TestResult {
     let mut mask = [0u8; 64];
     check_ok!(syscall::sched_getaffinity(0, &mut mask), "aff");
@@ -34,7 +34,7 @@ fn tps_getaffinity_self() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "sched_getaffinity for the calling pid succeeds")]
 fn tps_getaffinity_pid() -> TestResult {
     let mut mask = [0u8; 64];
     check_ok!(
@@ -44,28 +44,28 @@ fn tps_getaffinity_pid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "sched_getscheduler for the calling thread returns SCHED_OTHER")]
 fn tps_getscheduler_self() -> TestResult {
     let pol = check_ok!(syscall::sched_getscheduler(0), "pol");
     check_eq!(pol, SCHED_OTHER, "other");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "sched_getscheduler for the calling pid returns SCHED_OTHER")]
 fn tps_getscheduler_pid() -> TestResult {
     let pol = check_ok!(syscall::sched_getscheduler(syscall::getpid()), "pol");
     check_eq!(pol, SCHED_OTHER, "other");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getpriority for the calling process returns a nice in range")]
 fn tps_getpriority_self() -> TestResult {
     let p = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "prio");
     check!(p >= -20 && p <= 19, "nice range");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getpriority for the calling pid returns a nice in range")]
 fn tps_getpriority_pid() -> TestResult {
     let p = check_ok!(
         syscall::getpriority(PRIO_PROCESS, syscall::getpid()),
@@ -75,7 +75,7 @@ fn tps_getpriority_pid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getpriority for who 0 matches getpriority for the calling pid")]
 fn tps_getpriority_zero_eq_pid() -> TestResult {
     let a = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "a");
     let b = check_ok!(
@@ -86,7 +86,7 @@ fn tps_getpriority_zero_eq_pid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "sched_yield leaves the process nice unchanged")]
 fn tps_yield_between_prio() -> TestResult {
     let a = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "a");
     check_ok!(syscall::sched_yield(), "y");
@@ -95,7 +95,7 @@ fn tps_yield_between_prio() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two sched_getscheduler calls return the same policy")]
 fn tps_getscheduler_twice() -> TestResult {
     let a = check_ok!(syscall::sched_getscheduler(0), "a");
     let b = check_ok!(syscall::sched_getscheduler(0), "b");
@@ -103,7 +103,7 @@ fn tps_getscheduler_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "two sched_getaffinity calls return the same mask")]
 fn tps_affinity_mask_stable() -> TestResult {
     let mut a = [0u8; 64];
     let mut b = [0u8; 64];
@@ -113,7 +113,7 @@ fn tps_affinity_mask_stable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "getpriority with an invalid which is rejected")]
 fn tps_getpriority_bad_which() -> TestResult {
     match syscall::getpriority(99, 0) {
         Err(Errno::EINVAL) => Ok(()),
@@ -122,7 +122,7 @@ fn tps_getpriority_bad_which() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "getpriority for a missing pid returns ESRCH or another rejection")]
 fn tps_getpriority_esrch_soft() -> TestResult {
     match syscall::getpriority(PRIO_PROCESS, 999_999_999) {
         Err(Errno::ESRCH) => Ok(()),
@@ -131,7 +131,7 @@ fn tps_getpriority_esrch_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "a forked child sees SCHED_OTHER from sched_getscheduler")]
 fn tps_child_scheduler() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -147,7 +147,7 @@ fn tps_child_scheduler() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "a forked child inherits the parent nice value")]
 fn tps_child_priority() -> TestResult {
     let parent = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "p");
     let pid = check_ok!(syscall::fork(), "fork");
@@ -163,13 +163,13 @@ fn tps_child_priority() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "sched_yield succeeds")]
 fn tps_yield_ok() -> TestResult {
     check_ok!(syscall::sched_yield(), "y");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "sched_getaffinity with a small buffer succeeds or returns EINVAL")]
 fn tps_affinity_small_buf_soft() -> TestResult {
     let mut mask = [0u8; 8];
     match syscall::sched_getaffinity(0, &mut mask) {
@@ -180,7 +180,7 @@ fn tps_affinity_small_buf_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "sched_getscheduler for a missing pid is rejected")]
 fn tps_getscheduler_bad_pid_soft() -> TestResult {
     match syscall::sched_getscheduler(999_999_999) {
         Err(Errno::ESRCH) | Err(Errno::EINVAL) => Ok(()),
@@ -189,7 +189,7 @@ fn tps_getscheduler_bad_pid_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "sched_getaffinity succeeds after sched_yield")]
 fn tps_yield_then_affinity() -> TestResult {
     check_ok!(syscall::sched_yield(), "y");
     let mut mask = [0u8; 64];
@@ -197,7 +197,7 @@ fn tps_yield_then_affinity() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two getpriority calls return the same nice")]
 fn tps_prio_stable_twice() -> TestResult {
     let a = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "a");
     let b = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "b");
@@ -205,7 +205,7 @@ fn tps_prio_stable_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "many successive sched_yield calls succeed")]
 fn tps_many_yields_full() -> TestResult {
     for _ in 0..64 {
         check_ok!(syscall::sched_yield(), "y");
@@ -213,13 +213,13 @@ fn tps_many_yields_full() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "SCHED_OTHER has value 0")]
 fn tps_scheduler_other_constant() -> TestResult {
     check_eq!(SCHED_OTHER, 0, "const");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "a forked child can call sched_getaffinity")]
 fn tps_getaffinity_after_fork() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -235,7 +235,7 @@ fn tps_getaffinity_after_fork() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getpriority and sched_yield can be interleaved")]
 fn tps_yield_interleaved_prio() -> TestResult {
     for _ in 0..4 {
         let _ = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "p");
@@ -244,7 +244,7 @@ fn tps_yield_interleaved_prio() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "sched_getscheduler on a live child pid returns SCHED_OTHER")]
 fn tps_getscheduler_child_pid() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -262,14 +262,14 @@ fn tps_getscheduler_child_pid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "sched_getaffinity succeeds with a 64-byte mask")]
 fn tps_affinity_len_64() -> TestResult {
     let mut mask = [0u8; 64];
     check_ok!(syscall::sched_getaffinity(0, &mut mask), "a");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "getpriority and sched_getscheduler can be queried together")]
 fn tps_prio_and_sched_together() -> TestResult {
     let p = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "p");
     let s = check_ok!(syscall::sched_getscheduler(0), "s");
@@ -278,7 +278,7 @@ fn tps_prio_and_sched_together() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "repeated sched_yield calls succeed without error")]
 fn tps_yield_no_errno() -> TestResult {
     for _ in 0..3 {
         match syscall::sched_yield() {
@@ -289,7 +289,7 @@ fn tps_yield_no_errno() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "sched_getaffinity returns at least one cpu bit set")]
 fn tps_affinity_cpu0_or_any() -> TestResult {
     let mut mask = [0u8; 64];
     check_ok!(syscall::sched_getaffinity(0, &mut mask), "a");
@@ -298,13 +298,13 @@ fn tps_affinity_cpu0_or_any() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "getpid returns a positive process id")]
 fn tps_getpid_positive() -> TestResult {
     check!(syscall::getpid() > 0, "pid");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "yield, getscheduler, and getpriority can be queried in a loop")]
 fn tps_round_robin_queries() -> TestResult {
     for _ in 0..5 {
         check_ok!(syscall::sched_yield(), "y");

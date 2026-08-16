@@ -33,7 +33,7 @@ fn rmid(id: i32) {
 
 macro_rules! sem_create_n {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = soft, case = "semget can create a private semaphore set")]
         fn $name() -> TestResult {
             let Some(id) = sem_open($n)? else {
                 return Ok(());
@@ -53,7 +53,7 @@ sem_create_n!(sem_posix_create_8, 8);
 
 macro_rules! sem_setval_getval {
     ($name:ident, $v:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = soft, case = "semctl SETVAL then GETVAL round-trips a semaphore value")]
         fn $name() -> TestResult {
             let Some(id) = sem_open(1)? else {
                 return Ok(());
@@ -96,7 +96,7 @@ sem_setval_getval!(sem_posix_val_7, 7);
 sem_setval_getval!(sem_posix_val_10, 10);
 sem_setval_getval!(sem_posix_val_16, 16);
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "semop can decrement then increment a semaphore")]
 fn sem_posix_op_down_up() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -133,7 +133,7 @@ fn sem_posix_op_down_up() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "semop with IPC_NOWAIT on a zero semaphore returns EAGAIN")]
 fn sem_posix_nowait_wouldblock() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -160,7 +160,7 @@ fn sem_posix_nowait_wouldblock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a two-semaphore set can be updated with one semop array")]
 fn sem_posix_multi_op() -> TestResult {
     let Some(id) = sem_open(2)? else {
         return Ok(());
@@ -198,7 +198,7 @@ fn sem_posix_multi_op() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a child can post a semaphore the parent waits on")]
 fn sem_posix_fork_post_wait() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -250,7 +250,7 @@ fn sem_posix_fork_post_wait() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "GETNCNT is zero when no waiters are sleeping")]
 fn sem_posix_getncnt_zero() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -268,7 +268,7 @@ fn sem_posix_getncnt_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "GETZCNT is zero when no waiters are sleeping on zero")]
 fn sem_posix_getzcnt_zero() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -286,7 +286,7 @@ fn sem_posix_getzcnt_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "semop with SEM_UNDO succeeds or is rejected as unsupported")]
 fn sem_posix_undo_flag_soft() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -312,7 +312,7 @@ fn sem_posix_undo_flag_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "semop can add then subtract the same count")]
 fn sem_posix_add_then_sub() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -342,7 +342,7 @@ fn sem_posix_add_then_sub() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "semctl IPC_RMID removes a private semaphore set")]
 fn sem_posix_rmid() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -351,7 +351,7 @@ fn sem_posix_rmid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a second IPC_RMID on a removed set is rejected or ignored")]
 fn sem_posix_rmid_second_soft() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -368,7 +368,7 @@ fn sem_posix_rmid_second_soft() -> TestResult {
 }
 
 /// Futex process-shared style via MAP_SHARED anon (SEM-like).
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a process-shared futex can wake a forked waiter")]
 fn sem_posix_futex_pshared_fork() -> TestResult {
     let addr = match syscall::mmap(
         0,
@@ -420,7 +420,7 @@ fn sem_posix_futex_pshared_fork() -> TestResult {
 
 macro_rules! sem_op_cycles {
     ($name:ident, $n:expr) => {
-        #[crate::lctp_test(suite = posix, full)]
+        #[crate::lctp_test(suite = posix, full, expect = soft, case = "semop can decrement and increment a semaphore in a loop")]
         fn $name() -> TestResult {
             let Some(id) = sem_open(1)? else {
                 return Ok(());
@@ -461,7 +461,7 @@ sem_op_cycles!(sem_posix_cycles_4, 4);
 sem_op_cycles!(sem_posix_cycles_8, 8);
 sem_op_cycles!(sem_posix_cycles_16, 16);
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "semop with IPC_NOWAIT succeeds when the semaphore is available")]
 fn sem_posix_nowait_ok_when_available() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -487,7 +487,7 @@ fn sem_posix_nowait_ok_when_available() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a forked child can decrement a semaphore")]
 fn sem_posix_fork_child_down() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -525,7 +525,7 @@ fn sem_posix_fork_child_down() -> TestResult {
 
 macro_rules! sem_val_roundtrip {
     ($name:ident, $a:expr, $b:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = soft, case = "two SETVAL calls leave GETVAL at the last value")]
         fn $name() -> TestResult {
             let Some(id) = sem_open(1)? else {
                 return Ok(());
@@ -555,7 +555,7 @@ sem_val_roundtrip!(sem_posix_rt_3_3, 3, 3);
 sem_val_roundtrip!(sem_posix_rt_8_1, 8, 1);
 sem_val_roundtrip!(sem_posix_rt_4_7, 4, 7);
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a zero-valued semop is a no-op on an existing semaphore")]
 fn sem_posix_zero_op() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -578,7 +578,7 @@ fn sem_posix_zero_op() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "semop can increment several semaphores in one array")]
 fn sem_posix_multi_up() -> TestResult {
     let Some(id) = sem_open(2)? else {
         return Ok(());
@@ -609,7 +609,7 @@ fn sem_posix_multi_up() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "two private semaphore sets can be created at once")]
 fn sem_posix_two_ids() -> TestResult {
     let Some(a) = sem_open(1)? else {
         return Ok(());
@@ -624,7 +624,7 @@ fn sem_posix_two_ids() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "semop with IPC_NOWAIT can increment a semaphore")]
 fn sem_posix_nowait_up() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -644,7 +644,7 @@ fn sem_posix_nowait_up() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "GETVAL after create returns a defined value")]
 fn sem_posix_getval_after_create() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -658,7 +658,7 @@ fn sem_posix_getval_after_create() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "SETVAL and GETVAL work on each semaphore in a three-member set")]
 fn sem_posix_three_sems_set() -> TestResult {
     let Some(id) = sem_open(3)? else {
         return Ok(());
@@ -675,7 +675,7 @@ fn sem_posix_three_sems_set() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "semctl GETVAL with an out-of-range semnum is rejected")]
 fn sem_posix_bad_semnum_soft() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -689,7 +689,7 @@ fn sem_posix_bad_semnum_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "two process-shared futex posts can wake a forked waiter")]
 fn sem_posix_futex_pshared_two_posts() -> TestResult {
     let addr = match syscall::mmap(
         0,
@@ -713,7 +713,7 @@ fn sem_posix_futex_pshared_two_posts() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "semop can increment a semaphore by one")]
 fn sem_posix_op_plus_one() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -733,7 +733,7 @@ fn sem_posix_op_plus_one() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "semop can increment a semaphore by several")]
 fn sem_posix_op_plus_many() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());
@@ -753,7 +753,7 @@ fn sem_posix_op_plus_many() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "two one-semaphore private sets can be created in sequence")]
 fn sem_posix_create_nsems_1_twice() -> TestResult {
     for _ in 0..2 {
         let Some(id) = sem_open(1)? else {
@@ -764,7 +764,7 @@ fn sem_posix_create_nsems_1_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "semop can decrement a semaphore that was set to 3")]
 fn sem_posix_down_from_3() -> TestResult {
     let Some(id) = sem_open(1)? else {
         return Ok(());

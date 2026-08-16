@@ -18,7 +18,7 @@ fn soft(e: Errno) -> bool {
     )
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "fsopen of proc succeeds, or is rejected as unsupported or unprivileged")]
 fn fsopen_proc_soft() -> TestResult {
     match syscall::fsopen(b"proc\0", 0) {
         Ok(fd) => {
@@ -31,7 +31,7 @@ fn fsopen_proc_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "fsopen of tmpfs succeeds, or is rejected as unsupported or unprivileged")]
 fn fsopen_tmpfs_soft() -> TestResult {
     match syscall::fsopen(b"tmpfs\0", 0) {
         Ok(fd) => {
@@ -43,7 +43,7 @@ fn fsopen_tmpfs_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "fsconfig on fd -1 fails, or the syscall is rejected as unsupported")]
 fn fsconfig_bad_fd_soft() -> TestResult {
     match syscall::fsconfig(-1, FSCONFIG_CMD_CREATE, 0, 0, 0) {
         Err(Errno::EBADF) | Err(Errno::ENOSYS) | Err(Errno::EINVAL) | Err(Errno::EPERM) => {}

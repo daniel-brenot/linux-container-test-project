@@ -18,7 +18,7 @@ fn bind_udp_ephemeral() -> Result<(i32, SockAddrIn), crate::harness::AssertFail>
     Ok((fd, bound))
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "bind of a UDP socket to loopback port 0 yields a nonzero ephemeral port")]
 fn udp_bind_ephemeral() -> TestResult {
     let (fd, addr) = bind_udp_ephemeral()?;
     check_eq!(addr.sin_family, AF_INET as u16, "family");
@@ -26,7 +26,7 @@ fn udp_bind_ephemeral() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "UDP sendto/recvfrom on loopback delivers the payload and peer address")]
 fn udp_sendto_recvfrom_loopback() -> TestResult {
     let (srv, bound) = bind_udp_ephemeral()?;
     let cli = check_ok!(
@@ -54,7 +54,7 @@ fn udp_sendto_recvfrom_loopback() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a UDP echo round-trip on loopback delivers ping and pong")]
 fn udp_echo_roundtrip() -> TestResult {
     let (srv, bound) = bind_udp_ephemeral()?;
     let cli = check_ok!(
@@ -85,7 +85,7 @@ fn udp_echo_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "UDP sendto of a zero-length datagram is received as zero bytes")]
 fn udp_sendto_zero_len() -> TestResult {
     let (srv, bound) = bind_udp_ephemeral()?;
     let cli = check_ok!(
@@ -105,7 +105,7 @@ fn udp_sendto_zero_len() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a connected UDP socket can send a datagram that recvfrom delivers")]
 fn udp_connected_send_recv() -> TestResult {
     let (srv, bound) = bind_udp_ephemeral()?;
     let cli = check_ok!(
@@ -127,7 +127,7 @@ fn udp_connected_send_recv() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "UDP sendto/recvfrom on loopback delivers a 1200-byte datagram")]
 fn udp_largeish_datagram() -> TestResult {
     let (srv, bound) = bind_udp_ephemeral()?;
     let cli = check_ok!(
@@ -152,7 +152,7 @@ fn udp_largeish_datagram() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "two connected UDP sockets can exchange datagrams both ways")]
 fn udp_connected_socket_bidirectional() -> TestResult {
     let (srv, bound) = bind_udp_ephemeral()?;
     let cli = check_ok!(

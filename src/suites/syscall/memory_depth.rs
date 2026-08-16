@@ -20,7 +20,7 @@ fn map_anon(len: usize, p: i32, flags: i32) -> Result<usize, crate::harness::Ass
     ))
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "private anonymous mmap is writable then munmap succeeds")]
 fn mmap_private_anon() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     unsafe { *(addr as *mut u8) = 1 };
@@ -28,7 +28,7 @@ fn mmap_private_anon() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "MAP_SHARED anonymous mmap succeeds or is rejected with EINVAL/ENOSYS")]
 fn mmap_shared_anon_soft() -> TestResult {
     // MAP_SHARED|ANON is supported on Linux.
     match syscall::mmap(
@@ -46,21 +46,21 @@ fn mmap_shared_anon_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "anonymous mmap with PROT_NONE succeeds")]
 fn mmap_prot_none() -> TestResult {
     let addr = map_anon(4096, prot::PROT_NONE, map::MAP_PRIVATE)?;
     check_ok!(syscall::munmap(addr, 4096), "munmap");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "anonymous mmap with PROT_READ succeeds")]
 fn mmap_prot_read_only() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ, map::MAP_PRIVATE)?;
     check_ok!(syscall::munmap(addr, 4096), "munmap");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "MAP_FIXED onto an existing mapping succeeds or returns EINVAL/ENOMEM")]
 fn mmap_fixed_soft() -> TestResult {
     let base = map_anon(8192, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     let target = base + 4096;
@@ -87,7 +87,7 @@ fn mmap_fixed_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a private file mmap sees the file's first byte")]
 fn mmap_file_private() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"mp", 0o644), "create");
@@ -105,7 +105,7 @@ fn mmap_file_private() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mprotect can set PROT_NONE then restore PROT_READ")]
 fn mprotect_none() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     check_ok!(syscall::mprotect(addr, 4096, prot::PROT_NONE), "none");
@@ -114,7 +114,7 @@ fn mprotect_none() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mprotect can add PROT_WRITE to a read-only mapping")]
 fn mprotect_write() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ, map::MAP_PRIVATE)?;
     check_ok!(
@@ -126,7 +126,7 @@ fn mprotect_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "mprotect PROT_EXEC succeeds or is rejected with EPERM/EINVAL/EACCES")]
 fn mprotect_exec_soft() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     match syscall::mprotect(addr, 4096, prot::PROT_READ | prot::PROT_EXEC) {
@@ -141,7 +141,7 @@ fn mprotect_exec_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "madvise MADV_NORMAL succeeds on an anonymous mapping")]
 fn madvise_normal() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     check_ok!(syscall::madvise(addr, 4096, madvise::MADV_NORMAL), "normal");
@@ -149,7 +149,7 @@ fn madvise_normal() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "madvise MADV_RANDOM succeeds on an anonymous mapping")]
 fn madvise_random() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     check_ok!(syscall::madvise(addr, 4096, madvise::MADV_RANDOM), "random");
@@ -157,7 +157,7 @@ fn madvise_random() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "madvise MADV_SEQUENTIAL succeeds on an anonymous mapping")]
 fn madvise_sequential() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     check_ok!(
@@ -168,7 +168,7 @@ fn madvise_sequential() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "madvise MADV_WILLNEED succeeds on an anonymous mapping")]
 fn madvise_willneed() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     check_ok!(
@@ -179,7 +179,7 @@ fn madvise_willneed() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "madvise MADV_DONTNEED succeeds after a write to the mapping")]
 fn madvise_dontneed_again() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     unsafe { *(addr as *mut u8) = 9 };
@@ -191,7 +191,7 @@ fn madvise_dontneed_again() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "madvise MADV_FREE succeeds or is rejected with EINVAL/ENOSYS")]
 fn madvise_free_soft() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     match syscall::madvise(addr, 4096, madvise::MADV_FREE) {
@@ -206,7 +206,7 @@ fn madvise_free_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "madvise MADV_HUGEPAGE succeeds or is rejected with EINVAL/ENOSYS")]
 fn madvise_hugepage_soft() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     match syscall::madvise(addr, 4096, madvise::MADV_HUGEPAGE) {
@@ -221,7 +221,7 @@ fn madvise_hugepage_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "madvise MADV_NOHUGEPAGE succeeds or is rejected with EINVAL/ENOSYS")]
 fn madvise_nohugepage_soft() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     match syscall::madvise(addr, 4096, madvise::MADV_NOHUGEPAGE) {
@@ -236,7 +236,7 @@ fn madvise_nohugepage_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "mlock of one page succeeds or is rejected with EPERM/ENOMEM/EAGAIN/EINVAL/ENOSYS")]
 fn mlock_soft_eperm() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     match syscall::mlock(addr, 4096) {
@@ -253,7 +253,7 @@ fn mlock_soft_eperm() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "mlock of two pages succeeds or is rejected with EPERM/ENOMEM/EAGAIN/EINVAL/ENOSYS")]
 fn mlock_two_pages_soft() -> TestResult {
     let addr = map_anon(8192, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     match syscall::mlock(addr, 8192) {
@@ -270,7 +270,7 @@ fn mlock_two_pages_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mremap with MREMAP_MAYMOVE can grow a mapping")]
 fn mremap_maymove_grow() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     let new = check_ok!(
@@ -282,7 +282,7 @@ fn mremap_maymove_grow() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mremap with MREMAP_MAYMOVE can shrink a mapping")]
 fn mremap_maymove_shrink() -> TestResult {
     let addr = map_anon(8192, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     let new = check_ok!(
@@ -293,7 +293,7 @@ fn mremap_maymove_shrink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mremap with the same size succeeds")]
 fn mremap_same_size() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     let new = check_ok!(
@@ -304,7 +304,7 @@ fn mremap_same_size() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mincore reports a touched anonymous page as resident")]
 fn mincore_anon_page() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     unsafe { *(addr as *mut u8) = 1 };
@@ -315,7 +315,7 @@ fn mincore_anon_page() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mincore reports two touched pages as resident")]
 fn mincore_two_pages() -> TestResult {
     let addr = map_anon(8192, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     unsafe {
@@ -330,14 +330,14 @@ fn mincore_two_pages() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "brk(0) returns a nonzero program break")]
 fn brk_query_nonzero() -> TestResult {
     let cur = check_ok!(syscall::brk(0), "brk0");
     check!(cur != 0, "null");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "brk can grow by one page or is rejected with ENOMEM/EINVAL/EPERM")]
 fn brk_grow_shrink_soft() -> TestResult {
     let cur = check_ok!(syscall::brk(0), "cur");
     let grow = cur + 4096;
@@ -352,7 +352,7 @@ fn brk_grow_shrink_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "brk can grow by two pages or is rejected with ENOMEM/EINVAL/EPERM")]
 fn brk_grow_two_pages_soft() -> TestResult {
     let cur = check_ok!(syscall::brk(0), "cur");
     match syscall::brk(cur + 8192) {
@@ -365,7 +365,7 @@ fn brk_grow_two_pages_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "an 8192-byte anonymous mmap is writable at both ends")]
 fn mmap_len_8192() -> TestResult {
     let addr = map_anon(8192, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     unsafe {
@@ -376,7 +376,7 @@ fn mmap_len_8192() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "MAP_POPULATE anonymous mmap can be queried with mincore")]
 fn mmap_populate_touch() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -395,7 +395,7 @@ fn mmap_populate_touch() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mprotect can set different protections on two adjacent pages")]
 fn mprotect_split_two_pages() -> TestResult {
     let addr = map_anon(8192, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     check_ok!(syscall::mprotect(addr, 4096, prot::PROT_READ), "p0");
@@ -407,7 +407,7 @@ fn mprotect_split_two_pages() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "munmap of a low non-mapped address succeeds or returns EINVAL")]
 fn munmap_bad_addr_soft() -> TestResult {
     match syscall::munmap(0x1000, 4096) {
         Ok(()) => {}
@@ -417,7 +417,7 @@ fn munmap_bad_addr_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "madvise with an invalid advice value returns EINVAL or succeeds")]
 fn madvise_bad_advice_einval() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     match syscall::madvise(addr, 4096, 9999) {
@@ -432,7 +432,7 @@ fn madvise_bad_advice_einval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "mincore succeeds on an untouched anonymous page")]
 fn mincore_unfaulted_page() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     let mut vec = [0xffu8; 1];
@@ -443,7 +443,7 @@ fn mincore_unfaulted_page() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "mincore succeeds on a mapping grown with mremap")]
 fn mremap_grow_then_mincore() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     unsafe { *(addr as *mut u8) = 3 };
@@ -457,7 +457,7 @@ fn mremap_grow_then_mincore() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "mmap with length 0 returns EINVAL")]
 fn mmap_zero_len_einval() -> TestResult {
     match syscall::mmap(
         0,
@@ -477,7 +477,7 @@ fn mmap_zero_len_einval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "mprotect of a low non-mapped address returns ENOMEM/EINVAL/EACCES or succeeds")]
 fn mprotect_bad_addr_soft() -> TestResult {
     match syscall::mprotect(0x1000, 4096, prot::PROT_READ) {
         Err(Errno::ENOMEM) | Err(Errno::EINVAL) | Err(Errno::EACCES) => {}
@@ -487,7 +487,7 @@ fn mprotect_bad_addr_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "a shared file mmap write is visible via pread after msync")]
 fn mmap_shared_file_writeback() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(tmp.create_file(b"sw", 0o644), "create");
@@ -513,7 +513,7 @@ fn mmap_shared_file_writeback() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "mlock of a sub-page length succeeds or is rejected with EPERM/ENOMEM/EAGAIN/EINVAL/ENOSYS")]
 fn mlock_partial_page_soft() -> TestResult {
     let addr = map_anon(4096, prot::PROT_READ | prot::PROT_WRITE, map::MAP_PRIVATE)?;
     // Length need not be page-aligned on Linux for mlock in modern kernels; soft-accept.
@@ -531,7 +531,7 @@ fn mlock_partial_page_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "two brk(0) queries return the same program break")]
 fn brk_idempotent_query() -> TestResult {
     let a = check_ok!(syscall::brk(0), "a");
     let b = check_ok!(syscall::brk(0), "b");

@@ -24,7 +24,7 @@ fn event_at(buf: &[u8], off: usize) -> InotifyEvent {
     ev
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "inotify_init1 with IN_CLOEXEC returns a fd with FD_CLOEXEC set")]
 fn inotify_init1_cloexec() -> TestResult {
     let fd = check_ok!(syscall::inotify_init1(IN_CLOEXEC), "init1");
     let flags = check_ok!(syscall::fcntl(fd, syscall::fcntl_cmd::F_GETFD, 0), "F_GETFD");
@@ -33,7 +33,7 @@ fn inotify_init1_cloexec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "creating a file in a watched directory delivers an IN_CREATE event")]
 fn inotify_watch_create() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(syscall::inotify_init1(IN_CLOEXEC), "init1");
@@ -59,7 +59,7 @@ fn inotify_watch_create() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "writing a watched file delivers an IN_MODIFY event")]
 fn inotify_watch_modify() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"m")?;
@@ -81,7 +81,7 @@ fn inotify_watch_modify() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "watching IN_CREATE|IN_MODIFY reports both create and modify events")]
 fn inotify_create_and_modify() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(syscall::inotify_init1(IN_CLOEXEC), "init1");
@@ -116,7 +116,7 @@ fn inotify_create_and_modify() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "inotify_rm_watch removes a previously added watch")]
 fn inotify_rm_watch_ok() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(syscall::inotify_init1(IN_CLOEXEC), "init1");
@@ -129,7 +129,7 @@ fn inotify_rm_watch_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "unlinking a file in a watched directory delivers an IN_DELETE event")]
 fn inotify_watch_delete() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"delme")?;
@@ -151,7 +151,7 @@ fn inotify_watch_delete() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "watching IN_CREATE|IN_DELETE reports both create and delete events")]
 fn inotify_create_then_delete() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let fd = check_ok!(syscall::inotify_init1(IN_CLOEXEC), "init1");

@@ -10,7 +10,7 @@ fn affinity_has_cpu(mask: &[u8]) -> bool {
     mask.iter().any(|&b| b != 0)
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sched_getaffinity of pid 0 returns a nonempty cpu mask")]
 fn sched_getaffinity_self_nonempty() -> TestResult {
     let mut mask = [0u8; 128];
     check_ok!(syscall::sched_getaffinity(0, &mut mask), "getaffinity");
@@ -18,7 +18,7 @@ fn sched_getaffinity_self_nonempty() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sched_getaffinity of getpid returns a nonempty cpu mask")]
 fn sched_getaffinity_pid_self() -> TestResult {
     let mut mask = [0u8; 128];
     check_ok!(syscall::sched_getaffinity(syscall::getpid(), &mut mask), "getaffinity pid");
@@ -26,7 +26,7 @@ fn sched_getaffinity_pid_self() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sched_getaffinity into an 8-byte buffer returns a nonempty cpu mask")]
 fn sched_getaffinity_small_buffer() -> TestResult {
     let mut mask = [0u8; 8];
     check_ok!(syscall::sched_getaffinity(0, &mut mask), "getaffinity small");
@@ -34,7 +34,7 @@ fn sched_getaffinity_small_buffer() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sched_getaffinity into a 256-byte buffer returns a nonempty cpu mask")]
 fn sched_getaffinity_large_buffer() -> TestResult {
     let mut mask = [0u8; 256];
     check_ok!(syscall::sched_getaffinity(0, &mut mask), "getaffinity large");
@@ -42,35 +42,35 @@ fn sched_getaffinity_large_buffer() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sched_getscheduler of pid 0 returns SCHED_OTHER")]
 fn sched_getscheduler_self() -> TestResult {
     let pol = check_ok!(syscall::sched_getscheduler(0), "getscheduler");
     check_eq!(pol, SCHED_OTHER, "policy");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sched_getscheduler of getpid returns SCHED_OTHER")]
 fn sched_getscheduler_pid() -> TestResult {
     let pol = check_ok!(syscall::sched_getscheduler(syscall::getpid()), "getscheduler pid");
     check_eq!(pol, SCHED_OTHER, "policy");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getpriority of pid 0 returns a nice value between -20 and 19")]
 fn getpriority_self() -> TestResult {
     let nice = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "getpriority");
     check!(nice >= -20 && nice <= 19, "nice range");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getpriority of getpid returns a nice value between -20 and 19")]
 fn getpriority_pid() -> TestResult {
     let nice = check_ok!(syscall::getpriority(PRIO_PROCESS, syscall::getpid()), "getpriority pid");
     check!(nice >= -20 && nice <= 19, "nice range");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a child sched_getaffinity of pid 0 returns a nonempty cpu mask")]
 fn sched_getaffinity_child() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -86,7 +86,7 @@ fn sched_getaffinity_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a child getpriority of pid 0 returns a nice value between -20 and 19")]
 fn getpriority_child() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -101,7 +101,7 @@ fn getpriority_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sched_getscheduler of pid 0 and getpid return the same policy")]
 fn sched_getscheduler_zero_pid() -> TestResult {
     let a = check_ok!(syscall::sched_getscheduler(0), "sched 0");
     let b = check_ok!(syscall::sched_getscheduler(syscall::getpid()), "sched pid");
@@ -109,7 +109,7 @@ fn sched_getscheduler_zero_pid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "getpriority of pid 0 and getpid return the same nice value")]
 fn getpriority_zero_vs_pid() -> TestResult {
     let a = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "prio 0");
     let b = check_ok!(syscall::getpriority(PRIO_PROCESS, syscall::getpid()), "prio pid");
@@ -117,7 +117,7 @@ fn getpriority_zero_vs_pid() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "two successive sched_getaffinity calls return the same mask")]
 fn sched_getaffinity_twice_stable() -> TestResult {
     let mut m1 = [0u8; 128];
     let mut m2 = [0u8; 128];
@@ -127,7 +127,7 @@ fn sched_getaffinity_twice_stable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sched_setaffinity of the current mask leaves a nonempty affinity")]
 fn sched_setaffinity_same_mask() -> TestResult {
     let mut mask = [0u8; 128];
     check_ok!(syscall::sched_getaffinity(0, &mut mask), "get");
@@ -138,7 +138,7 @@ fn sched_setaffinity_same_mask() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "sched_setaffinity of getpid with the current mask succeeds")]
 fn sched_setaffinity_pid_self() -> TestResult {
     let mut mask = [0u8; 128];
     check_ok!(syscall::sched_getaffinity(syscall::getpid(), &mut mask), "get");
@@ -149,7 +149,7 @@ fn sched_setaffinity_pid_self() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "sched_setaffinity of the current mask can be applied twice")]
 fn sched_setaffinity_roundtrip() -> TestResult {
     let mut mask = [0u8; 128];
     check_ok!(syscall::sched_getaffinity(0, &mut mask), "get");
@@ -158,7 +158,7 @@ fn sched_setaffinity_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "setpriority to the current nice succeeds, or is rejected as unprivileged")]
 fn setpriority_same_nice_soft() -> TestResult {
     use crate::syscall::Errno;
     let nice = check_ok!(syscall::getpriority(PRIO_PROCESS, 0), "get");
@@ -169,7 +169,7 @@ fn setpriority_same_nice_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "setpriority to a lower nice succeeds, or is rejected as unprivileged")]
 fn setpriority_lower_nice_soft() -> TestResult {
     use crate::syscall::Errno;
     // Raising priority (lower nice number) often fails unprivileged.
@@ -184,7 +184,7 @@ fn setpriority_lower_nice_soft() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "setpriority to a higher nice succeeds, or is rejected as unprivileged")]
 fn setpriority_raise_nice_soft() -> TestResult {
     use crate::syscall::Errno;
     // Increasing nice (lower priority) is usually allowed.

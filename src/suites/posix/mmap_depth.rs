@@ -11,7 +11,7 @@ const PAGE: usize = 4096;
 
 macro_rules! anon_rw {
     ($name:ident, $byte:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = "an anonymous private page can be written and read back")]
         fn $name() -> TestResult {
             let addr = check_ok!(
                 syscall::mmap(
@@ -42,7 +42,7 @@ anon_rw!(mem_d_anon_ff, 0xff);
 anon_rw!(mem_d_anon_aa, 0xaa);
 anon_rw!(mem_d_anon_55, 0x55);
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a fresh anonymous page reads as zeros")]
 fn mem_d_anon_zero_page() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -64,7 +64,7 @@ fn mem_d_anon_zero_page() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "mprotect can cycle an anonymous page from read-write to read-only and back")]
 fn mem_d_mprotect_rw_ro_rw() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -89,7 +89,7 @@ fn mem_d_mprotect_rw_ro_rw() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "mprotect can raise PROT_NONE to read-write on an anonymous page")]
 fn mem_d_mprotect_none_then_rw() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -113,7 +113,7 @@ fn mem_d_mprotect_none_then_rw() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a MAP_SHARED file write can be flushed with msync")]
 fn mem_d_shared_file_msync() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tmp");
     let fd = check_ok!(tmp.create_file(b"sh", 0o644), "f");
@@ -138,7 +138,7 @@ fn mem_d_shared_file_msync() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "msync with MS_ASYNC succeeds on an anonymous mapping")]
 fn mem_d_msync_async() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -159,7 +159,7 @@ fn mem_d_msync_async() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mincore reports residency of a touched anonymous page when supported")]
 fn mem_d_mincore_soft() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -185,7 +185,7 @@ fn mem_d_mincore_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mlock of an anonymous page succeeds or is rejected as unsupported")]
 fn mem_d_mlock_soft() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -209,7 +209,7 @@ fn mem_d_mlock_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mlockall with MCL_CURRENT succeeds or is rejected as unsupported")]
 fn mem_d_mlockall_soft() -> TestResult {
     match syscall::mlockall(MCL_CURRENT) {
         Ok(()) => {
@@ -221,7 +221,7 @@ fn mem_d_mlockall_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "a private anonymous page may copy-on-write across fork")]
 fn mem_d_fork_cow_private() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -255,7 +255,7 @@ fn mem_d_fork_cow_private() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "a MAP_SHARED anonymous page is visible to the parent after a child write")]
 fn mem_d_fork_shared_anon() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -287,7 +287,7 @@ fn mem_d_fork_shared_anon() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a MAP_PRIVATE file write may leave the underlying file unchanged")]
 fn mem_d_private_file_cow_soft() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tmp");
     let path = create_empty(&mut tmp, b"p")?;
@@ -313,7 +313,7 @@ fn mem_d_private_file_cow_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a two-page anonymous mapping can be written on both pages")]
 fn mem_d_two_pages() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -334,7 +334,7 @@ fn mem_d_two_pages() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "mprotect can change protection on the first page of a two-page map")]
 fn mem_d_mprotect_partial() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -357,7 +357,7 @@ fn mem_d_mprotect_partial() -> TestResult {
 
 macro_rules! anon_fill {
     ($name:ident, $val:expr) => {
-        #[crate::lctp_test(suite = posix)]
+        #[crate::lctp_test(suite = posix, expect = success, case = "an anonymous private page can be filled and the first byte read back")]
         fn $name() -> TestResult {
             let addr = check_ok!(
                 syscall::mmap(
@@ -389,7 +389,7 @@ anon_fill!(mem_d_fill_77, 0x77);
 anon_fill!(mem_d_fill_88, 0x88);
 anon_fill!(mem_d_fill_99, 0x99);
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "filling a MAP_SHARED page is visible in the file after msync")]
 fn mem_d_shared_fill_msync() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tmp");
     let fd = check_ok!(tmp.create_file(b"fill", 0o644), "f");
@@ -417,7 +417,7 @@ fn mem_d_shared_fill_msync() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "a second munmap of the same address is rejected or ignored")]
 fn mem_d_munmap_idempotent_soft() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -438,7 +438,7 @@ fn mem_d_munmap_idempotent_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "MAP_POPULATE on an anonymous mapping succeeds or is rejected")]
 fn mem_d_populate_soft() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -458,7 +458,7 @@ fn mem_d_populate_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mincore can be called on two touched anonymous pages")]
 fn mem_d_mincore_touch_all() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -481,7 +481,7 @@ fn mem_d_mincore_touch_all() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "the last byte of an anonymous page can be written and read back")]
 fn mem_d_end_byte() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -502,7 +502,7 @@ fn mem_d_end_byte() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = soft, case = "mlock followed by munlock succeeds when locking is allowed")]
 fn mem_d_mlock_munlock_pair() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -522,7 +522,7 @@ fn mem_d_mlock_munlock_pair() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "an anonymous mapping created PROT_READ can be mapped")]
 fn mem_d_prot_read_only() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -542,7 +542,7 @@ fn mem_d_prot_read_only() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "four anonymous mappings can be created, written, and unmapped")]
 fn mem_d_four_anon_maps() -> TestResult {
     let mut addrs = [0usize; 4];
     for a in addrs.iter_mut() {
@@ -564,7 +564,7 @@ fn mem_d_four_anon_maps() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "msync with MS_SYNC can be called twice on a MAP_SHARED mapping")]
 fn mem_d_msync_sync_twice() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -583,7 +583,7 @@ fn mem_d_msync_sync_twice() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "the parent can write a private anonymous page after the child exits")]
 fn mem_d_fork_parent_write_after() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(
@@ -612,7 +612,7 @@ fn mem_d_fork_parent_write_after() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mmap with length zero returns EINVAL or another rejection")]
 fn mem_d_len_zero_einval() -> TestResult {
     match syscall::mmap(
         0,
@@ -631,7 +631,7 @@ fn mem_d_len_zero_einval() -> TestResult {
     }
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "the same file can be mapped MAP_SHARED and MAP_PRIVATE together")]
 fn mem_d_shared_then_private() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tmp");
     let fd = check_ok!(tmp.create_file(b"sp", 0o644), "f");
@@ -664,7 +664,7 @@ fn mem_d_shared_then_private() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = soft, case = "mprotect to PROT_EXEC succeeds or is rejected as unsupported")]
 fn mem_d_mprotect_exec_soft() -> TestResult {
     let addr = check_ok!(
         syscall::mmap(

@@ -6,7 +6,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::{copy_child, create_dir, create_empty, join_path, write_file};
 use crate::syscall::{self, oflag, Errno, F_OK, R_OK, W_OK, X_OK};
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access F_OK on a regular file succeeds")]
 fn access_f_ok_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -14,7 +14,7 @@ fn access_f_ok_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access F_OK on a directory succeeds")]
 fn access_f_ok_dir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -23,7 +23,7 @@ fn access_f_ok_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access F_OK on a missing path returns ENOENT")]
 fn access_f_ok_missing() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"missing")?;
@@ -31,7 +31,7 @@ fn access_f_ok_missing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access R_OK succeeds on a file with mode 0400")]
 fn access_r_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -40,7 +40,7 @@ fn access_r_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access W_OK succeeds on a file with mode 0200")]
 fn access_w_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -49,7 +49,7 @@ fn access_w_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access X_OK succeeds on a file with mode 0100")]
 fn access_x_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -58,7 +58,7 @@ fn access_x_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access R_OK|W_OK succeeds on a file with mode 0600")]
 fn access_rw_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -67,7 +67,7 @@ fn access_rw_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access R_OK|X_OK succeeds on a file with mode 0500")]
 fn access_rx_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -76,7 +76,7 @@ fn access_rx_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access W_OK|X_OK succeeds on a file with mode 0300")]
 fn access_wx_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -85,7 +85,7 @@ fn access_wx_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access R_OK|W_OK|X_OK succeeds on a file with mode 0700")]
 fn access_rwx_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -94,7 +94,7 @@ fn access_rwx_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access R_OK on a write-only file returns EACCES")]
 fn access_r_eacces() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -104,7 +104,7 @@ fn access_r_eacces() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access W_OK on a read-only file returns EACCES")]
 fn access_w_eacces() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -114,7 +114,7 @@ fn access_w_eacces() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access X_OK on a file without execute bits returns EACCES")]
 fn access_x_eacces() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -123,7 +123,7 @@ fn access_x_eacces() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access R_OK, W_OK, and X_OK on a mode 0000 file return EACCES")]
 fn access_zero_mode_eacces_all() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -136,7 +136,7 @@ fn access_zero_mode_eacces_all() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access X_OK on a searchable directory succeeds")]
 fn access_dir_x_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -145,7 +145,7 @@ fn access_dir_x_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access X_OK on a directory without search permission returns EACCES")]
 fn access_dir_no_search() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -156,7 +156,7 @@ fn access_dir_no_search() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access follows a symlink and R_OK on the target succeeds")]
 fn access_follows_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -167,7 +167,7 @@ fn access_follows_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access F_OK through a dangling symlink returns ENOENT")]
 fn access_dangling_symlink() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let link = copy_child(&mut tmp, b"l")?;
@@ -176,7 +176,7 @@ fn access_dangling_symlink() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "faccessat F_OK on a file via a directory fd succeeds")]
 fn faccessat_basic() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -198,7 +198,7 @@ fn faccessat_basic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "faccessat R_OK on a mode 0000 file returns EACCES")]
 fn faccessat_eacces() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -212,7 +212,7 @@ fn faccessat_eacces() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access through a parent without search permission returns EACCES")]
 fn access_parent_no_search() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -227,7 +227,7 @@ fn access_parent_no_search() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access through a non-directory path component returns ENOTDIR")]
 fn access_enotdir() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;
@@ -237,7 +237,7 @@ fn access_enotdir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access through a symlink loop returns ELOOP")]
 fn access_loop_eloop() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let a = copy_child(&mut tmp, b"a")?;
@@ -248,7 +248,7 @@ fn access_loop_eloop() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access R_OK on a readable directory succeeds")]
 fn access_dir_r_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -257,7 +257,7 @@ fn access_dir_r_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access W_OK on a writable directory succeeds")]
 fn access_dir_w_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -266,7 +266,7 @@ fn access_dir_w_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access W_OK on a directory without write permission returns EACCES")]
 fn access_dir_no_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -277,7 +277,7 @@ fn access_dir_no_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access F_OK on a FIFO succeeds")]
 fn access_fifo_f_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = copy_child(&mut tmp, b"fifo")?;
@@ -290,7 +290,7 @@ fn access_fifo_f_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access F_OK after unlink returns ENOENT")]
 fn access_after_unlink_enoent() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -299,7 +299,7 @@ fn access_after_unlink_enoent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access R_OK|W_OK on a read-only file returns EACCES")]
 fn access_rw_partial_eacces() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -309,13 +309,13 @@ fn access_rw_partial_eacces() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access F_OK on /tmp succeeds")]
 fn access_tmp_path_f_ok() -> TestResult {
     check_ok!(syscall::access(b"/tmp\0", F_OK), "tmp");
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access X_OK on /tmp succeeds")]
 fn access_tmp_path_x_ok() -> TestResult {
     check_ok!(syscall::access(b"/tmp\0", X_OK), "tmp x");
     Ok(())
@@ -323,7 +323,7 @@ fn access_tmp_path_x_ok() -> TestResult {
 
 macro_rules! access_mode_ok {
     ($name:ident, $mode_chmod:expr, $mode_access:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = success, case = concat!("access with the requested bits succeeds after chmod ", stringify!($mode_chmod)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "tempdir");
             let path = create_empty(&mut tmp, b"f")?;
@@ -337,7 +337,7 @@ macro_rules! access_mode_ok {
 
 macro_rules! access_mode_eacces {
     ($name:ident, $mode_chmod:expr, $mode_access:expr) => {
-        #[crate::lctp_test(suite = fs)]
+        #[crate::lctp_test(suite = fs, expect = failure, case = concat!("access with the requested bits returns EACCES after chmod ", stringify!($mode_chmod)))]
         fn $name() -> TestResult {
             let mut tmp = check_ok!(TempDir::create(), "tempdir");
             let path = create_empty(&mut tmp, b"f")?;
@@ -391,7 +391,7 @@ access_mode_eacces!(access_deny_620_x, 0o620, X_OK);
 access_mode_eacces!(access_deny_460_w, 0o460, W_OK);
 access_mode_eacces!(access_deny_240_r, 0o240, R_OK);
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access W_OK on a 0555 directory returns EACCES")]
 fn access_dir_555_no_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -403,7 +403,7 @@ fn access_dir_555_no_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "access X_OK on a 0111 directory succeeds and R_OK and W_OK return EACCES")]
 fn access_dir_111_search_only() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let dir = create_dir(&mut tmp, b"d", 0o755)?;
@@ -416,7 +416,7 @@ fn access_dir_111_search_only() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "faccessat W_OK succeeds on a file with write permission")]
 fn faccessat_w_ok() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -429,7 +429,7 @@ fn faccessat_w_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "faccessat X_OK on a file without execute bits returns EACCES")]
 fn faccessat_x_eacces() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"f")?;
@@ -442,7 +442,7 @@ fn faccessat_x_eacces() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = failure, case = "access R_OK through a symlink to an unreadable file returns EACCES")]
 fn access_symlink_target_no_read() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let file = create_empty(&mut tmp, b"f")?;

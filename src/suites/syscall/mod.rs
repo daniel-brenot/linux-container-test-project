@@ -1,4 +1,4 @@
-//! Linux syscall behaviour tests (LTP-inspired, unprivileged-only).
+//! Linux syscall behaviour tests (unprivileged-only).
 
 mod close_range;
 mod entropy_dev;

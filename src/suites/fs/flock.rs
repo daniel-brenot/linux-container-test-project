@@ -5,7 +5,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::create_empty;
 use crate::syscall::{self, oflag, LOCK_EX, LOCK_NB, LOCK_SH, LOCK_UN};
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "flock LOCK_EX then LOCK_UN on a regular file succeeds")]
 fn fs_flock_exclusive() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"fl")?;
@@ -16,7 +16,7 @@ fn fs_flock_exclusive() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "flock LOCK_SH then LOCK_UN on a regular file succeeds")]
 fn fs_flock_shared() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"fls")?;
@@ -27,7 +27,7 @@ fn fs_flock_shared() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "flock LOCK_EX|LOCK_NB on an unlocked file succeeds")]
 fn fs_flock_nb_success() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"flnb")?;
@@ -38,7 +38,7 @@ fn fs_flock_nb_success() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "two fds can hold flock LOCK_SH on the same file")]
 fn fs_flock_two_fds_same_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"fl2")?;
@@ -53,7 +53,7 @@ fn fs_flock_two_fds_same_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "flock exclusive lock, unlock, and lock again succeeds")]
 fn fs_flock_relock() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"flr")?;
@@ -66,7 +66,7 @@ fn fs_flock_relock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "write while holding flock LOCK_EX succeeds")]
 fn fs_flock_with_write() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"flw")?;
@@ -78,7 +78,7 @@ fn fs_flock_with_write() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "flock LOCK_SH on a read-only fd succeeds")]
 fn fs_flock_rdonly_fd() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"flro")?;
@@ -89,7 +89,7 @@ fn fs_flock_rdonly_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "flock upgrades LOCK_SH to LOCK_EX on the same fd")]
 fn fs_flock_upgrade() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"flu")?;
@@ -101,7 +101,7 @@ fn fs_flock_upgrade() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs, full)]
+#[crate::lctp_test(suite = fs, full, expect = success, case = "closing a flock holder unlocks so another fd can LOCK_EX|LOCK_NB")]
 fn fs_flock_close_auto_unlock() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"flc")?;
@@ -115,7 +115,7 @@ fn fs_flock_close_auto_unlock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "flock LOCK_EX on a write-only fd succeeds")]
 fn fs_flock_wronly_fd() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"flwo")?;
@@ -126,7 +126,7 @@ fn fs_flock_wronly_fd() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = fs)]
+#[crate::lctp_test(suite = fs, expect = success, case = "fcntl F_SETLK takes a write lock, a read lock, and then unlocks")]
 fn fcntl_setlk_advisory() -> TestResult {
     use crate::syscall::{fcntl_cmd, Flock, F_RDLCK, F_UNLCK, F_WRLCK};
 

@@ -7,7 +7,7 @@ use crate::harness::{TempDir, TestResult};
 use crate::suites::common::create_empty;
 use crate::syscall::{self, Errno, LOCK_EX, LOCK_NB, LOCK_SH, LOCK_UN};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "flock LOCK_EX then LOCK_UN on a regular file both succeed")]
 fn flock_exclusive_unlock() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"fl")?;
@@ -18,7 +18,7 @@ fn flock_exclusive_unlock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "flock LOCK_SH then LOCK_UN on a regular file both succeed")]
 fn flock_shared_unlock() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"fls")?;
@@ -29,7 +29,7 @@ fn flock_shared_unlock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "flock can upgrade LOCK_SH to LOCK_EX, downgrade back to LOCK_SH, then unlock")]
 fn flock_upgrade_downgrade() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"flu")?;
@@ -42,7 +42,7 @@ fn flock_upgrade_downgrade() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = failure, case = "flock LOCK_EX|LOCK_NB on a file already exclusively locked by the parent returns EWOULDBLOCK")]
 fn flock_nb_contention_fork() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"flnb")?;
@@ -65,7 +65,7 @@ fn flock_nb_contention_fork() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "statfs of /tmp reports a positive block size and block count")]
 fn statfs_tmp() -> TestResult {
     let st = check_ok!(syscall::statfs(b"/tmp\0"), "statfs /tmp");
     check!(st.f_bsize > 0, "bsize");
@@ -73,14 +73,14 @@ fn statfs_tmp() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "statfs of / reports a positive block size")]
 fn statfs_root() -> TestResult {
     let st = check_ok!(syscall::statfs(b"/\0"), "statfs /");
     check!(st.f_bsize > 0, "bsize");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "fstatfs of a temporary file reports a positive block size")]
 fn fstatfs_temp_file() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"sf")?;
@@ -91,7 +91,7 @@ fn fstatfs_temp_file() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "statfs of a temporary directory reports positive bsize and namelen")]
 fn statfs_temp_dir() -> TestResult {
     let tmp = check_ok!(TempDir::create(), "tempdir");
     let st = check_ok!(syscall::statfs(tmp.path()), "statfs temp");
@@ -100,7 +100,7 @@ fn statfs_temp_dir() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "flock LOCK_EX succeeds again after LOCK_UN on the same fd")]
 fn flock_relock_after_unlock() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"flr")?;
@@ -113,14 +113,14 @@ fn flock_relock_after_unlock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "statfs of /tmp reports f_bavail less than or equal to f_bfree")]
 fn statfs_bavail_le_bfree() -> TestResult {
     let st = check_ok!(syscall::statfs(b"/tmp\0"), "statfs");
     check!(st.f_bavail <= st.f_bfree, "bavail");
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "statfs of a temp directory and fstatfs of a file in it report the same f_type and f_bsize")]
 fn fstatfs_matches_statfs() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"cmp")?;
@@ -133,7 +133,7 @@ fn fstatfs_matches_statfs() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "flock LOCK_EX|LOCK_NB succeeds on an unlocked file")]
 fn flock_nb_success() -> TestResult {
     let mut tmp = check_ok!(TempDir::create(), "tempdir");
     let path = create_empty(&mut tmp, b"flnbok")?;

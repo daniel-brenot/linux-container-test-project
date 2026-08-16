@@ -29,7 +29,7 @@ fn shmget_or_soft(size: usize, flg: i32) -> Result<Option<i32>, crate::harness::
     }
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "shmget on IPC_PRIVATE is implemented and does not return ENOSYS")]
 fn sysv_shm_get_not_enosys() -> TestResult {
     match syscall::shmget(IPC_PRIVATE, 4096, IPC_CREAT | 0o600) {
         Ok(id) => {
@@ -44,7 +44,7 @@ fn sysv_shm_get_not_enosys() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "shmat of an IPC_PRIVATE segment allows a write that shmdt then IPC_RMID tear down")]
 fn sysv_shm_ipc_private_roundtrip() -> TestResult {
     let size = 4096usize;
     let Some(shmid) = shmget_or_soft(size, IPC_CREAT | 0o600)? else {
@@ -71,7 +71,7 @@ fn sysv_shm_ipc_private_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "a child write through shmat is visible to the parent on the same segment")]
 fn sysv_shm_parent_child_shared() -> TestResult {
     let size = 4096usize;
     let Some(shmid) = shmget_or_soft(size, IPC_CREAT | 0o600)? else {
@@ -108,7 +108,7 @@ fn sysv_shm_parent_child_shared() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "two shmat mappings of the same segment alias the same bytes")]
 fn sysv_shm_dual_attach_same_segment() -> TestResult {
     let Some(shmid) = shmget_or_soft(4096, IPC_CREAT | 0o600)? else {
         return Ok(());
@@ -148,7 +148,7 @@ fn sysv_shm_dual_attach_same_segment() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "shmget with IPC_CREAT|IPC_EXCL creates a private segment")]
 fn sysv_shm_creat_excl() -> TestResult {
     let Some(id) = shmget_or_soft(4096, IPC_CREAT | IPC_EXCL | 0o600)? else {
         return Ok(());
@@ -157,7 +157,7 @@ fn sysv_shm_creat_excl() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = failure, case = "shmget with size 0 returns EINVAL")]
 fn sysv_shm_zero_size_einval() -> TestResult {
     match syscall::shmget(IPC_PRIVATE, 0, IPC_CREAT | 0o600) {
         Err(Errno::EINVAL) => {}
@@ -174,7 +174,7 @@ fn sysv_shm_zero_size_einval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = soft, case = "two IPC_PRIVATE shmget segments have distinct ids and independent contents")]
 fn sysv_shm_two_segments_independent() -> TestResult {
     let Some(a) = shmget_or_soft(4096, IPC_CREAT | 0o600)? else {
         return Ok(());
@@ -220,7 +220,7 @@ fn sysv_shm_two_segments_independent() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "shmat write then shmdt and shmctl IPC_RMID complete on an 8192-byte segment")]
 fn sysv_shm_attach_write_detach_path() -> TestResult {
     let shmid = check_ok!(
         syscall::shmget(IPC_PRIVATE, 8192, IPC_CREAT | 0o600),
@@ -245,7 +245,7 @@ fn sysv_shm_attach_write_detach_path() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "SHM_RDONLY shmat can read bytes previously written through a read-write attach")]
 fn sysv_shm_rdonly_attach() -> TestResult {
     let Some(shmid) = shmget_or_soft(4096, IPC_CREAT | 0o600)? else {
         return Ok(());
@@ -281,7 +281,7 @@ fn sysv_shm_rdonly_attach() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = soft, case = "shmctl IPC_STAT fills a buffer for an existing shared memory id")]
 fn sysv_shm_stat_soft() -> TestResult {
     let Some(shmid) = shmget_or_soft(8192, IPC_CREAT | 0o600)? else {
         return Ok(());
@@ -303,7 +303,7 @@ fn sysv_shm_stat_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = failure, case = "shmat after shmctl IPC_RMID returns EINVAL or EIDRM")]
 fn sysv_shm_attach_after_rmid_fails() -> TestResult {
     let Some(shmid) = shmget_or_soft(4096, IPC_CREAT | 0o600)? else {
         return Ok(());
@@ -322,7 +322,7 @@ fn sysv_shm_attach_after_rmid_fails() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = failure, case = "a second shmctl IPC_RMID returns EINVAL, EPERM, or EIDRM")]
 fn sysv_shm_rmid_idempotent_probe() -> TestResult {
     let Some(shmid) = shmget_or_soft(4096, IPC_CREAT | 0o600)? else {
         return Ok(());
@@ -337,7 +337,7 @@ fn sysv_shm_rmid_idempotent_probe() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = failure, case = "shmdt of a null address returns EINVAL")]
 fn sysv_shm_shmdt_bad_addr() -> TestResult {
     check_err!(syscall::shmdt(0), Errno::EINVAL, "null shmdt");
     Ok(())

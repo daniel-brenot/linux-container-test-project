@@ -14,7 +14,7 @@ fn mono_le(a: &syscall::Timespec, b: &syscall::Timespec) -> bool {
     b.tv_sec > a.tv_sec || (b.tv_sec == a.tv_sec && b.tv_nsec >= a.tv_nsec)
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_gettime on CLOCK_REALTIME returns a timespec after 2020 with valid nsec")]
 fn timers_clock_realtime_get() -> TestResult {
     let t = check_ok!(syscall::clock_gettime(clock::CLOCK_REALTIME), "realtime");
     check!(t.tv_sec > 1_600_000_000, "sec");
@@ -22,7 +22,7 @@ fn timers_clock_realtime_get() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_gettime on CLOCK_MONOTONIC returns a timespec with non-negative seconds and valid nsec")]
 fn timers_clock_monotonic_get() -> TestResult {
     let t = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "mono");
     check!(t.tv_sec >= 0, "sec");
@@ -30,7 +30,7 @@ fn timers_clock_monotonic_get() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_gettime on CLOCK_MONOTONIC_RAW returns a timespec with non-negative seconds and valid nsec")]
 fn timers_clock_monotonic_raw_get() -> TestResult {
     let t = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC_RAW), "raw");
     check!(t.tv_sec >= 0, "sec");
@@ -38,7 +38,7 @@ fn timers_clock_monotonic_raw_get() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_gettime on CLOCK_PROCESS_CPUTIME_ID returns a timespec with non-negative seconds and valid nsec")]
 fn timers_clock_process_cputime_get() -> TestResult {
     let t = check_ok!(
         syscall::clock_gettime(clock::CLOCK_PROCESS_CPUTIME_ID),
@@ -49,7 +49,7 @@ fn timers_clock_process_cputime_get() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_gettime on CLOCK_THREAD_CPUTIME_ID returns a timespec with non-negative seconds and valid nsec")]
 fn timers_clock_thread_cputime_get() -> TestResult {
     let t = check_ok!(
         syscall::clock_gettime(clock::CLOCK_THREAD_CPUTIME_ID),
@@ -60,7 +60,7 @@ fn timers_clock_thread_cputime_get() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_getres on CLOCK_REALTIME returns a sub-second positive nsec resolution")]
 fn timers_clock_realtime_getres() -> TestResult {
     let r = check_ok!(syscall::clock_getres(clock::CLOCK_REALTIME), "getres");
     check!(r.tv_sec == 0, "sec0");
@@ -68,7 +68,7 @@ fn timers_clock_realtime_getres() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_getres on CLOCK_MONOTONIC returns a zero-second positive nsec resolution")]
 fn timers_clock_monotonic_getres() -> TestResult {
     let r = check_ok!(syscall::clock_getres(clock::CLOCK_MONOTONIC), "getres");
     check!(r.tv_sec == 0, "sec0");
@@ -76,7 +76,7 @@ fn timers_clock_monotonic_getres() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_getres on CLOCK_MONOTONIC_RAW returns a zero-second positive nsec resolution")]
 fn timers_clock_monotonic_raw_getres() -> TestResult {
     let r = check_ok!(syscall::clock_getres(clock::CLOCK_MONOTONIC_RAW), "getres");
     check!(r.tv_sec == 0, "sec0");
@@ -84,7 +84,7 @@ fn timers_clock_monotonic_raw_getres() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_getres on CLOCK_PROCESS_CPUTIME_ID returns a zero-second positive nsec resolution")]
 fn timers_clock_process_cputime_getres() -> TestResult {
     let r = check_ok!(
         syscall::clock_getres(clock::CLOCK_PROCESS_CPUTIME_ID),
@@ -95,7 +95,7 @@ fn timers_clock_process_cputime_getres() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_getres on CLOCK_THREAD_CPUTIME_ID returns a zero-second positive nsec resolution")]
 fn timers_clock_thread_cputime_getres() -> TestResult {
     let r = check_ok!(
         syscall::clock_getres(clock::CLOCK_THREAD_CPUTIME_ID),
@@ -106,19 +106,19 @@ fn timers_clock_thread_cputime_getres() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "clock_getres on an invalid clock id returns EINVAL")]
 fn timers_getres_bad_clock_einval() -> TestResult {
     check_err!(syscall::clock_getres(99999), Errno::EINVAL, "bad clock");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "clock_gettime on an invalid clock id returns EINVAL")]
 fn timers_gettime_bad_clock_einval() -> TestResult {
     check_err!(syscall::clock_gettime(99999), Errno::EINVAL, "bad clock");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two CLOCK_MONOTONIC samples are non-decreasing")]
 fn timers_monotonic_non_decreasing() -> TestResult {
     let a = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "a");
     let b = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "b");
@@ -126,7 +126,7 @@ fn timers_monotonic_non_decreasing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two CLOCK_MONOTONIC_RAW samples are non-decreasing")]
 fn timers_monotonic_raw_non_decreasing() -> TestResult {
     let a = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC_RAW), "a");
     let b = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC_RAW), "b");
@@ -134,7 +134,7 @@ fn timers_monotonic_raw_non_decreasing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "a CLOCK_REALTIME sample after a short nanosleep is greater than or equal to the earlier sample")]
 fn timers_realtime_advances_soft() -> TestResult {
     let a = check_ok!(syscall::clock_gettime(clock::CLOCK_REALTIME), "a");
     let req = syscall::Timespec {
@@ -147,7 +147,7 @@ fn timers_realtime_advances_soft() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "nanosleep of 1 ms returns and CLOCK_MONOTONIC has not gone backwards")]
 fn timers_nanosleep_1ms() -> TestResult {
     let before = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "before");
     let req = syscall::Timespec {
@@ -160,7 +160,7 @@ fn timers_nanosleep_1ms() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "nanosleep of 10 ms succeeds")]
 fn timers_nanosleep_10ms() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: 0,
@@ -170,7 +170,7 @@ fn timers_nanosleep_10ms() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "nanosleep of a zero timespec succeeds")]
 fn timers_nanosleep_zero() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: 0,
@@ -180,7 +180,7 @@ fn timers_nanosleep_zero() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "nanosleep with tv_nsec equal to 1e9 returns EINVAL")]
 fn timers_nanosleep_bad_nsec_einval() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: 0,
@@ -190,7 +190,7 @@ fn timers_nanosleep_bad_nsec_einval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "nanosleep with a negative tv_nsec returns EINVAL")]
 fn timers_nanosleep_neg_nsec_einval() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: 0,
@@ -200,7 +200,7 @@ fn timers_nanosleep_neg_nsec_einval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "nanosleep with a negative tv_sec returns EINVAL")]
 fn timers_nanosleep_neg_sec_einval() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: -1,
@@ -210,7 +210,7 @@ fn timers_nanosleep_neg_sec_einval() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "clock_nanosleep relative on CLOCK_MONOTONIC for 1 ms succeeds")]
 fn timers_clock_nanosleep_monotonic() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: 0,
@@ -223,7 +223,7 @@ fn timers_clock_nanosleep_monotonic() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "clock_nanosleep on an invalid clock id returns EINVAL")]
 fn timers_clock_nanosleep_bad_clock() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: 0,
@@ -237,7 +237,7 @@ fn timers_clock_nanosleep_bad_clock() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = failure, case = "clock_nanosleep with tv_nsec of 2e9 returns EINVAL")]
 fn timers_clock_nanosleep_bad_nsec() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: 0,
@@ -251,7 +251,7 @@ fn timers_clock_nanosleep_bad_nsec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "gettimeofday returns a time after 2020 with usec in range 0 to 1000000")]
 fn timers_gettimeofday_sec() -> TestResult {
     let tv = check_ok!(syscall::gettimeofday(), "gettimeofday");
     check!(tv.tv_sec > 1_600_000_000, "sec");
@@ -259,35 +259,35 @@ fn timers_gettimeofday_sec() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_gettime on CLOCK_REALTIME returns nsec in range 0 to 1e9")]
 fn timers_realtime_nsec_in_range() -> TestResult {
     let t = check_ok!(syscall::clock_gettime(clock::CLOCK_REALTIME), "rt");
     check!(valid_nsec(&t), "nsec");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_gettime on CLOCK_MONOTONIC returns nsec in range 0 to 1e9")]
 fn timers_monotonic_nsec_in_range() -> TestResult {
     let t = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "m");
     check!(valid_nsec(&t), "nsec");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_getres on CLOCK_REALTIME reports a sub-second resolution")]
 fn timers_getres_realtime_le_1s() -> TestResult {
     let r = check_ok!(syscall::clock_getres(clock::CLOCK_REALTIME), "res");
     check!(r.tv_sec == 0 && r.tv_nsec < 1_000_000_000, "fine");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_getres on CLOCK_MONOTONIC reports a sub-second resolution")]
 fn timers_getres_monotonic_le_1s() -> TestResult {
     let r = check_ok!(syscall::clock_getres(clock::CLOCK_MONOTONIC), "res");
     check!(r.tv_sec == 0 && r.tv_nsec < 1_000_000_000, "fine");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "the CLOCK_MONOTONIC clock advances by at least about 1 ms across a 5 ms nanosleep")]
 fn timers_monotonic_after_sleep() -> TestResult {
     let a = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "a");
     let req = syscall::Timespec {
@@ -301,7 +301,7 @@ fn timers_monotonic_after_sleep() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two CLOCK_PROCESS_CPUTIME_ID samples are non-decreasing")]
 fn timers_cputime_non_decreasing() -> TestResult {
     let a = check_ok!(
         syscall::clock_gettime(clock::CLOCK_PROCESS_CPUTIME_ID),
@@ -315,7 +315,7 @@ fn timers_cputime_non_decreasing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two CLOCK_THREAD_CPUTIME_ID samples are non-decreasing")]
 fn timers_thread_cputime_non_decreasing() -> TestResult {
     let a = check_ok!(
         syscall::clock_gettime(clock::CLOCK_THREAD_CPUTIME_ID),
@@ -329,7 +329,7 @@ fn timers_thread_cputime_non_decreasing() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two CLOCK_REALTIME samples both have nsec in range")]
 fn timers_realtime_two_samples_ok() -> TestResult {
     let a = check_ok!(syscall::clock_gettime(clock::CLOCK_REALTIME), "a");
     let b = check_ok!(syscall::clock_gettime(clock::CLOCK_REALTIME), "b");
@@ -337,7 +337,7 @@ fn timers_realtime_two_samples_ok() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "two clock_getres samples on CLOCK_MONOTONIC are identical")]
 fn timers_getres_twice_stable() -> TestResult {
     let a = check_ok!(syscall::clock_getres(clock::CLOCK_MONOTONIC), "a");
     let b = check_ok!(syscall::clock_getres(clock::CLOCK_MONOTONIC), "b");
@@ -345,7 +345,7 @@ fn timers_getres_twice_stable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "nanosleep of 100 us succeeds")]
 fn timers_nanosleep_sub_ms() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: 0,
@@ -355,7 +355,7 @@ fn timers_nanosleep_sub_ms() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_nanosleep relative on CLOCK_REALTIME for 1 ms succeeds")]
 fn timers_clock_nanosleep_realtime() -> TestResult {
     let req = syscall::Timespec {
         tv_sec: 0,
@@ -368,21 +368,21 @@ fn timers_clock_nanosleep_realtime() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_getres on CLOCK_MONOTONIC_RAW returns a positive resolution")]
 fn timers_getres_raw_positive() -> TestResult {
     let r = check_ok!(syscall::clock_getres(clock::CLOCK_MONOTONIC_RAW), "res");
     check!(r.tv_nsec > 0 || r.tv_sec > 0, "positive");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix)]
+#[crate::lctp_test(suite = posix, expect = success, case = "clock_gettime on CLOCK_MONOTONIC returns a non-negative tv_sec")]
 fn timers_monotonic_sec_nonneg() -> TestResult {
     let t = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "m");
     check!(t.tv_sec >= 0, "sec");
     Ok(())
 }
 
-#[crate::lctp_test(suite = posix, full)]
+#[crate::lctp_test(suite = posix, full, expect = success, case = "three CLOCK_MONOTONIC samples are non-decreasing in order")]
 fn timers_triple_monotonic_samples() -> TestResult {
     let a = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "a");
     let b = check_ok!(syscall::clock_gettime(clock::CLOCK_MONOTONIC), "b");

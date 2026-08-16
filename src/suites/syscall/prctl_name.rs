@@ -6,7 +6,7 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{self};
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "prctl set-name then get-name round-trips the comm string lctp-test")]
 fn prctl_set_get_name() -> TestResult {
     let name = b"lctp-test\0";
     check_ok!(syscall::prctl_set_name(name), "set name");
@@ -16,7 +16,7 @@ fn prctl_set_get_name() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "prctl get-name writes a NUL-terminated comm into a 16-byte buffer")]
 fn prctl_get_name_nul_terminated() -> TestResult {
     let mut buf = [0xFFu8; 16];
     check_ok!(syscall::prctl_get_name(&mut buf), "get name");
@@ -24,7 +24,7 @@ fn prctl_get_name_nul_terminated() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "prctl set-name then get-name round-trips short and 12-character comm strings")]
 fn prctl_set_name_roundtrip() -> TestResult {
     for &name in &[b"a\0" as &[u8], b"xy\0", b"longname12\0"] {
         check_ok!(syscall::prctl_set_name(name), "set");
@@ -36,7 +36,7 @@ fn prctl_set_name_roundtrip() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "a child can set its comm to child and read that name back")]
 fn prctl_name_in_child() -> TestResult {
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
@@ -54,7 +54,7 @@ fn prctl_name_in_child() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "prctl set-name of a single character is visible via get-name")]
 fn prctl_set_short_name() -> TestResult {
     check_ok!(syscall::prctl_set_name(b"z\0"), "set");
     let mut buf = [0u8; 16];
@@ -63,7 +63,7 @@ fn prctl_set_short_name() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "prctl set-name of 15 characters is returned in full by get-name")]
 fn prctl_name_max_15_chars() -> TestResult {
     let name = b"123456789012345\0";
     check_ok!(syscall::prctl_set_name(name), "set max");
@@ -73,7 +73,7 @@ fn prctl_name_max_15_chars() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "prctl set-name of a temporary comm can be restored to the original name")]
 fn prctl_restore_name() -> TestResult {
     let mut orig = [0u8; 16];
     check_ok!(syscall::prctl_get_name(&mut orig), "orig");
@@ -86,7 +86,7 @@ fn prctl_restore_name() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "prctl get-name returns printable ASCII up to the terminating NUL")]
 fn prctl_get_name_readable() -> TestResult {
     let mut buf = [0u8; 16];
     check_ok!(syscall::prctl_get_name(&mut buf), "get");
@@ -98,7 +98,7 @@ fn prctl_get_name_readable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "PR_SET_DUMPABLE 1 is visible via PR_GET_DUMPABLE and the original value can be restored")]
 fn prctl_get_set_dumpable() -> TestResult {
     let orig = check_ok!(
         syscall::prctl(syscall::PR_GET_DUMPABLE, 0, 0, 0, 0),
@@ -121,7 +121,7 @@ fn prctl_get_set_dumpable() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall)]
+#[crate::lctp_test(suite = syscall, expect = success, case = "PR_GET_NO_NEW_PRIVS returns 0 or 1")]
 fn prctl_get_no_new_privs() -> TestResult {
     let v = check_ok!(
         syscall::prctl(syscall::PR_GET_NO_NEW_PRIVS, 0, 0, 0, 0),
@@ -131,7 +131,7 @@ fn prctl_get_no_new_privs() -> TestResult {
     Ok(())
 }
 
-#[crate::lctp_test(suite = syscall, full)]
+#[crate::lctp_test(suite = syscall, full, expect = success, case = "PR_SET_DUMPABLE 0 is visible via PR_GET_DUMPABLE")]
 fn prctl_set_dumpable_zero_readback() -> TestResult {
     let orig = check_ok!(
         syscall::prctl(syscall::PR_GET_DUMPABLE, 0, 0, 0, 0),
