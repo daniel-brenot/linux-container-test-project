@@ -5,14 +5,18 @@
 //! A runtime that invents an immediate zombie (exit 0, EOF on the channel)
 //! or refuses to run the new image (exit 127) fails these cases. Existing
 //! echo helpers write only after the parent, so they do not catch that.
+//!
+//! A second class of failure is nest restore: the parent HTTP listen must
+//! still be accept()'able (via epoll) while the nested helper is running.
 
 use crate::check;
 use crate::check_eq;
 use crate::check_ok;
 use crate::harness::TestResult;
 use crate::syscall::{
-    self, poll, wait, SockAddrIn, AF_INET, AF_UNIX, POLLIN, POLLHUP, SIGKILL, SOCK_CLOEXEC,
-    SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR,
+    self, epoll, fcntl_cmd, oflag, poll, wait, SockAddrIn, AF_INET, AF_UNIX, EPOLLET, EPOLLIN,
+    EPOLLOUT, EPOLL_CTL_ADD, F_OK, POLLIN, POLLHUP, SIGKILL, SOCK_CLOEXEC, SOCK_STREAM, SOL_SOCKET,
+    SO_REUSEADDR,
 };
 
 fn self_exe(buf: &mut [u8; 256]) -> Result<usize, crate::harness::AssertFail> {
@@ -227,6 +231,244 @@ fn spawn_hello_stdout_pipe_and_ipc() -> TestResult {
     check!(child_still_running(pid)?, "exited after hello");
     let _ = syscall::close(out_r);
     let _ = syscall::close(ipc_a);
+    reap_or_kill(pid);
+    Ok(())
+}
+
+fn set_nonblock(fd: i32) -> Result<(), crate::harness::AssertFail> {
+    let fl = check_ok!(syscall::fcntl(fd, fcntl_cmd::F_GETFL, 0), "F_GETFL");
+    check_ok!(
+        syscall::fcntl(
+            fd,
+            fcntl_cmd::F_SETFL,
+            (fl as i32 | oflag::O_NONBLOCK) as usize
+        ),
+        "F_SETFL O_NONBLOCK"
+    );
+    Ok(())
+}
+
+fn listen_loopback() -> Result<(i32, SockAddrIn), crate::harness::AssertFail> {
+    let srv = check_ok!(
+        syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0),
+        "listen socket"
+    );
+    let one = 1i32.to_ne_bytes();
+    check_ok!(
+        syscall::setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &one),
+        "SO_REUSEADDR"
+    );
+    check_ok!(syscall::bind(srv, &SockAddrIn::loopback(0)), "bind");
+    check_ok!(syscall::listen(srv, 128), "listen");
+    set_nonblock(srv)?;
+    let bound = check_ok!(syscall::getsockname_in(srv), "getsockname");
+    Ok((srv, bound))
+}
+
+/// Theia/Node `child_process.fork` shape: unix socketpairs for stdio + IPC +
+/// spawn-error, TCP listen left open, child `dup2`s the listen socket onto
+/// fd 4 (xvisor always steals fd 4 into the nested child). Exec a nestable
+/// `sh -c` that blocks on the IPC fd so the child stays alive.
+fn spawn_nested_plugin_host_shape(
+    listen: i32,
+) -> Result<(i32, i32, [i32; 4]), crate::harness::AssertFail> {
+    check_ok!(syscall::access(b"/bin/sh\0", F_OK), "/bin/sh missing");
+    let (ipc_a, ipc_b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "ipc");
+    let (in_a, in_b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "stdin");
+    let (out_a, out_b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "stdout");
+    let (err_a, err_b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "stderr");
+    let (st_a, st_b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "spawn-error");
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        let _ = syscall::close(ipc_a);
+        let _ = syscall::close(in_a);
+        let _ = syscall::close(out_a);
+        let _ = syscall::close(err_a);
+        let _ = syscall::close(st_a);
+        // Park listen + IPC above the stdio/channel slots before dup2, so
+        // overwriting fd 3/4 cannot clobber the source descriptors.
+        let listen_keep = match syscall::fcntl(listen, fcntl_cmd::F_DUPFD, 20) {
+            Ok(fd) => fd as i32,
+            Err(_) => syscall::exit(124),
+        };
+        let ipc_keep = match syscall::fcntl(ipc_b, fcntl_cmd::F_DUPFD, 20) {
+            Ok(fd) => fd as i32,
+            Err(_) => syscall::exit(124),
+        };
+        if syscall::dup2(in_b, 0).is_err()
+            || syscall::dup2(out_b, 1).is_err()
+            || syscall::dup2(err_b, 2).is_err()
+            || syscall::dup2(ipc_keep, 3).is_err()
+            || syscall::dup2(listen_keep, 4).is_err()
+        {
+            syscall::exit(125);
+        }
+        if in_b != 0 {
+            let _ = syscall::close(in_b);
+        }
+        if out_b != 1 {
+            let _ = syscall::close(out_b);
+        }
+        if err_b != 2 {
+            let _ = syscall::close(err_b);
+        }
+        if ipc_b != 3 {
+            let _ = syscall::close(ipc_b);
+        }
+        if ipc_keep != 3 {
+            let _ = syscall::close(ipc_keep);
+        }
+        if listen_keep != 4 {
+            let _ = syscall::close(listen_keep);
+        }
+        if listen != 4 {
+            let _ = syscall::close(listen);
+        }
+        if st_b != 4 {
+            let _ = syscall::close(st_b);
+        }
+        let env0 = b"NODE_CHANNEL_FD=3\0";
+        let envp = [env0.as_ptr(), core::ptr::null()];
+        let arg0 = b"sh\0";
+        let arg1 = b"-c\0";
+        // Builtin `read` blocks on fd 3 until the parent writes or hangs up.
+        // Not stubbed as echo/ls/true, so a cooperative runtime must nest it.
+        let arg2 = b"read line <&3\0";
+        let argv = [
+            arg0.as_ptr(),
+            arg1.as_ptr(),
+            arg2.as_ptr(),
+            core::ptr::null(),
+        ];
+        let _ = syscall::execve(b"/bin/sh\0", &argv, &envp);
+        syscall::exit(127);
+    }
+    let _ = syscall::close(ipc_b);
+    let _ = syscall::close(in_b);
+    let _ = syscall::close(out_b);
+    let _ = syscall::close(err_b);
+    let _ = syscall::close(st_b);
+    Ok((pid, ipc_a, [in_a, out_a, err_a, st_a]))
+}
+
+fn http_roundtrip(srv: i32, bound: &SockAddrIn) -> Result<(), crate::harness::AssertFail> {
+    let cli = check_ok!(
+        syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0),
+        "client"
+    );
+    check_ok!(syscall::connect(cli, bound), "connect after nest");
+    let mut pfds = [poll::PollFd {
+        fd: srv,
+        events: POLLIN,
+        revents: 0,
+    }];
+    check!(
+        check_ok!(syscall::poll(&mut pfds, 2000), "poll listen") >= 1,
+        "listen not readable after nest"
+    );
+    let acc = check_ok!(syscall::accept4(srv, None, None, SOCK_CLOEXEC), "accept4");
+    check_ok!(syscall::send(cli, b"GET /", 0), "send");
+    let mut buf = [0u8; 8];
+    check_eq!(check_ok!(syscall::recv(acc, &mut buf, 0), "recv"), 5, "len");
+    check_eq!(&buf[..5], b"GET /", "payload");
+    let _ = syscall::close(acc);
+    let _ = syscall::close(cli);
+    Ok(())
+}
+
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "after fork+exec of a live nested helper that inherits the TCP listen on fd 4, the parent listen fd still accepts"
+)]
+fn spawn_nested_child_parent_tcp_listen_survives() -> TestResult {
+    // Theia plugin-host nest restores the parent and steals fd 3 (IPC) plus
+    // whatever sits at fd 4. If fd 4 is a TCP socket, identifying it by
+    // Darwin fstat (dev=0, ino=0 for every TCP fd) closes the HTTP listen
+    // in the parent: the page connects into the kernel backlog and never
+    // gets accept()'d.
+    let (srv, bound) = listen_loopback()?;
+    let (pid, ipc, extra) = spawn_nested_plugin_host_shape(srv)?;
+    check!(child_still_running(pid)?, "child already exited");
+    check_ok!(
+        syscall::fcntl(srv, fcntl_cmd::F_GETFL, 0),
+        "listen fd closed by nest"
+    );
+    http_roundtrip(srv, &bound)?;
+    check!(child_still_running(pid)?, "helper died during accept");
+    let _ = syscall::close(ipc);
+    for fd in extra {
+        let _ = syscall::close(fd);
+    }
+    let _ = syscall::close(srv);
+    reap_or_kill(pid);
+    Ok(())
+}
+
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "after a nested plugin-host-shaped fork+exec, epoll_wait still reports the TCP listen so HTTP can be accepted"
+)]
+fn spawn_nested_child_parent_epoll_still_accepts_http() -> TestResult {
+    // Node HTTP is nonblocking listen + epoll (EPOLLIN|EPOLLET) while libuv
+    // also watches IPC/stdio socketpairs with EPOLLIN|EPOLLOUT|EPOLLET.
+    // A nest restore that drops the listen fd or leaves POLLOUT always-ready
+    // wedges the event loop: curl hangs with 0 bytes and the page never loads.
+    let (srv, bound) = listen_loopback()?;
+    let ep = check_ok!(syscall::epoll_create1(0), "epoll");
+    let mut ev = epoll::EpollEvent {
+        events: EPOLLIN | EPOLLET,
+        data: srv as u64,
+    };
+    check_ok!(syscall::epoll_ctl(ep, EPOLL_CTL_ADD, srv, &mut ev), "add listen");
+
+    let (pid, ipc, extra) = spawn_nested_plugin_host_shape(srv)?;
+    check!(child_still_running(pid)?, "child already exited");
+
+    ev.events = EPOLLIN | EPOLLOUT | EPOLLET;
+    ev.data = ipc as u64;
+    check_ok!(syscall::epoll_ctl(ep, EPOLL_CTL_ADD, ipc, &mut ev), "add ipc");
+    for &fd in &extra {
+        ev.data = fd as u64;
+        let _ = syscall::epoll_ctl(ep, EPOLL_CTL_ADD, fd, &mut ev);
+    }
+
+    let cli = check_ok!(
+        syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0),
+        "client"
+    );
+    check_ok!(syscall::connect(cli, &bound), "connect");
+
+    let mut out = [epoll::EpollEvent { events: 0, data: 0 }; 16];
+    let mut saw_listen = false;
+    for _ in 0..20 {
+        let n = check_ok!(syscall::epoll_wait(ep, &mut out, 100), "epoll_wait");
+        for e in out.iter().take(n) {
+            if e.data == srv as u64 && e.events & EPOLLIN != 0 {
+                saw_listen = true;
+            }
+        }
+        if saw_listen {
+            break;
+        }
+    }
+    check!(saw_listen, "listen not ready in epoll after nest");
+    let acc = check_ok!(syscall::accept4(srv, None, None, SOCK_CLOEXEC), "accept4");
+    check_ok!(syscall::send(cli, b"web", 0), "send");
+    let mut buf = [0u8; 8];
+    check_eq!(check_ok!(syscall::recv(acc, &mut buf, 0), "recv"), 3, "len");
+    check_eq!(&buf[..3], b"web", "payload");
+    check!(child_still_running(pid)?, "helper died during epoll accept");
+
+    let _ = syscall::close(acc);
+    let _ = syscall::close(cli);
+    let _ = syscall::close(ep);
+    let _ = syscall::close(ipc);
+    for fd in extra {
+        let _ = syscall::close(fd);
+    }
+    let _ = syscall::close(srv);
     reap_or_kill(pid);
     Ok(())
 }
