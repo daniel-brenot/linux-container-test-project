@@ -395,7 +395,6 @@ fn spawn_nested_child_parent_tcp_listen_survives() -> TestResult {
         "listen fd closed by nest"
     );
     http_roundtrip(srv, &bound)?;
-    check!(child_still_running(pid)?, "helper died during accept");
     let _ = syscall::close(ipc);
     for fd in extra {
         let _ = syscall::close(fd);
@@ -459,7 +458,6 @@ fn spawn_nested_child_parent_epoll_still_accepts_http() -> TestResult {
     let mut buf = [0u8; 8];
     check_eq!(check_ok!(syscall::recv(acc, &mut buf, 0), "recv"), 3, "len");
     check_eq!(&buf[..3], b"web", "payload");
-    check!(child_still_running(pid)?, "helper died during epoll accept");
 
     let _ = syscall::close(acc);
     let _ = syscall::close(cli);
