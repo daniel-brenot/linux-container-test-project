@@ -2,6 +2,8 @@
 //!
 //! - `--ipc-channel-echo` — read fd 3, write back, exit
 //! - `--ipc-channel-hold` — keep fd 3 open and block until killed (reload/teardown)
+//! - `--ipc-channel-hello` — write `HELLO` on fd 3 immediately, then hold
+//!   (Theia/Node plugin-host shape: child speaks first on the IPC channel)
 
 use crate::syscall;
 use crate::syscall::poll;
@@ -36,6 +38,9 @@ pub unsafe fn dispatch_helper(argc: usize, argv: *const usize) -> bool {
         Some(b"--ipc-channel-hold") => {
             run_ipc_channel_hold();
         }
+        Some(b"--ipc-channel-hello") => {
+            run_ipc_channel_hello();
+        }
         _ => return false,
     }
 }
@@ -59,6 +64,24 @@ pub fn run_ipc_channel_echo() -> ! {
         }
     }
     syscall::exit(0);
+}
+
+/// Write a handshake, then hold the channel until hangup or kill.
+///
+/// Node `child_process.fork` / Theia plugin-host send on the IPC socket
+/// before the parent writes. A runtime that turns `fork` into an instant
+/// zombie (exit 0, EOF on the channel) fails this path.
+pub fn run_ipc_channel_hello() -> ! {
+    let msg = b"HELLO";
+    let mut off = 0usize;
+    while off < msg.len() {
+        match syscall::write(CHANNEL_FD, &msg[off..]) {
+            Ok(0) => syscall::exit(4),
+            Ok(w) => off += w,
+            Err(_) => syscall::exit(5),
+        }
+    }
+    run_ipc_channel_hold();
 }
 
 /// Hold the IPC channel open until the process is killed or the peer hangs up.

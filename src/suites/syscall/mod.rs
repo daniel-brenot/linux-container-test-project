@@ -56,6 +56,7 @@ mod signal_depth;
 mod signalfd;
 mod sigmask;
 mod sockopt;
+mod spawn_ipc;
 mod statx_test;
 mod sync_ops;
 mod sysinfo_rusage;
