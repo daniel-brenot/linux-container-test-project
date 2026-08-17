@@ -1313,3 +1313,369 @@ fn spawn_worker_ppoll_does_not_block_parent_listen() -> TestResult {
     );
     Ok(())
 }
+
+fn spawn_theia_ipc_epoll_helper(exe: &[u8]) -> Result<(i32, i32), crate::harness::AssertFail> {
+    let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "sp");
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        let _ = syscall::close(a);
+        if syscall::dup2(b, 3).is_err() {
+            syscall::exit(125);
+        }
+        if b != 3 {
+            let _ = syscall::close(b);
+        }
+        let env0 = b"NODE_CHANNEL_FD=3\0";
+        let envp = [env0.as_ptr(), core::ptr::null()];
+        let mut arg0 = [0u8; 256];
+        arg0[..exe.len()].copy_from_slice(exe);
+        // "plugin-host" in argv so a cooperative runtime nests this like Theia.
+        let flag = b"--plugin-host-epoll-idle\0";
+        let argv = [arg0.as_ptr(), flag.as_ptr(), core::ptr::null()];
+        let _ = syscall::execve(exe, &argv, &envp);
+        syscall::exit(127);
+    }
+    let _ = syscall::close(b);
+    Ok((a, pid))
+}
+
+fn spawn_plugin_host_fd4_pipe(
+    exe: &[u8],
+) -> Result<(i32, i32), crate::harness::AssertFail> {
+    let (pr, pw) = check_ok!(syscall::pipe2(0), "fd4 pipe");
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        let _ = syscall::close(pr);
+        if syscall::dup2(pw, 4).is_err() {
+            syscall::exit(125);
+        }
+        if pw != 4 {
+            let _ = syscall::close(pw);
+        }
+        let envp = [core::ptr::null::<u8>()];
+        let mut arg0 = [0u8; 256];
+        arg0[..exe.len()].copy_from_slice(exe);
+        let flag = b"--plugin-host-fd4\0";
+        let argv = [arg0.as_ptr(), flag.as_ptr(), core::ptr::null()];
+        let _ = syscall::execve(exe, &argv, &envp);
+        syscall::exit(127);
+    }
+    let _ = syscall::close(pw);
+    Ok((pr, pid))
+}
+
+fn read_exact_msg(fd: i32, want: &[u8]) -> Result<(), crate::harness::AssertFail> {
+    check!(want.len() <= 8, "read_exact_msg len");
+    let mut got = [0u8; 8];
+    let mut filled = 0usize;
+    for _ in 0..80 {
+        let mut fds = [poll::PollFd {
+            fd,
+            events: POLLIN | POLLHUP,
+            revents: 0,
+        }];
+        let pr = check_ok!(syscall::poll(&mut fds, 100), "poll msg");
+        if pr == 0 {
+            continue;
+        }
+        if fds[0].revents & POLLHUP != 0 && fds[0].revents & POLLIN == 0 {
+            return Err(crate::harness::AssertFail::msg("eof before msg"));
+        }
+        match syscall::read(fd, &mut got[filled..want.len()]) {
+            Ok(0) => return Err(crate::harness::AssertFail::msg("eof before msg")),
+            Ok(n) => {
+                filled += n;
+                if filled >= want.len() {
+                    check_eq!(&got[..want.len()], want, "msg");
+                    return Ok(());
+                }
+            }
+            Err(syscall::Errno::EAGAIN) => {}
+            Err(_) => return Err(crate::harness::AssertFail::msg("read msg")),
+        }
+    }
+    Err(crate::harness::AssertFail::msg("msg timeout"))
+}
+
+fn read_idleok(fd: i32) -> Result<(), crate::harness::AssertFail> {
+    read_exact_msg(fd, b"IDLEOK")
+}
+
+/// Theia plugin-host is a nested Node that inherits the IPC socketpair and
+/// immediately epolls it with EPOLLIN|EPOLLOUT|EPOLLET. The nested process
+/// must go idle and speak on the channel — a POLLOUT livelock never writes
+/// IDLEOK and the workbench freezes at "Restoring the layout state".
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "nested plugin-host-shaped child with EPOLLET on inherited IPC goes idle and writes IDLEOK"
+)]
+fn spawn_theia_nested_ipc_epoll_goes_idle() -> TestResult {
+    let mut exe = [0u8; 256];
+    let exe_len = self_exe(&mut exe)?;
+    let (sock, pid) = spawn_theia_ipc_epoll_helper(&exe[..exe_len])?;
+    let hello = read_idleok(sock);
+    let alive = child_still_running(pid);
+    let _ = syscall::close(sock);
+    reap_or_kill(pid);
+    hello?;
+    check!(alive?, "nested idle helper already exited");
+    Ok(())
+}
+
+/// Theia `child_process.fork({ stdio: [pipe,pipe,pipe,ipc,overlapped] })` puts
+/// BinaryMessagePipe on fd 4, which is a pipe rather than a socket. Nesting
+/// that drops fd 4 unless inherited pipes are installed in the child.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "nested plugin-host-shaped child inherits an extra stdio pipe on fd 4 and writes FD4OK"
+)]
+fn spawn_nested_fd4_pipe_survives() -> TestResult {
+    let mut exe = [0u8; 256];
+    let exe_len = self_exe(&mut exe)?;
+    let (fd4, pid) = spawn_plugin_host_fd4_pipe(&exe[..exe_len])?;
+    let fd4ok = read_exact_msg(fd4, b"FD4OK");
+    let alive = child_still_running(pid);
+    let _ = syscall::close(fd4);
+    reap_or_kill(pid);
+    fd4ok?;
+    check!(alive?, "fd4 helper already exited");
+    Ok(())
+}
+
+unsafe extern "C" fn nest_epoll_block_worker(_arg: *mut u8) -> i32 {
+    let ep = WORKER_EP.load(Ordering::SeqCst);
+    let r = WORKER_PIPE_R.load(Ordering::SeqCst);
+    let mut buf = [0u8; 8];
+    while WORKER_KEEP.load(Ordering::SeqCst) != 0 {
+        let mut out = [epoll::EpollEvent { events: 0, data: 0 }; 4];
+        // Node UV pool threads use epoll_wait(-1), not a 50ms poll. The
+        // blocking trampoline must survive parent fork+exec swapping fd tables.
+        match syscall::epoll_wait(ep, &mut out, -1) {
+            Ok(n) => {
+                for e in out.iter().take(n) {
+                    if e.data == r as u64 && e.events & EPOLLIN != 0 {
+                        let _ = syscall::read(r, &mut buf);
+                        WORKER_TICKS.fetch_add(1, Ordering::SeqCst);
+                    }
+                }
+            }
+            Err(_) => {
+                let req = syscall::Timespec {
+                    tv_sec: 0,
+                    tv_nsec: 2_000_000,
+                };
+                let _ = syscall::nanosleep(&req);
+            }
+        }
+    }
+    0
+}
+
+/// UV pool threads sit in epoll_wait(-1) while the main thread nests
+/// plugin-host. Closing the original host fds at fork makes that wait see
+/// POLLNVAL and the parent event loop livelocks after the page loads.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "a CLONE_THREAD worker blocked in epoll_wait(-1) still wakes after plugin-host nest, and leftover ET sockets go idle"
+)]
+fn spawn_nested_worker_epoll_infinite_goes_idle() -> TestResult {
+    WORKER_KEEP.store(1, Ordering::SeqCst);
+    WORKER_TICKS.store(0, Ordering::SeqCst);
+    let (pr, pw) = check_ok!(syscall::pipe2(0), "pipe");
+    set_nonblock(pr)?;
+    let ep = check_ok!(syscall::epoll_create1(0), "epoll");
+    add_socket_to_epoll(ep, pr, EPOLLIN | EPOLLET)?;
+    let (left_a, left_b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "leftover");
+    add_socket_to_epoll(ep, left_a, EPOLLIN | EPOLLOUT | EPOLLET)?;
+    add_socket_to_epoll(ep, left_b, EPOLLIN | EPOLLOUT | EPOLLET)?;
+    let mut drain = [epoll::EpollEvent { events: 0, data: 0 }; 16];
+    let _ = syscall::epoll_wait(ep, &mut drain, 0);
+    WORKER_EP.store(ep, Ordering::SeqCst);
+    WORKER_PIPE_R.store(pr, Ordering::SeqCst);
+
+    let worker = match runtime::spawn_thread(nest_epoll_block_worker, core::ptr::null_mut()) {
+        Ok(t) => t,
+        Err(e) if runtime::thread_unavailable(e) => {
+            let _ = syscall::close(ep);
+            let _ = syscall::close(pr);
+            let _ = syscall::close(pw);
+            let _ = syscall::close(left_a);
+            let _ = syscall::close(left_b);
+            return Ok(());
+        }
+        Err(e) => return Err(crate::harness::AssertFail::msg(e.name())),
+    };
+
+    check_ok!(syscall::write(pw, b"a"), "prime worker");
+    let mut spins = 0u32;
+    while WORKER_TICKS.load(Ordering::SeqCst) == 0 && spins < 400 {
+        let req = syscall::Timespec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000,
+        };
+        let _ = syscall::nanosleep(&req);
+        spins += 1;
+    }
+
+    let (srv, bound) = listen_loopback()?;
+    let ticks_before = WORKER_TICKS.load(Ordering::SeqCst);
+    let nest = spawn_nested_plugin_host_shape(srv);
+    let after = nest.as_ref().ok().map(|_| {
+        let leftover_ok = syscall::send(left_a, b"x", 0).is_ok();
+        let mut b = [0u8; 1];
+        let _ = syscall::recv(left_b, &mut b, 0);
+        let _ = syscall::epoll_wait(ep, &mut drain, 0);
+        let idle = epoll_goes_idle(ep);
+        let http = if leftover_ok && idle.as_ref().ok() == Some(&true) {
+            http_roundtrip(srv, &bound)
+        } else {
+            Ok(())
+        };
+        let _ = syscall::write(pw, b"b");
+        let mut s = 0u32;
+        while WORKER_TICKS.load(Ordering::SeqCst) <= ticks_before && s < 400 {
+            let req = syscall::Timespec {
+                tv_sec: 0,
+                tv_nsec: 1_000_000,
+            };
+            let _ = syscall::nanosleep(&req);
+            s += 1;
+        }
+        (
+            leftover_ok,
+            idle,
+            http,
+            WORKER_TICKS.load(Ordering::SeqCst) > ticks_before,
+        )
+    });
+
+    WORKER_KEEP.store(0, Ordering::SeqCst);
+    let _ = syscall::write(pw, b"c");
+    match runtime::join_thread(worker) {
+        Ok(()) => {}
+        Err(e) if runtime::thread_unavailable(e) || e == syscall::Errno::ETIMEDOUT => {}
+        Err(_) => {}
+    }
+    let _ = syscall::close(left_a);
+    let _ = syscall::close(left_b);
+    let _ = syscall::close(ep);
+    let _ = syscall::close(pr);
+    let _ = syscall::close(pw);
+
+    let (pid, ipc, extra) = nest?;
+    let _ = syscall::close(ipc);
+    for fd in extra {
+        let _ = syscall::close(fd);
+    }
+    let _ = syscall::close(srv);
+    reap_or_kill(pid);
+
+    check!(ticks_before > 0, "worker never ran before nest");
+    let (leftover_ok, idle, http, woke) = after.ok_or(crate::harness::AssertFail::msg("nest failed"))?;
+    check!(leftover_ok, "leftover socketpair closed by nest");
+    check!(idle?, "epoll idle wait did not block after nest with worker in epoll_wait(-1)");
+    http?;
+    check!(woke, "worker epoll_wait(-1) did not wake after nest");
+    Ok(())
+}
+
+/// A second bind of an occupied TCP port must fail with EADDRINUSE quickly,
+/// even if a UV-style worker is blocked in ppoll. Hanging here is what the
+/// Theia listen callback looks like when port 3000 is already taken.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "second TCP bind of a live listen port returns EADDRINUSE without waiting on a worker ppoll"
+)]
+fn spawn_second_bind_eaddrinuse_is_fast() -> TestResult {
+    WORKER_KEEP.store(1, Ordering::SeqCst);
+    let (idle_r, idle_w) = check_ok!(syscall::pipe2(0), "idle pipe");
+    let (ready_r, ready_w) = check_ok!(syscall::pipe2(0), "ready pipe");
+    WORKER_PIPE_R.store(idle_r, Ordering::SeqCst);
+    WORKER_PIPE_W.store(ready_w, Ordering::SeqCst);
+
+    let worker = match runtime::spawn_thread(nest_ppoll_blocker, core::ptr::null_mut()) {
+        Ok(t) => t,
+        Err(e) if runtime::thread_unavailable(e) => {
+            let _ = syscall::close(idle_r);
+            let _ = syscall::close(idle_w);
+            let _ = syscall::close(ready_r);
+            let _ = syscall::close(ready_w);
+            return Ok(());
+        }
+        Err(e) => return Err(crate::harness::AssertFail::msg(e.name())),
+    };
+
+    let mut go = [0u8; 1];
+    set_nonblock(ready_r)?;
+    let mut saw = false;
+    for _ in 0..10_000 {
+        match syscall::read(ready_r, &mut go) {
+            Ok(n) if n > 0 => {
+                saw = true;
+                break;
+            }
+            Err(syscall::Errno::EAGAIN) => {
+                let mut s = 0u32;
+                while s < 10_000 {
+                    core::hint::spin_loop();
+                    s += 1;
+                }
+            }
+            Err(_) => break,
+            Ok(_) => {}
+        }
+    }
+    check!(saw, "worker never started");
+
+    let srv = check_ok!(
+        syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0),
+        "listen socket"
+    );
+    let one = 1i32.to_ne_bytes();
+    let _ = syscall::setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &one);
+    check_ok!(syscall::bind(srv, &SockAddrIn::any(0)), "first bind");
+    check_ok!(syscall::listen(srv, 8), "listen");
+    let bound = check_ok!(syscall::getsockname_in(srv), "getsockname");
+
+    let srv2 = check_ok!(
+        syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0),
+        "second socket"
+    );
+    let _ = syscall::setsockopt(srv2, SOL_SOCKET, SO_REUSEADDR, &one);
+    let t0 = check_ok!(
+        syscall::clock_gettime(clock::CLOCK_MONOTONIC),
+        "clock before second bind"
+    );
+    let bind2 = syscall::bind(srv2, &SockAddrIn::any(bound.port_host()));
+    let t1 = check_ok!(
+        syscall::clock_gettime(clock::CLOCK_MONOTONIC),
+        "clock after second bind"
+    );
+
+    WORKER_KEEP.store(0, Ordering::SeqCst);
+    let _ = syscall::write(idle_w, b"x");
+    match runtime::join_thread(worker) {
+        Ok(()) => {}
+        Err(e) if runtime::thread_unavailable(e) || e == syscall::Errno::ETIMEDOUT => {}
+        Err(_) => {}
+    }
+    let _ = syscall::close(srv);
+    let _ = syscall::close(srv2);
+    let _ = syscall::close(idle_r);
+    let _ = syscall::close(idle_w);
+    let _ = syscall::close(ready_r);
+    let _ = syscall::close(ready_w);
+
+    match bind2 {
+        Err(e) if e == syscall::Errno::EADDRINUSE => {}
+        Ok(_) => return Err(crate::harness::AssertFail::msg("second bind succeeded")),
+        Err(_) => return Err(crate::harness::AssertFail::msg("second bind errno")),
+    }
+    let elapsed = timespec_ms(&t1).saturating_sub(timespec_ms(&t0));
+    check!(elapsed < 200, "second bind blocked on worker ppoll");
+    Ok(())
+}
