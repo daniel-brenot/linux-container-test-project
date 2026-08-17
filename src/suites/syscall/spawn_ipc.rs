@@ -12,7 +12,7 @@
 //! (the frontend websocket) must keep serving, and epoll must go idle rather
 //! than livelock on leftover socketpair POLLOUT.
 
-use core::sync::atomic::{AtomicU32, Ordering};
+use core::sync::atomic::{AtomicI32, AtomicU32, Ordering};
 
 use crate::check;
 use crate::check_eq;
@@ -827,5 +827,333 @@ fn spawn_nested_existing_tcp_with_live_worker_body() -> TestResult {
     }
     let _ = syscall::close(srv);
     reap_or_kill(pid);
+    Ok(())
+}
+
+/// Bytes already on an accepted TCP socket at fork must still be readable
+/// after nest restore (browser may pipeline the next HTTP/websocket frame
+/// while plugin-host is spawning).
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "TCP bytes queued on an accepted connection before plugin-host nest are still readable afterwards"
+)]
+fn spawn_nested_tcp_bytes_queued_before_nest() -> TestResult {
+    let (srv, bound) = listen_loopback()?;
+    let ep = check_ok!(syscall::epoll_create1(0), "epoll");
+    add_socket_to_epoll(ep, srv, EPOLLIN | EPOLLET)?;
+    let cli = check_ok!(
+        syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0),
+        "client"
+    );
+    check_ok!(syscall::connect(cli, &bound), "connect");
+    check!(
+        wait_epoll_bit(ep, srv as u64, EPOLLIN, 20)?,
+        "listen not ready"
+    );
+    let acc = check_ok!(syscall::accept4(srv, None, None, SOCK_CLOEXEC), "accept");
+    set_nonblock(acc)?;
+    add_socket_to_epoll(ep, acc, EPOLLIN | EPOLLOUT | EPOLLET)?;
+    check_ok!(syscall::send(cli, b"PAGE", 0), "send page");
+    check!(
+        wait_epoll_bit(ep, acc as u64, EPOLLIN, 20)?,
+        "page not readable"
+    );
+    recv_exact(acc, b"PAGE")?;
+    let mut drain = [epoll::EpollEvent { events: 0, data: 0 }; 16];
+    let _ = syscall::epoll_wait(ep, &mut drain, 0);
+
+    check_ok!(syscall::send(cli, b"PING", 0), "queue ping before nest");
+    let (pid, ipc, extra) = spawn_nested_plugin_host_shape(srv)?;
+    check!(child_still_running(pid)?, "child already exited");
+    check!(
+        wait_epoll_bit(ep, acc as u64, EPOLLIN, 20)?,
+        "queued bytes not readable after nest"
+    );
+    recv_exact(acc, b"PING")?;
+
+    let _ = syscall::close(acc);
+    let _ = syscall::close(cli);
+    let _ = syscall::close(ep);
+    let _ = syscall::close(ipc);
+    for fd in extra {
+        let _ = syscall::close(fd);
+    }
+    let _ = syscall::close(srv);
+    reap_or_kill(pid);
+    Ok(())
+}
+
+/// Opening the Theia workbench uses several connections at once (HTML, bundle,
+/// websocket). All of them must survive plugin-host nest.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "three accepted TCP connections all still read and write after plugin-host nest"
+)]
+fn spawn_nested_three_accepted_tcp_still_serve() -> TestResult {
+    let (srv, bound) = listen_loopback()?;
+    let ep = check_ok!(syscall::epoll_create1(0), "epoll");
+    add_socket_to_epoll(ep, srv, EPOLLIN | EPOLLET)?;
+
+    let mut clis = [-1i32; 3];
+    let mut accs = [-1i32; 3];
+    for i in 0..3 {
+        clis[i] = check_ok!(
+            syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0),
+            "client"
+        );
+        check_ok!(syscall::connect(clis[i], &bound), "connect");
+        check!(
+            wait_epoll_bit(ep, srv as u64, EPOLLIN, 20)?,
+            "listen not ready"
+        );
+        accs[i] = check_ok!(syscall::accept4(srv, None, None, SOCK_CLOEXEC), "accept");
+        set_nonblock(accs[i])?;
+        add_socket_to_epoll(ep, accs[i], EPOLLIN | EPOLLOUT | EPOLLET)?;
+        check_ok!(syscall::send(clis[i], b"PAGE", 0), "send page");
+        check!(
+            wait_epoll_bit(ep, accs[i] as u64, EPOLLIN, 20)?,
+            "page not readable"
+        );
+        recv_exact(accs[i], b"PAGE")?;
+    }
+    let mut drain = [epoll::EpollEvent { events: 0, data: 0 }; 16];
+    let _ = syscall::epoll_wait(ep, &mut drain, 0);
+
+    let (pid, ipc, extra) = spawn_nested_plugin_host_shape(srv)?;
+    check!(child_still_running(pid)?, "child already exited");
+
+    for i in 0..3 {
+        check_ok!(syscall::send(clis[i], b"PING", 0), "send ping");
+        check!(
+            wait_epoll_bit(ep, accs[i] as u64, EPOLLIN, 20)?,
+            "accepted fd not readable after nest"
+        );
+        recv_exact(accs[i], b"PING")?;
+        check_ok!(syscall::send(accs[i], b"PONG", 0), "send pong");
+        let mut pong = [0u8; 4];
+        check_eq!(
+            check_ok!(syscall::recv(clis[i], &mut pong, 0), "cli pong"),
+            4,
+            "pong len"
+        );
+        check_eq!(&pong, b"PONG", "pong");
+    }
+
+    for i in 0..3 {
+        let _ = syscall::close(accs[i]);
+        let _ = syscall::close(clis[i]);
+    }
+    let _ = syscall::close(ep);
+    let _ = syscall::close(ipc);
+    for fd in extra {
+        let _ = syscall::close(fd);
+    }
+    let _ = syscall::close(srv);
+    reap_or_kill(pid);
+    Ok(())
+}
+
+static WORKER_EP: AtomicI32 = AtomicI32::new(-1);
+static WORKER_PIPE_R: AtomicI32 = AtomicI32::new(-1);
+
+unsafe extern "C" fn nest_epoll_worker(_arg: *mut u8) -> i32 {
+    let ep = WORKER_EP.load(Ordering::SeqCst);
+    let r = WORKER_PIPE_R.load(Ordering::SeqCst);
+    let mut buf = [0u8; 8];
+    while WORKER_KEEP.load(Ordering::SeqCst) != 0 {
+        let mut out = [epoll::EpollEvent { events: 0, data: 0 }; 4];
+        match syscall::epoll_wait(ep, &mut out, 50) {
+            Ok(n) => {
+                for e in out.iter().take(n) {
+                    if e.data == r as u64 && e.events & EPOLLIN != 0 {
+                        let _ = syscall::read(r, &mut buf);
+                        WORKER_TICKS.fetch_add(1, Ordering::SeqCst);
+                    }
+                }
+            }
+            Err(_) => {
+                let req = syscall::Timespec {
+                    tv_sec: 0,
+                    tv_nsec: 2_000_000,
+                };
+                let _ = syscall::nanosleep(&req);
+            }
+        }
+    }
+    0
+}
+
+/// Node/Theia UV pool threads sit in epoll_wait while the main thread
+/// fork+execs plugin-host. Those workers must still see pipe POLLIN after nest.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "a live CLONE_THREAD worker blocked in epoll_wait still wakes after plugin-host nest"
+)]
+fn spawn_nested_worker_epoll_still_wakes() -> TestResult {
+    WORKER_KEEP.store(1, Ordering::SeqCst);
+    WORKER_TICKS.store(0, Ordering::SeqCst);
+    let (pr, pw) = check_ok!(syscall::pipe2(0), "pipe");
+    set_nonblock(pr)?;
+    let ep = check_ok!(syscall::epoll_create1(0), "epoll");
+    add_socket_to_epoll(ep, pr, EPOLLIN | EPOLLET)?;
+    WORKER_EP.store(ep, Ordering::SeqCst);
+    WORKER_PIPE_R.store(pr, Ordering::SeqCst);
+
+    let worker = match runtime::spawn_thread(nest_epoll_worker, core::ptr::null_mut()) {
+        Ok(t) => t,
+        Err(e) if runtime::thread_unavailable(e) => {
+            let _ = syscall::close(ep);
+            let _ = syscall::close(pr);
+            let _ = syscall::close(pw);
+            return Ok(());
+        }
+        Err(e) => return Err(crate::harness::AssertFail::msg(e.name())),
+    };
+
+    check_ok!(syscall::write(pw, b"a"), "prime worker");
+    let mut spins = 0u32;
+    while WORKER_TICKS.load(Ordering::SeqCst) == 0 && spins < 200 {
+        let req = syscall::Timespec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000,
+        };
+        let _ = syscall::nanosleep(&req);
+        spins += 1;
+    }
+
+    let (srv, _bound) = listen_loopback()?;
+    let ticks_before = WORKER_TICKS.load(Ordering::SeqCst);
+    let nest = spawn_nested_plugin_host_shape(srv);
+    let woke = nest.as_ref().ok().map(|_| {
+        let _ = syscall::write(pw, b"b");
+        let mut s = 0u32;
+        while WORKER_TICKS.load(Ordering::SeqCst) <= ticks_before && s < 200 {
+            let req = syscall::Timespec {
+                tv_sec: 0,
+                tv_nsec: 1_000_000,
+            };
+            let _ = syscall::nanosleep(&req);
+            s += 1;
+        }
+        WORKER_TICKS.load(Ordering::SeqCst) > ticks_before
+    });
+
+    WORKER_KEEP.store(0, Ordering::SeqCst);
+    match runtime::join_thread(worker) {
+        Ok(()) => {}
+        Err(e) if runtime::thread_unavailable(e) || e == syscall::Errno::ETIMEDOUT => {}
+        Err(_) => {}
+    }
+    let _ = syscall::close(ep);
+    let _ = syscall::close(pr);
+    let _ = syscall::close(pw);
+
+    let (pid, ipc, extra) = nest?;
+    let _ = syscall::close(ipc);
+    for fd in extra {
+        let _ = syscall::close(fd);
+    }
+    let _ = syscall::close(srv);
+    reap_or_kill(pid);
+    check!(ticks_before > 0, "worker never ran");
+    check!(woke.unwrap_or(false), "worker epoll did not wake after nest");
+    Ok(())
+}
+
+/// libuv reads a stream until EAGAIN, then `epoll_wait`s. If the peer writes
+/// in that gap, Linux still reports EPOLLIN. xvisor disarms ET POLLIN on the
+/// first wait and only rearms it when a later wait observes "not ready" — so
+/// data that arrives after EAGAIN is stuck and Theia's websocket freezes.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "EPOLLET POLLIN rearms after recv EAGAIN so a socketpair write before the next wait is still reported"
+)]
+fn spawn_epoll_et_socket_in_rearm_after_eagain() -> TestResult {
+    let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "sp");
+    set_nonblock(a)?;
+    set_nonblock(b)?;
+    let ep = check_ok!(syscall::epoll_create1(0), "epoll");
+    add_socket_to_epoll(ep, a, EPOLLIN | EPOLLET)?;
+
+    check_ok!(syscall::send(b, b"x", 0), "prime");
+    check!(wait_epoll_bit(ep, a as u64, EPOLLIN, 20)?, "first in");
+    let mut tmp = [0u8; 8];
+    loop {
+        match syscall::recv(a, &mut tmp, 0) {
+            Ok(0) => break,
+            Ok(_) => {}
+            Err(syscall::Errno::EAGAIN) => break,
+            Err(_) => return Err(crate::harness::AssertFail::msg("recv drain")),
+        }
+    }
+
+    check_ok!(syscall::send(b, b"y", 0), "after eagain");
+    check!(
+        wait_epoll_bit(ep, a as u64, EPOLLIN, 20)?,
+        "POLLIN missing after recv EAGAIN then peer write"
+    );
+    recv_exact(a, b"y")?;
+    let _ = syscall::close(ep);
+    let _ = syscall::close(a);
+    let _ = syscall::close(b);
+    Ok(())
+}
+
+/// libuv writes until EAGAIN, the peer may drain the buffer before the next
+/// `epoll_wait`, and Linux still reports EPOLLOUT. xvisor keeps POLLOUT
+/// disarmed while the socket is writable, so Theia never finishes flushing
+/// `bundle.js` / the frontend websocket and the page freezes.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "EPOLLET POLLOUT rearms after send EAGAIN so a drained socketpair is writable again"
+)]
+fn spawn_epoll_et_socket_out_rearm_after_eagain() -> TestResult {
+    let (a, b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "sp");
+    set_nonblock(a)?;
+    set_nonblock(b)?;
+    let ep = check_ok!(syscall::epoll_create1(0), "epoll");
+    add_socket_to_epoll(ep, a, EPOLLOUT | EPOLLET)?;
+
+    check!(wait_epoll_bit(ep, a as u64, EPOLLOUT, 20)?, "first out");
+    let mut drain = [epoll::EpollEvent { events: 0, data: 0 }; 4];
+    let _ = syscall::epoll_wait(ep, &mut drain, 0);
+
+    let chunk = [0u8; 4096];
+    let mut filled = false;
+    for _ in 0..4096 {
+        match syscall::send(a, &chunk, 0) {
+            Ok(0) => break,
+            Ok(_) => {}
+            Err(syscall::Errno::EAGAIN) => {
+                filled = true;
+                break;
+            }
+            Err(_) => return Err(crate::harness::AssertFail::msg("send fill")),
+        }
+    }
+    check!(filled, "send never returned EAGAIN");
+
+    let mut buf = [0u8; 4096];
+    loop {
+        match syscall::recv(b, &mut buf, 0) {
+            Ok(0) => break,
+            Ok(_) => {}
+            Err(syscall::Errno::EAGAIN) => break,
+            Err(_) => return Err(crate::harness::AssertFail::msg("recv drain")),
+        }
+    }
+
+    check!(
+        wait_epoll_bit(ep, a as u64, EPOLLOUT, 50)?,
+        "POLLOUT missing after send EAGAIN then peer drain"
+    );
+    let _ = syscall::close(ep);
+    let _ = syscall::close(a);
+    let _ = syscall::close(b);
     Ok(())
 }
