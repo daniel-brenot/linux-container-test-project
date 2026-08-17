@@ -957,6 +957,7 @@ fn spawn_nested_three_accepted_tcp_still_serve() -> TestResult {
 
 static WORKER_EP: AtomicI32 = AtomicI32::new(-1);
 static WORKER_PIPE_R: AtomicI32 = AtomicI32::new(-1);
+static WORKER_PIPE_W: AtomicI32 = AtomicI32::new(-1);
 
 unsafe extern "C" fn nest_epoll_worker(_arg: *mut u8) -> i32 {
     let ep = WORKER_EP.load(Ordering::SeqCst);
@@ -1155,5 +1156,160 @@ fn spawn_epoll_et_socket_out_rearm_after_eagain() -> TestResult {
     let _ = syscall::close(ep);
     let _ = syscall::close(a);
     let _ = syscall::close(b);
+    Ok(())
+}
+
+/// Theia `http.Server.listen(port, '0.0.0.0')` binds INADDR_ANY. Isolated
+/// runtimes that rewrite unpublished ports to loopback must still accept from
+/// 127.0.0.1, or the "Theia app listening" callback never becomes reachable.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "TCP bind/listen on INADDR_ANY still accepts a 127.0.0.1 client (Theia --hostname=0.0.0.0)"
+)]
+fn spawn_listen_inaddr_any_accepts_loopback() -> TestResult {
+    let srv = check_ok!(
+        syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0),
+        "socket"
+    );
+    let one = 1i32.to_ne_bytes();
+    check_ok!(
+        syscall::setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &one),
+        "SO_REUSEADDR"
+    );
+    check_ok!(syscall::bind(srv, &SockAddrIn::any(0)), "bind INADDR_ANY");
+    check_ok!(syscall::listen(srv, 128), "listen");
+    let bound = check_ok!(syscall::getsockname_in(srv), "getsockname");
+    check!(bound.port_host() != 0, "ephemeral port");
+    let mut dest = SockAddrIn::loopback(bound.port_host());
+    if bound.sin_addr != 0 {
+        dest.sin_addr = bound.sin_addr;
+    }
+    let cli = check_ok!(
+        syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0),
+        "client"
+    );
+    check_ok!(syscall::connect(cli, &dest), "connect loopback to INADDR_ANY");
+    let acc = check_ok!(syscall::accept4(srv, None, None, SOCK_CLOEXEC), "accept4");
+    check_ok!(syscall::send(cli, b"hi", 0), "send");
+    let mut buf = [0u8; 2];
+    check_eq!(check_ok!(syscall::recv(acc, &mut buf, 0), "recv"), 2, "len");
+    check_eq!(&buf, b"hi", "payload");
+    let _ = syscall::close(acc);
+    let _ = syscall::close(cli);
+    let _ = syscall::close(srv);
+    Ok(())
+}
+
+unsafe extern "C" fn nest_ppoll_blocker(_arg: *mut u8) -> i32 {
+    let r = WORKER_PIPE_R.load(Ordering::SeqCst);
+    let ready = WORKER_PIPE_W.load(Ordering::SeqCst);
+    let _ = syscall::write(ready, b"x");
+    let ts = syscall::Timespec {
+        tv_sec: 2,
+        tv_nsec: 0,
+    };
+    while WORKER_KEEP.load(Ordering::SeqCst) != 0 {
+        let mut fds = [poll::PollFd {
+            fd: r,
+            events: POLLIN,
+            revents: 0,
+        }];
+        let _ = syscall::ppoll(&mut fds, Some(&ts), None);
+    }
+    0
+}
+
+/// Node `listen(port, '0.0.0.0')` does `dns.lookup` on a UV worker (`ppoll`)
+/// then bind+listen on the main thread. If the emulator holds a global lock
+/// across that worker ppoll, Theia never prints "Theia app listening".
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "a CLONE_THREAD worker blocked in ppoll must not delay the parent's TCP bind+listen"
+)]
+fn spawn_worker_ppoll_does_not_block_parent_listen() -> TestResult {
+    WORKER_KEEP.store(1, Ordering::SeqCst);
+    let (idle_r, idle_w) = check_ok!(syscall::pipe2(0), "idle pipe");
+    let (ready_r, ready_w) = check_ok!(syscall::pipe2(0), "ready pipe");
+    WORKER_PIPE_R.store(idle_r, Ordering::SeqCst);
+    WORKER_PIPE_W.store(ready_w, Ordering::SeqCst);
+
+    let worker = match runtime::spawn_thread(nest_ppoll_blocker, core::ptr::null_mut()) {
+        Ok(t) => t,
+        Err(e) if runtime::thread_unavailable(e) => {
+            let _ = syscall::close(idle_r);
+            let _ = syscall::close(idle_w);
+            let _ = syscall::close(ready_r);
+            let _ = syscall::close(ready_w);
+            return Ok(());
+        }
+        Err(e) => return Err(crate::harness::AssertFail::msg(e.name())),
+    };
+
+    let mut go = [0u8; 1];
+    set_nonblock(ready_r)?;
+    let mut saw = false;
+    for _ in 0..10_000 {
+        match syscall::read(ready_r, &mut go) {
+            Ok(n) if n > 0 => {
+                saw = true;
+                break;
+            }
+            Err(syscall::Errno::EAGAIN) => {
+                let mut s = 0u32;
+                while s < 10_000 {
+                    core::hint::spin_loop();
+                    s += 1;
+                }
+            }
+            Err(_) => break,
+            Ok(_) => {}
+        }
+    }
+    check!(saw, "worker never started");
+    let mut spins = 0u32;
+    while spins < 5_000_000 {
+        core::hint::spin_loop();
+        spins += 1;
+    }
+    let t0 = check_ok!(
+        syscall::clock_gettime(clock::CLOCK_MONOTONIC),
+        "clock before listen"
+    );
+
+    let srv = check_ok!(
+        syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0),
+        "socket"
+    );
+    let one = 1i32.to_ne_bytes();
+    let _ = syscall::setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &one);
+    let bind_r = syscall::bind(srv, &SockAddrIn::any(0));
+    let listen_r = syscall::listen(srv, 8);
+    let t1 = check_ok!(
+        syscall::clock_gettime(clock::CLOCK_MONOTONIC),
+        "clock after listen"
+    );
+
+    WORKER_KEEP.store(0, Ordering::SeqCst);
+    let _ = syscall::write(idle_w, b"x");
+    match runtime::join_thread(worker) {
+        Ok(()) => {}
+        Err(e) if runtime::thread_unavailable(e) || e == syscall::Errno::ETIMEDOUT => {}
+        Err(_) => {}
+    }
+    let _ = syscall::close(srv);
+    let _ = syscall::close(idle_r);
+    let _ = syscall::close(idle_w);
+    let _ = syscall::close(ready_r);
+    let _ = syscall::close(ready_w);
+
+    check_ok!(bind_r, "bind blocked by worker ppoll");
+    check_ok!(listen_r, "listen blocked by worker ppoll");
+    let elapsed = timespec_ms(&t1).saturating_sub(timespec_ms(&t0));
+    check!(
+        elapsed < 500,
+        "parent bind+listen waited on worker ppoll"
+    );
     Ok(())
 }

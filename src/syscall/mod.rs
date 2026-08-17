@@ -636,6 +636,16 @@ impl Default for SockAddrIn {
 }
 
 impl SockAddrIn {
+    /// Build an `INADDR_ANY` address with `port` in host byte order.
+    pub fn any(port: u16) -> Self {
+        Self {
+            sin_family: AF_INET as u16,
+            sin_port: port.to_be(),
+            sin_addr: 0,
+            sin_zero: [0; 8],
+        }
+    }
+
     /// Build a loopback address with `port` in host byte order.
     pub fn loopback(port: u16) -> Self {
         Self {
