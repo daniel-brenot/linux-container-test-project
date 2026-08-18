@@ -4,14 +4,17 @@
 //! - `--ipc-channel-hold` — keep fd 3 open and block until killed (reload/teardown)
 //! - `--ipc-channel-hello` — write `HELLO` on fd 3 immediately, then hold
 //!   (Theia/Node plugin-host shape: child speaks first on the IPC channel)
+//! - node-pty `spawn-helper` argv (`cwd, uid, gid, closeFDs, file`) — CLOEXEC
+//!   fd 3 and exec the shell (Theia terminal handshake)
 //! - `--theia-ipc-epoll-idle` — plugin-host analogue: inherit fd 3, watch it with
 //!   EPOLLIN|EPOLLOUT|EPOLLET, prove epoll_wait sleeps, then write `IDLEOK`
 
 use crate::syscall;
 use crate::syscall::clock;
 use crate::syscall::epoll;
+use crate::syscall::fcntl_cmd;
 use crate::syscall::poll;
-use crate::syscall::{EPOLLET, EPOLLIN, EPOLLOUT, EPOLL_CTL_ADD};
+use crate::syscall::{EPOLLET, EPOLLIN, EPOLLOUT, EPOLL_CTL_ADD, FD_CLOEXEC, TIOCSCTTY};
 
 const CHANNEL_FD: i32 = 3;
 
@@ -46,9 +49,69 @@ unsafe fn argv_flag<'a>(argc: usize, argv: *const usize) -> Option<&'a [u8]> {
     None
 }
 
+fn argv_is_numeric(s: &[u8]) -> bool {
+    !s.is_empty() && s.iter().all(|c| c.is_ascii_digit())
+}
+
+/// node-pty `posix_spawn(spawn-helper, [cwd, uid, gid, closeFDs, file, …])`.
+/// `argv[0]` is the cwd, not the helper path, so detect the argv shape.
+unsafe fn maybe_run_pty_spawn_helper(argc: usize, argv: *const usize) -> bool {
+    if argc < 5 {
+        return false;
+    }
+    let Some(uid) = argv_cstr(argv, 1) else {
+        return false;
+    };
+    let Some(close_fds) = argv_cstr(argv, 3) else {
+        return false;
+    };
+    let Some(file) = argv_cstr(argv, 4) else {
+        return false;
+    };
+    let uid_ok = uid == b"-1" || argv_is_numeric(uid);
+    let close_ok = close_fds == b"0" || close_fds == b"1";
+    if !uid_ok || !close_ok || !file.starts_with(b"/") {
+        return false;
+    }
+    run_pty_spawn_helper(argc, argv);
+}
+
+fn run_pty_spawn_helper(argc: usize, argv: *const usize) -> ! {
+    let _ = syscall::setsid();
+    let _ = syscall::ioctl(0, TIOCSCTTY, 0);
+    let _ = syscall::fcntl(3, fcntl_cmd::F_SETFD, FD_CLOEXEC as usize);
+    let file_ptr = unsafe { *argv.add(4) as *const u8 };
+    if file_ptr.is_null() {
+        syscall::exit(127);
+    }
+    let mut path = [0u8; 256];
+    let mut plen = 0usize;
+    unsafe {
+        while plen + 1 < path.len() && *file_ptr.add(plen) != 0 {
+            path[plen] = *file_ptr.add(plen);
+            plen += 1;
+        }
+    }
+    path[plen] = 0;
+    let mut child_argv = [core::ptr::null::<u8>(); 16];
+    let mut k = 0usize;
+    let mut j = 4usize;
+    while j < argc && k < 15 {
+        child_argv[k] = unsafe { *argv.add(j) as *const u8 };
+        k += 1;
+        j += 1;
+    }
+    let envp: [*const u8; 1] = [core::ptr::null()];
+    let _ = syscall::execve(&path[..plen + 1], &child_argv, &envp);
+    syscall::exit(127);
+}
+
 /// # Safety
 /// `argv` must be a valid argc-length argv vector.
 pub unsafe fn dispatch_helper(argc: usize, argv: *const usize) -> bool {
+    if maybe_run_pty_spawn_helper(argc, argv) {
+        // never returns
+    }
     match argv_flag(argc, argv) {
         Some(b"--ipc-channel-echo") => {
             run_ipc_channel_echo();

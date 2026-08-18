@@ -9,9 +9,10 @@ use crate::check;
 use crate::check_eq;
 use crate::check_err;
 use crate::check_ok;
-use crate::harness::TestResult;
+use crate::harness::{TempDir, TestResult};
 use crate::syscall::{
-    self, oflag, poll, wait, Errno, F_OK, POLLIN, TIOCGPTN, TIOCSPTLCK, TIOCSCTTY,
+    self, oflag, poll, wait, Errno, SockAddrIn, AF_INET, F_OK, POLLIN, POLLHUP, SIGKILL,
+    SOCK_CLOEXEC, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR, TIOCGPTN, TIOCSPTLCK, TIOCSCTTY,
 };
 
 const PTMX: &[u8] = b"/dev/ptmx\0";
@@ -609,5 +610,226 @@ fn pty_interactive_ls_line() -> TestResult {
     }
     let _ = syscall::close(master);
     check!(saw_listing, "interactive ls listing");
+    Ok(())
+}
+
+fn listen_loopback() -> Result<(i32, SockAddrIn), crate::harness::AssertFail> {
+    let srv = check_ok!(
+        syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0),
+        "listen socket"
+    );
+    let one = 1i32.to_ne_bytes();
+    check_ok!(
+        syscall::setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &one),
+        "SO_REUSEADDR"
+    );
+    check_ok!(syscall::bind(srv, &SockAddrIn::loopback(0)), "bind");
+    check_ok!(syscall::listen(srv, 128), "listen");
+    let bound = check_ok!(syscall::getsockname_in(srv), "getsockname");
+    Ok((srv, bound))
+}
+
+fn http_roundtrip(srv: i32, bound: &SockAddrIn) -> Result<(), crate::harness::AssertFail> {
+    let cli = check_ok!(
+        syscall::socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC, 0),
+        "client"
+    );
+    check_ok!(syscall::connect(cli, bound), "connect");
+    let mut pfds = [poll::PollFd {
+        fd: srv,
+        events: POLLIN,
+        revents: 0,
+    }];
+    check!(
+        check_ok!(syscall::poll(&mut pfds, 2000), "poll listen") >= 1,
+        "listen not readable"
+    );
+    let acc = check_ok!(syscall::accept4(srv, None, None, SOCK_CLOEXEC), "accept4");
+    check_ok!(syscall::send(cli, b"GET /", 0), "send");
+    let mut acc_poll = [poll::PollFd {
+        fd: acc,
+        events: POLLIN,
+        revents: 0,
+    }];
+    check!(
+        check_ok!(syscall::poll(&mut acc_poll, 2000), "poll accepted") >= 1,
+        "accepted not readable"
+    );
+    let mut buf = [0u8; 8];
+    let n = check_ok!(syscall::recv(acc, &mut buf, 0), "recv");
+    check_eq!(n, 5, "len");
+    check_eq!(&buf[..5], b"GET /", "payload");
+    let _ = syscall::close(acc);
+    let _ = syscall::close(cli);
+    Ok(())
+}
+
+fn comms_read_eof(fd: i32) -> Result<(), crate::harness::AssertFail> {
+    // node-pty PtyFork `read`s the comms pipe until EOF. A leftover write end
+    // in a parked interactive shell hangs this forever (Theia JS thread stuck).
+    let mut scratch = [0u8; 8];
+    for _ in 0..20 {
+        let mut fds = [poll::PollFd {
+            fd,
+            events: POLLIN | POLLHUP,
+            revents: 0,
+        }];
+        let pr = check_ok!(syscall::poll(&mut fds, 100), "poll comms");
+        if pr == 0 {
+            continue;
+        }
+        match syscall::read(fd, &mut scratch) {
+            Ok(0) => return Ok(()),
+            Ok(_) => {
+                return Err(crate::harness::AssertFail::msg("comms error payload"));
+            }
+            Err(Errno::EAGAIN) => {}
+            Err(_) => return Err(crate::harness::AssertFail::msg("comms read")),
+        }
+        if fds[0].revents & POLLHUP != 0 {
+            return Ok(());
+        }
+    }
+    Err(crate::harness::AssertFail::msg("comms read hung (write end still open)"))
+}
+
+fn install_pty_spawn_helper(tmp: &mut TempDir) -> Result<[u8; 160], crate::harness::AssertFail> {
+    let src = check_ok!(tmp.child(b"pty-spawn-helper\0"), "helper path");
+    let mut helper = [0u8; 160];
+    check!(src.len() <= helper.len(), "helper path");
+    helper[..src.len()].copy_from_slice(src);
+    let mut exe = [0u8; 256];
+    let n = check_ok!(
+        syscall::readlink(b"/proc/self/exe\0", &mut exe),
+        "readlink exe"
+    );
+    check!(n > 0 && n < exe.len(), "exe len");
+    exe[n] = 0;
+    if syscall::link(&exe[..n + 1], &helper).is_err() {
+        check_ok!(syscall::symlink(&exe[..n + 1], &helper), "symlink helper");
+    }
+    Ok(helper)
+}
+
+/// Theia/node-pty: posix_spawn a `spawn-helper` with a comms pipe on fd 3,
+/// PTY slave as stdio, then the parent `read`s the comms pipe (EOF = success)
+/// and drives `ls -la` on the master. A runtime that parks interactive `sh`
+/// without closing the comms write hangs PtyFork on the JS thread, so the
+/// workbench stops accepting HTTP and never shows a terminal.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "node-pty spawn-helper comms pipe EOFs, HTTP still accepts, and ls -la on the pty lists a rootfs entry"
+)]
+fn pty_nodepty_comms_eof_then_ls_la_http() -> TestResult {
+    check_ok!(syscall::access(b"/bin/sh\0", F_OK), "/bin/sh");
+    let (srv, bound) = listen_loopback()?;
+    if http_roundtrip(srv, &bound).is_err() {
+        let _ = syscall::close(srv);
+        return Err(crate::harness::AssertFail::msg("http before spawn"));
+    }
+
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let helper = install_pty_spawn_helper(&mut tmp)?;
+    let (master, slave, _) = openpty_pair()?;
+    let (comms_r, comms_w) = check_ok!(syscall::pipe2(oflag::O_CLOEXEC), "comms pipe");
+
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        let _ = syscall::close(master);
+        let _ = syscall::close(comms_r);
+        let _ = syscall::close(srv);
+        let _ = syscall::setsid();
+        let _ = syscall::ioctl(slave, TIOCSCTTY, 0);
+        if syscall::dup2(slave, 0).is_err()
+            || syscall::dup2(slave, 1).is_err()
+            || syscall::dup2(slave, 2).is_err()
+            || syscall::dup2(comms_w, 3).is_err()
+        {
+            syscall::exit(125);
+        }
+        if slave > 2 {
+            let _ = syscall::close(slave);
+        }
+        if comms_w != 3 {
+            let _ = syscall::close(comms_w);
+        }
+        let cwd = b"/\0";
+        let uid = b"-1\0";
+        let gid = b"-1\0";
+        let close_fds = b"0\0";
+        let file = b"/bin/sh\0";
+        let argv = [
+            cwd.as_ptr(),
+            uid.as_ptr(),
+            gid.as_ptr(),
+            close_fds.as_ptr(),
+            file.as_ptr(),
+            core::ptr::null(),
+        ];
+        let envp: [*const u8; 1] = [core::ptr::null()];
+        let _ = syscall::execve(&helper, &argv, &envp);
+        syscall::exit(127);
+    }
+    let _ = syscall::close(slave);
+    let _ = syscall::close(comms_w);
+
+    let eof = comms_read_eof(comms_r);
+    let http_after_spawn = http_roundtrip(srv, &bound);
+    let _ = syscall::close(comms_r);
+
+    let mut listing_ok = false;
+    if eof.is_ok() {
+        check_ok!(syscall::write(master, b"ls -la\n"), "write ls -la");
+        let mut buf = [0u8; 2048];
+        let mut filled = 0usize;
+        for _ in 0..40 {
+            let mut fds = [poll::PollFd {
+                fd: master,
+                events: POLLIN,
+                revents: 0,
+            }];
+            if syscall::poll(&mut fds, 100).unwrap_or(0) > 0 {
+                match syscall::read(master, &mut buf[filled..]) {
+                    Ok(0) => break,
+                    Ok(n) => {
+                        filled += n;
+                        if buf_contains(&buf[..filled], b"etc")
+                            || buf_contains(&buf[..filled], b"bin")
+                            || buf_contains(&buf[..filled], b"usr")
+                            || buf_contains(&buf[..filled], b"total")
+                        {
+                            listing_ok = true;
+                            break;
+                        }
+                    }
+                    Err(Errno::EIO) => break,
+                    Err(_) => {}
+                }
+            }
+        }
+        let _ = syscall::write(master, b"exit\n");
+    }
+
+    let http_after_ls = http_roundtrip(srv, &bound);
+    let _ = syscall::close(master);
+    let _ = syscall::close(srv);
+    // Interactive `sh` stays alive after `ls -la`; SIGKILL + drain so later
+    // waitpid(-1) tests do not reap this child.
+    let _ = syscall::kill(pid, SIGKILL);
+    let mut status = 0;
+    let _ = syscall::wait4(pid, &mut status, 0);
+    loop {
+        match syscall::wait4(-1, &mut status, wait::WNOHANG) {
+            Ok(0) | Err(Errno::ECHILD) => break,
+            Ok(_) => continue,
+            Err(_) => break,
+        }
+    }
+
+    eof.map_err(|_| crate::harness::AssertFail::msg("comms read hung"))?;
+    http_after_spawn.map_err(|_| crate::harness::AssertFail::msg("http after spawn"))?;
+    check!(listing_ok, "ls -la listing");
+    http_after_ls.map_err(|_| crate::harness::AssertFail::msg("http after ls -la"))?;
     Ok(())
 }
