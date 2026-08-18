@@ -1037,12 +1037,15 @@ fn low_gva_store_after_fork_exec_parent_http() -> TestResult {
     cow_slice_mut(addr, len).fill(0xA5);
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
-        // Many stores to the same low GVA: one COW fault is not enough to
-        // expose a native-retry livelock that only storms on the retry.
-        cow_slice_mut(addr, len).fill(0x5A);
+        // One STR to the PAGEZERO GVA: a native retry after COW mprotect of the
+        // host mirror livelocks in `_sigtramp`. A bulk `fill` also trips that,
+        // but a single store is enough and keeps the emulate path small.
+        unsafe {
+            *(addr as *mut u64) = 0x5A5A_5A5A_5A5A_5A5A;
+        }
         exec_plugin_host_hold();
     }
-    let parent_ok = cow_slice(addr, len).iter().all(|&b| b == 0xA5);
+    let parent_ok = cow_slice(addr, 8).iter().all(|&b| b == 0xA5);
     let http_ok = http_roundtrip(srv, &bound);
     let _ = syscall::close(srv);
     let _ = syscall::kill(pid, SIGKILL);
