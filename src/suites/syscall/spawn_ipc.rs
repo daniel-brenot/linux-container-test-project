@@ -972,36 +972,6 @@ fn mmap_anon_canary_survives_fork_exec() -> TestResult {
     Ok(())
 }
 
-/// Pick a MAP_FIXED address in the classic ET_EXEC / PAGEZERO band (<256MiB).
-/// xvisor maps those at `guest+LOW_VA_BIAS`; a native store still uses the
-/// low GVA and SIGSEGVs. Fork-COW used to mprotect the host mirror and
-/// retry the instruction, livelocking in `_sigtramp` so the parent never
-/// restored — Theia reload then stopped accepting HTTP.
-fn map_low_gva_anon(len: usize) -> Result<usize, crate::harness::AssertFail> {
-    // Above the V8 near-exec bump (~99MiB) and below the 256MiB PAGEZERO
-    // mirror cap, so MAP_FIXED does not punch the ET_EXEC image.
-    const CANDIDATES: [usize; 3] = [0x0a00_0000, 0x0c00_0000, 0x0e00_0000];
-    for &hint in &CANDIDATES {
-        match syscall::mmap(
-            hint,
-            len,
-            prot::PROT_READ | prot::PROT_WRITE,
-            map::MAP_PRIVATE | map::MAP_ANONYMOUS | map::MAP_FIXED,
-            -1,
-            0,
-        ) {
-            Ok(addr) if addr == hint => return Ok(addr),
-            Ok(addr) => {
-                let _ = syscall::munmap(addr, len);
-            }
-            Err(_) => {}
-        }
-    }
-    Err(crate::harness::AssertFail::msg(
-        "mmap MAP_FIXED in low 256MiB",
-    ))
-}
-
 fn drain_zombies() {
     let mut status = 0;
     loop {
@@ -1013,38 +983,27 @@ fn drain_zombies() {
     }
 }
 
-/// Theia/Node classic `fork` COW mprotects the Darwin host mirror of a low
-/// guest mapping, then the SIGSEGV handler returned and retried the store
-/// natively. The store still used the PAGEZERO GVA, so the child livelocked
-/// (`fork cow armed` with no restore) and the parent's HTTP listen died —
-/// workbench reload / second `uv_spawn`. Completing `fork`+`exec` so HTTP
-/// still accepts is the property; a parent canary on the PAGEZERO alias is
-/// not required for the workbench to stay up.
+/// Theia/Node classic `fork` COW used to livelock the child on a PAGEZERO
+/// store (`fork cow armed` with no restore) so the parent's HTTP listen died
+/// — workbench reload / second `uv_spawn`. A live TCP listen must still
+/// accept after the child overwrites ELF data and execs.
 #[crate::lctp_test(
     suite = syscall,
     expect = success,
-    case = "a MAP_FIXED anonymous mapping below 256MiB can be written after fork, the child can exec, and the parent TCP listen still accepts"
+    case = "after a child overwrites ELF data and execs, the parent TCP listen still accepts"
 )]
 fn low_gva_store_after_fork_exec_parent_http() -> TestResult {
     let (srv, bound) = listen_loopback()?;
     http_roundtrip(srv, &bound)?;
-    let len = 0x4000usize;
-    let addr = match map_low_gva_anon(len) {
-        Ok(a) => a,
-        Err(e) => {
-            let _ = syscall::close(srv);
-            return Err(e);
-        }
-    };
-    cow_slice_mut(addr, len).fill(0xA5);
+    unsafe {
+        ELF_DATA_CANARY.fill(0xA5);
+    }
     let pid = check_ok!(syscall::fork(), "fork");
     if pid == 0 {
-        // One STR to the PAGEZERO GVA: a native retry after COW mprotect of the
-        // host mirror livelocks in `_sigtramp`. A bulk `fill` also trips that,
-        // but a single store is enough and keeps the emulate path small.
-    unsafe {
-            *(addr as *mut u64) = 0x5A5A_5A5A_5A5A_5A5A;
+        unsafe {
+            ELF_DATA_CANARY.fill(0x5A);
         }
+        core::hint::black_box(unsafe { &ELF_DATA_CANARY });
         let arg0 = b"sh\0";
         let arg1 = b"-c\0";
         let arg2 = b"true\0";
@@ -1058,11 +1017,16 @@ fn low_gva_store_after_fork_exec_parent_http() -> TestResult {
         let _ = syscall::execve(b"/bin/sh\0", &argv, &envp);
         syscall::exit(127);
     }
+    core::hint::black_box(unsafe { &ELF_DATA_CANARY });
+    let parent_ok = unsafe { ELF_DATA_CANARY.iter().all(|&b| b == 0xA5) };
     let http_ok = http_roundtrip(srv, &bound);
     let _ = syscall::close(srv);
     reap_or_kill(pid);
     drain_zombies();
-    let _ = syscall::munmap(addr, len);
+    check!(
+        parent_ok,
+        "parent ELF data saw child's stores after fork+exec"
+    );
     http_ok.map_err(|_| crate::harness::AssertFail::msg("http after low-GVA fork+exec"))?;
     Ok(())
 }
