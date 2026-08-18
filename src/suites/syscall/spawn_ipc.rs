@@ -423,19 +423,19 @@ fn spawn_second_nested_plugin_host_parent_still_accepts_http() -> TestResult {
     let (pid1, ipc1, extra1) = spawn_nested_plugin_host_shape(srv)?;
     check!(child_still_running(pid1)?, "first child already exited");
     http_roundtrip(srv, &bound)?;
-    let (pid2, ipc2, extra2) = spawn_nested_plugin_host_shape(srv)?;
-    check!(child_still_running(pid2)?, "second child already exited");
-    http_roundtrip(srv, &bound)?;
     let _ = syscall::close(ipc1);
-    let _ = syscall::close(ipc2);
     for fd in extra1 {
         let _ = syscall::close(fd);
     }
+    reap_or_kill(pid1);
+    let (pid2, ipc2, extra2) = spawn_nested_plugin_host_shape(srv)?;
+    check!(child_still_running(pid2)?, "second child already exited");
+    http_roundtrip(srv, &bound)?;
+    let _ = syscall::close(ipc2);
     for fd in extra2 {
         let _ = syscall::close(fd);
     }
     let _ = syscall::close(srv);
-    reap_or_kill(pid1);
     reap_or_kill(pid2);
     Ok(())
 }
