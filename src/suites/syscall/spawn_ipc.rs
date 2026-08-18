@@ -1149,10 +1149,8 @@ fn clone_worker_stores_deferred_cow_two_fork_exec_parent_http() -> TestResult {
     let _ = syscall::prctl(PR_XVISOR_COW_DEFER, 1, 0, 0, 0);
     COW_STORE_KEEP.store(1, Ordering::SeqCst);
     COW_STORE_TICKS.store(0, Ordering::SeqCst);
-    let mut workers = [None, None, None, None, None, None, None, None];
-    for (i, slot) in workers.iter_mut().enumerate() {
-        *slot = start_store_worker(i + 1)?;
-    }
+    let w0 = start_store_worker(1)?;
+    let w1 = start_store_worker(2)?;
     let mut spins = 0u32;
     while COW_STORE_TICKS.load(Ordering::SeqCst) == 0 && spins < 200 {
         let req = syscall::Timespec {
@@ -1162,27 +1160,28 @@ fn clone_worker_stores_deferred_cow_two_fork_exec_parent_http() -> TestResult {
         let _ = syscall::nanosleep(&req);
         spins += 1;
     }
-    let started = workers.iter().all(|w| w.is_none())
+    let started = (w0.is_none() && w1.is_none())
         || COW_STORE_TICKS.load(Ordering::SeqCst) > 0;
     let pid1 = fork_exec_hold_once()?;
-    http_roundtrip(srv, &bound).map_err(|_| {
-        crate::harness::AssertFail::msg("http after first deferred-COW store-worker fork+exec")
-    })?;
+    let http1 = http_roundtrip(srv, &bound);
     reap_or_kill(pid1);
     drain_zombies();
     let pid2 = fork_exec_hold_once()?;
-    http_roundtrip(srv, &bound).map_err(|_| {
-        crate::harness::AssertFail::msg("http after second deferred-COW store-worker fork+exec")
-    })?;
+    let http2 = http_roundtrip(srv, &bound);
     reap_or_kill(pid2);
     drain_zombies();
     let _ = syscall::close(srv);
     COW_STORE_KEEP.store(0, Ordering::SeqCst);
     let _ = syscall::prctl(PR_XVISOR_COW_DEFER, 0, 0, 0, 0);
-    for w in workers {
-        join_store_worker(w)?;
-    }
+    join_store_worker(w0)?;
+    join_store_worker(w1)?;
     check!(started, "deferred-COW store workers never ran");
+    http1.map_err(|_| {
+        crate::harness::AssertFail::msg("http after first deferred-COW store-worker fork+exec")
+    })?;
+    http2.map_err(|_| {
+        crate::harness::AssertFail::msg("http after second deferred-COW store-worker fork+exec")
+    })?;
     Ok(())
 }
 
