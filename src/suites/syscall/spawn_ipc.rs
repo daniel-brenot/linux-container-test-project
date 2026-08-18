@@ -1197,6 +1197,70 @@ fn clone_worker_keeps_ticking_across_fork_exec() -> TestResult {
     Ok(())
 }
 
+static COW_GETPID_KEEP: AtomicU32 = AtomicU32::new(0);
+static COW_GETPID_TICKS: AtomicU32 = AtomicU32::new(0);
+
+unsafe extern "C" fn cow_getpid_worker(_arg: *mut u8) -> i32 {
+    while COW_GETPID_KEEP.load(Ordering::SeqCst) != 0 {
+        let _ = syscall::getpid();
+        COW_GETPID_TICKS.fetch_add(1, Ordering::SeqCst);
+    }
+    0
+}
+
+/// Watchdog `force_thread_state` racing cooperative-fork worker suspend
+/// SIGILL'd nested Node (Theia plugin-host IPC exit 132).
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "a live worker spinning getpid survives parent fork+exec without killing the process"
+)]
+fn clone_worker_getpid_survives_fork_exec() -> TestResult {
+    COW_GETPID_KEEP.store(1, Ordering::SeqCst);
+    COW_GETPID_TICKS.store(0, Ordering::SeqCst);
+    let worker = match runtime::spawn_thread(cow_getpid_worker, core::ptr::null_mut()) {
+        Ok(t) => t,
+        Err(e) if runtime::thread_unavailable(e) => return Ok(()),
+        Err(e) => return Err(crate::harness::AssertFail::msg(e.name())),
+    };
+    let mut spins = 0u32;
+    while COW_GETPID_TICKS.load(Ordering::SeqCst) == 0 && spins < 200 {
+        let req = syscall::Timespec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000,
+        };
+        let _ = syscall::nanosleep(&req);
+        spins += 1;
+    }
+    let started = COW_GETPID_TICKS.load(Ordering::SeqCst) > 0;
+    let before = COW_GETPID_TICKS.load(Ordering::SeqCst);
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        exec_plugin_host_hold();
+    }
+    let wait = syscall::Timespec {
+        tv_sec: 0,
+        tv_nsec: 50_000_000,
+    };
+    let _ = syscall::nanosleep(&wait);
+    let after = COW_GETPID_TICKS.load(Ordering::SeqCst);
+    reap_or_kill(pid);
+    COW_GETPID_KEEP.store(0, Ordering::SeqCst);
+    match runtime::join_thread(worker) {
+        Ok(()) => {}
+        Err(e) if runtime::thread_unavailable(e) || e == syscall::Errno::ETIMEDOUT => {}
+        Err(e) => {
+            return Err(crate::harness::AssertFail::msg(e.name()));
+        }
+    }
+    check!(started, "getpid worker never ran");
+    check!(
+        after > before,
+        "getpid worker did not survive fork+exec"
+    );
+    Ok(())
+}
+
 static WORKER_KEEP: AtomicU32 = AtomicU32::new(0);
 static WORKER_TICKS: AtomicU32 = AtomicU32::new(0);
 
