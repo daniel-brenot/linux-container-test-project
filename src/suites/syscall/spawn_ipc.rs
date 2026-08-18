@@ -1129,6 +1129,86 @@ fn clone_worker_stores_two_fork_exec_parent_http() -> TestResult {
     Ok(())
 }
 
+/// Theia libuv pool threads sit in `epoll_wait` (xvisor host trampoline /
+/// Darwin kevent — not a guest PC) while the main thread `uv_spawn`s
+/// plugin-host again (reload / open terminal). Matching workers by guest PC
+/// or `pthread_getname_np(task_threads port)` missed them, they stormed
+/// fork-COW SIGSEGV, and the parent listen died (`fork cow armed` with no
+/// restore). Do not put `node`/`theia` in helper argv.
+static EPOLL_FORK_KEEP: AtomicU32 = AtomicU32::new(0);
+static EPOLL_FORK_EP: AtomicI32 = AtomicI32::new(-1);
+static EPOLL_FORK_R: AtomicI32 = AtomicI32::new(-1);
+static EPOLL_FORK_TICKS: AtomicU32 = AtomicU32::new(0);
+
+unsafe extern "C" fn epoll_block_worker(_arg: *mut u8) -> i32 {
+    let ep = EPOLL_FORK_EP.load(Ordering::SeqCst);
+    let r = EPOLL_FORK_R.load(Ordering::SeqCst);
+    let mut buf = [0u8; 8];
+    while EPOLL_FORK_KEEP.load(Ordering::SeqCst) != 0 {
+        let mut out = [epoll::EpollEvent { events: 0, data: 0 }; 4];
+        match syscall::epoll_wait(ep, &mut out, -1) {
+            Ok(n) => {
+                for e in out.iter().take(n) {
+                    if e.data == r as u64 && e.events & EPOLLIN != 0 {
+                        let _ = syscall::read(r, &mut buf);
+                        EPOLL_FORK_TICKS.fetch_add(1, Ordering::SeqCst);
+                    }
+                }
+            }
+            Err(_) => break,
+        }
+    }
+    0
+}
+
+fn start_epoll_block_worker() -> Result<Option<runtime::Thread>, crate::harness::AssertFail> {
+    match runtime::spawn_thread(epoll_block_worker, core::ptr::null_mut()) {
+        Ok(t) => Ok(Some(t)),
+        Err(e) if runtime::thread_unavailable(e) => Ok(None),
+        Err(e) => Err(crate::harness::AssertFail::msg(e.name())),
+    }
+}
+
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "parent TCP listen still accepts after two fork+execs while clone workers block in epoll_wait"
+)]
+fn clone_epoll_workers_two_fork_exec_parent_http() -> TestResult {
+    let (srv, bound) = listen_loopback()?;
+    http_roundtrip(srv, &bound)?;
+    let (pr, pw) = check_ok!(syscall::pipe2(0), "pipe");
+    let ep = check_ok!(syscall::epoll_create1(0), "epoll");
+    add_socket_to_epoll(ep, pr, EPOLLIN)?;
+    EPOLL_FORK_EP.store(ep, Ordering::SeqCst);
+    EPOLL_FORK_R.store(pr, Ordering::SeqCst);
+    EPOLL_FORK_TICKS.store(0, Ordering::SeqCst);
+    EPOLL_FORK_KEEP.store(1, Ordering::SeqCst);
+    let w0 = start_epoll_block_worker()?;
+    let w1 = start_epoll_block_worker()?;
+    let started = w0.is_none() && w1.is_none();
+    let pid1 = fork_exec_hold_once()?;
+    http_roundtrip(srv, &bound)
+        .map_err(|_| crate::harness::AssertFail::msg("http after first epoll-worker fork+exec"))?;
+    reap_or_kill(pid1);
+    drain_zombies();
+    let pid2 = fork_exec_hold_once()?;
+    http_roundtrip(srv, &bound)
+        .map_err(|_| crate::harness::AssertFail::msg("http after second epoll-worker fork+exec"))?;
+    reap_or_kill(pid2);
+    drain_zombies();
+    EPOLL_FORK_KEEP.store(0, Ordering::SeqCst);
+    let _ = syscall::write(pw, b"xx");
+    let _ = syscall::close(pw);
+    join_store_worker(w0)?;
+    join_store_worker(w1)?;
+    let _ = syscall::close(ep);
+    let _ = syscall::close(pr);
+    let _ = syscall::close(srv);
+    let _ = started;
+    Ok(())
+}
+
 /// Fork COW must not leave the parent's pages PROT_READ.
 #[crate::lctp_test(
     suite = syscall,
