@@ -20,9 +20,9 @@ use crate::check_ok;
 use crate::harness::{TempDir, TestResult};
 use crate::runtime;
 use crate::syscall::{
-    self, clock, epoll, fcntl_cmd, map, oflag, poll, prot, wait, SockAddrIn, AF_INET, AF_UNIX,
-    EPOLLET, EPOLLIN, EPOLLOUT, EPOLL_CTL_ADD, F_OK, POLLIN, POLLHUP, SIGKILL, SOCK_CLOEXEC,
-    SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR,
+    self, clock, epoll, fcntl_cmd, map, oflag, poll, prot, wait, Rlimit, SockAddrIn, AF_INET,
+    AF_UNIX, EPOLLET, EPOLLIN, EPOLLOUT, EPOLL_CTL_ADD, F_OK, POLLIN, POLLHUP, RLIMIT_NOFILE,
+    SIGKILL, SOCK_CLOEXEC, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR,
 };
 
 fn self_exe(buf: &mut [u8; 256]) -> Result<usize, crate::harness::AssertFail> {
@@ -1206,6 +1206,65 @@ fn clone_epoll_workers_two_fork_exec_parent_http() -> TestResult {
     let _ = syscall::close(pr);
     let _ = syscall::close(srv);
     let _ = started;
+    Ok(())
+}
+
+/// glibc's fork child runs `close_range(3, ~0U)` (or `close(3..rlimit)`).
+/// Walking `last=u32::MAX` in the emulator never reached `execve`, so the
+/// parent listen died (`fork cow armed` with no restore). Do not put
+/// `node`/`theia` in helper argv.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "parent TCP listen still accepts after the child close_range(3, UINT_MAX) and execs"
+)]
+fn close_range_uint_max_in_child_parent_http() -> TestResult {
+    let (srv, bound) = listen_loopback()?;
+    http_roundtrip(srv, &bound)?;
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        let _ = syscall::close_range(3, u32::MAX, 0);
+        exec_plugin_host_hold();
+    }
+    http_roundtrip(srv, &bound).map_err(|_| {
+        crate::harness::AssertFail::msg("http after child close_range(3, ~0U)+exec")
+    })?;
+    let _ = syscall::close(srv);
+    reap_or_kill(pid);
+    drain_zombies();
+    Ok(())
+}
+
+/// Node raises RLIMIT_NOFILE to a huge/unlimited value; the fork child then
+/// closes 3..rlimit. Without a cap the cooperative child never execs.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "parent TCP listen still accepts after fork+exec with a huge RLIMIT_NOFILE"
+)]
+fn high_nofile_fork_exec_parent_http() -> TestResult {
+    let (srv, bound) = listen_loopback()?;
+    http_roundtrip(srv, &bound)?;
+    let mut old = Rlimit::default();
+    check_ok!(
+        syscall::prlimit64(0, RLIMIT_NOFILE, None, Some(&mut old)),
+        "prlimit get"
+    );
+    let new = Rlimit {
+        rlim_cur: 1 << 20,
+        rlim_max: 1 << 20,
+    };
+    let _ = syscall::prlimit64(0, RLIMIT_NOFILE, Some(&new), None);
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        exec_plugin_host_hold();
+    }
+    let http = http_roundtrip(srv, &bound);
+    let _ = syscall::prlimit64(0, RLIMIT_NOFILE, Some(&old), None);
+    http.map_err(|_| crate::harness::AssertFail::msg("http after high-NOFILE fork+exec"))?;
+    let _ = syscall::close(srv);
+    reap_or_kill(pid);
+    drain_zombies();
     Ok(())
 }
 
