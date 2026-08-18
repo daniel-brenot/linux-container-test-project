@@ -1057,6 +1057,67 @@ fn elf_data_canary_survives_fork_exec() -> TestResult {
     Ok(())
 }
 
+/// Many private anonymous maps must not starve ELF data out of the fork-COW
+/// cap (Theia filled 192 regions and then abort/SIGILL'd after plugin-host nest).
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "ELF data canary survives fork+exec even when many scattered anonymous maps were dirtied"
+)]
+fn elf_data_canary_survives_fork_exec_with_many_anon_maps() -> TestResult {
+    const N: usize = 220;
+    const PAGE: usize = 0x4000;
+    let mut maps = [0usize; N];
+    let mut n = 0usize;
+    let mut i = 0usize;
+    while i < N {
+        let hint = 0x0000_0070_0000_0000usize + i * 0x2_0000;
+        match syscall::mmap(
+            hint,
+            PAGE,
+            prot::PROT_READ | prot::PROT_WRITE,
+            map::MAP_PRIVATE | map::MAP_ANONYMOUS | map::MAP_FIXED,
+            -1,
+            0,
+        ) {
+            Ok(addr) => {
+                maps[n] = addr;
+                n += 1;
+                cow_slice_mut(addr, PAGE).fill(0xA5);
+            }
+            Err(_) => {}
+        }
+        i += 1;
+    }
+    unsafe {
+        ELF_DATA_CANARY.fill(0xA5);
+    }
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        unsafe {
+            ELF_DATA_CANARY.fill(0x5A);
+        }
+        let mut j = 0usize;
+        while j < n {
+            cow_slice_mut(maps[j], PAGE).fill(0x5A);
+            j += 1;
+        }
+        exec_plugin_host_hold();
+    }
+    let parent_ok = unsafe { ELF_DATA_CANARY.iter().all(|&b| b == 0xA5) };
+    reap_or_kill(pid);
+    let mut j = 0usize;
+    while j < n {
+        let _ = syscall::munmap(maps[j], PAGE);
+        j += 1;
+    }
+    check!(
+        parent_ok,
+        "parent ELF data lost among many anon COW regions after fork+exec"
+    );
+    Ok(())
+}
+
 /// Fork COW of file-backed ELF data must not leave those pages PROT_READ.
 #[crate::lctp_test(
     suite = syscall,
