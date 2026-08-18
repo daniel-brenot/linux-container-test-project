@@ -1129,6 +1129,63 @@ fn clone_worker_stores_two_fork_exec_parent_http() -> TestResult {
     Ok(())
 }
 
+/// Linux `prctl` rejects this (EINVAL). xvisor honors it as "defer fork-COW
+/// `mprotect` to the watchdog" — the Node/Theia path — without putting
+/// `node`/`theia` in argv (that misses helper dispatch and fork-bombs).
+const PR_XVISOR_COW_DEFER: i32 = 0x5856_0001;
+
+/// Theia reload `uv_spawn`s while libuv workers keep storing. Node defers
+/// COW `mprotect` out of SIGSEGV; workers native-retry in `_sigtramp` and
+/// starve the watchdog (`fork cow armed` with no restore). This test
+/// requests that path explicitly. Do not put `node`/`theia` in helper argv.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "parent TCP listen still accepts after two fork+execs while clone workers store and COW mprotect is deferred"
+)]
+fn clone_worker_stores_deferred_cow_two_fork_exec_parent_http() -> TestResult {
+    let (srv, bound) = listen_loopback()?;
+    http_roundtrip(srv, &bound)?;
+    let _ = syscall::prctl(PR_XVISOR_COW_DEFER, 1, 0, 0, 0);
+    COW_STORE_KEEP.store(1, Ordering::SeqCst);
+    COW_STORE_TICKS.store(0, Ordering::SeqCst);
+    let mut workers = [None, None, None, None, None, None, None, None];
+    for (i, slot) in workers.iter_mut().enumerate() {
+        *slot = start_store_worker(i + 1)?;
+    }
+    let mut spins = 0u32;
+    while COW_STORE_TICKS.load(Ordering::SeqCst) == 0 && spins < 200 {
+        let req = syscall::Timespec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000,
+        };
+        let _ = syscall::nanosleep(&req);
+        spins += 1;
+    }
+    let started = workers.iter().all(|w| w.is_none())
+        || COW_STORE_TICKS.load(Ordering::SeqCst) > 0;
+    let pid1 = fork_exec_hold_once()?;
+    http_roundtrip(srv, &bound).map_err(|_| {
+        crate::harness::AssertFail::msg("http after first deferred-COW store-worker fork+exec")
+    })?;
+    reap_or_kill(pid1);
+    drain_zombies();
+    let pid2 = fork_exec_hold_once()?;
+    http_roundtrip(srv, &bound).map_err(|_| {
+        crate::harness::AssertFail::msg("http after second deferred-COW store-worker fork+exec")
+    })?;
+    reap_or_kill(pid2);
+    drain_zombies();
+    let _ = syscall::close(srv);
+    COW_STORE_KEEP.store(0, Ordering::SeqCst);
+    let _ = syscall::prctl(PR_XVISOR_COW_DEFER, 0, 0, 0, 0);
+    for w in workers {
+        join_store_worker(w)?;
+    }
+    check!(started, "deferred-COW store workers never ran");
+    Ok(())
+}
+
 /// Theia libuv pool threads sit in `epoll_wait` (xvisor host trampoline /
 /// Darwin kevent — not a guest PC) while the main thread `uv_spawn`s
 /// plugin-host again (reload / open terminal). Matching workers by guest PC
