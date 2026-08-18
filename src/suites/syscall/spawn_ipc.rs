@@ -1031,6 +1031,104 @@ fn low_gva_store_after_fork_exec_parent_http() -> TestResult {
     Ok(())
 }
 
+/// Theia reload / websocket close does a *second* `uv_spawn` while libuv
+/// workers keep storing into libc/heaps. Those workers skip fork-COW page
+/// copy (`is_secondary_thread`), so the same PROT_READ page stormed in
+/// `_sigtramp`, the child never exec'd, and the parent listen died with
+/// `fork cow armed` and no matching restore.
+static COW_STORE_KEEP: AtomicU32 = AtomicU32::new(0);
+static COW_STORE_TICKS: AtomicU32 = AtomicU32::new(0);
+static mut COW_STORE_HEAP: [u8; 65536] = [0; 65536];
+
+unsafe extern "C" fn cow_store_worker(arg: *mut u8) -> i32 {
+    let bump = (arg as usize as u8).wrapping_add(1);
+    let heap = core::ptr::addr_of_mut!(COW_STORE_HEAP) as *mut u8;
+    while COW_STORE_KEEP.load(Ordering::SeqCst) != 0 {
+        for i in (0..65536).step_by(64) {
+            unsafe {
+                let p = heap.add(i);
+                *p = (*p).wrapping_add(bump);
+            }
+        }
+        COW_STORE_TICKS.fetch_add(1, Ordering::SeqCst);
+    }
+    0
+}
+
+fn start_store_worker(arg: usize) -> Result<Option<runtime::Thread>, crate::harness::AssertFail> {
+    match runtime::spawn_thread(cow_store_worker, arg as *mut u8) {
+        Ok(t) => Ok(Some(t)),
+        Err(e) if runtime::thread_unavailable(e) => Ok(None),
+        Err(e) => Err(crate::harness::AssertFail::msg(e.name())),
+    }
+}
+
+fn join_store_worker(worker: Option<runtime::Thread>) -> TestResult {
+    let Some(worker) = worker else {
+        return Ok(());
+    };
+    match runtime::join_thread(worker) {
+        Ok(()) => Ok(()),
+        Err(e) if runtime::thread_unavailable(e) || e == syscall::Errno::ETIMEDOUT => Ok(()),
+        Err(e) => Err(crate::harness::AssertFail::msg(e.name())),
+    }
+}
+
+fn fork_exec_hold_once() -> Result<i32, crate::harness::AssertFail> {
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        let heap = core::ptr::addr_of_mut!(COW_STORE_HEAP) as *mut u8;
+        unsafe {
+            for i in (0..65536).step_by(64) {
+                *heap.add(i) = 0x5A;
+            }
+        }
+        exec_plugin_host_hold();
+    }
+    Ok(pid)
+}
+
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "parent TCP listen still accepts after two fork+execs while clone workers store into a heap"
+)]
+fn clone_worker_stores_two_fork_exec_parent_http() -> TestResult {
+    let (srv, bound) = listen_loopback()?;
+    http_roundtrip(srv, &bound)?;
+    COW_STORE_KEEP.store(1, Ordering::SeqCst);
+    COW_STORE_TICKS.store(0, Ordering::SeqCst);
+    let w0 = start_store_worker(1)?;
+    let w1 = start_store_worker(2)?;
+    let mut spins = 0u32;
+    while COW_STORE_TICKS.load(Ordering::SeqCst) == 0 && spins < 200 {
+        let req = syscall::Timespec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000,
+        };
+        let _ = syscall::nanosleep(&req);
+        spins += 1;
+    }
+    let started = (w0.is_none() && w1.is_none())
+        || COW_STORE_TICKS.load(Ordering::SeqCst) > 0;
+    let pid1 = fork_exec_hold_once()?;
+    http_roundtrip(srv, &bound)
+        .map_err(|_| crate::harness::AssertFail::msg("http after first store-worker fork+exec"))?;
+    reap_or_kill(pid1);
+    drain_zombies();
+    let pid2 = fork_exec_hold_once()?;
+    http_roundtrip(srv, &bound)
+        .map_err(|_| crate::harness::AssertFail::msg("http after second store-worker fork+exec"))?;
+    reap_or_kill(pid2);
+    drain_zombies();
+    let _ = syscall::close(srv);
+    COW_STORE_KEEP.store(0, Ordering::SeqCst);
+    join_store_worker(w0)?;
+    join_store_worker(w1)?;
+    check!(started, "store workers never ran");
+    Ok(())
+}
+
 /// Fork COW must not leave the parent's pages PROT_READ.
 #[crate::lctp_test(
     suite = syscall,
