@@ -17,7 +17,7 @@ use core::sync::atomic::{AtomicI32, AtomicU32, Ordering};
 use crate::check;
 use crate::check_eq;
 use crate::check_ok;
-use crate::harness::TestResult;
+use crate::harness::{TempDir, TestResult};
 use crate::runtime;
 use crate::syscall::{
     self, clock, epoll, fcntl_cmd, map, oflag, poll, prot, wait, SockAddrIn, AF_INET, AF_UNIX,
@@ -1021,6 +1021,178 @@ fn stack_local_survives_fork_exec() -> TestResult {
     check!(
         parent_ok,
         "parent stack local saw child's stores after fork+exec"
+    );
+    Ok(())
+}
+
+/// glibc malloc_state / tcache live in libc `.data`/`.bss` (file-backed
+/// `MAP_PRIVATE`), not in brk or anonymous mmap. Child `execve` malloc must
+/// not leave those pages as the child left them or the parent `abort()`s (134).
+static mut ELF_DATA_CANARY: [u8; 8192] = [0; 8192];
+
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "ELF data/BSS canary bytes keep the parent's value after the child overwrites them and execs"
+)]
+fn elf_data_canary_survives_fork_exec() -> TestResult {
+    unsafe {
+        ELF_DATA_CANARY.fill(0xA5);
+    }
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        unsafe {
+            ELF_DATA_CANARY.fill(0x5A);
+        }
+        core::hint::black_box(unsafe { &ELF_DATA_CANARY });
+        exec_plugin_host_hold();
+    }
+    core::hint::black_box(unsafe { &ELF_DATA_CANARY });
+    let parent_ok = unsafe { ELF_DATA_CANARY.iter().all(|&b| b == 0xA5) };
+    reap_or_kill(pid);
+    check!(
+        parent_ok,
+        "parent ELF data saw child's stores after fork+exec"
+    );
+    Ok(())
+}
+
+/// Fork COW of file-backed ELF data must not leave those pages PROT_READ.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "the parent can still write ELF data/BSS after the child overwrites it and execs"
+)]
+fn elf_data_writable_after_fork_exec() -> TestResult {
+    unsafe {
+        ELF_DATA_CANARY.fill(0x11);
+    }
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        unsafe {
+            ELF_DATA_CANARY.fill(0x22);
+        }
+        exec_plugin_host_hold();
+    }
+    unsafe {
+        ELF_DATA_CANARY.fill(0x33);
+    }
+    let wrote = unsafe { ELF_DATA_CANARY.iter().all(|&b| b == 0x33) };
+    reap_or_kill(pid);
+    check!(wrote, "parent ELF data not writable after fork+exec");
+    Ok(())
+}
+
+/// Same as ELF data, but via an explicit file-backed `MAP_PRIVATE` mmap
+/// (ld.so maps libc this way after the main executable image).
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "a file-backed MAP_PRIVATE mapping keeps the parent's canary after the child overwrites it and execs"
+)]
+fn file_private_mmap_canary_survives_fork_exec() -> TestResult {
+    let mut tmp = check_ok!(TempDir::create(), "tempdir");
+    let fd = check_ok!(tmp.create_file(b"cow\0", 0o644), "create");
+    let len = 64 * 1024usize;
+    let zeros = [0u8; 4096];
+    let mut wrote = 0usize;
+    while wrote < len {
+        let n = check_ok!(syscall::write(fd, &zeros), "write");
+        check!(n > 0, "short write");
+        wrote += n;
+    }
+    let addr = check_ok!(
+        syscall::mmap(
+            0,
+            len,
+            prot::PROT_READ | prot::PROT_WRITE,
+            map::MAP_PRIVATE,
+            fd,
+            0
+        ),
+        "mmap file"
+    );
+    let _ = syscall::close(fd);
+    cow_slice_mut(addr, len).fill(0xA5);
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        cow_slice_mut(addr, len).fill(0x5A);
+        exec_plugin_host_hold();
+    }
+    let parent_ok = cow_slice(addr, len).iter().all(|&b| b == 0xA5);
+    reap_or_kill(pid);
+    let _ = syscall::munmap(addr, len);
+    check!(
+        parent_ok,
+        "parent file-backed mmap saw child's stores after fork+exec"
+    );
+    Ok(())
+}
+
+/// Cooperative fork pauses UV-style workers while the child runs. They must
+/// resume; a leftover `thread_suspend` freezes Node after plugin-host nest.
+static COW_WORKER_KEEP: AtomicU32 = AtomicU32::new(0);
+static COW_WORKER_TICKS: AtomicU32 = AtomicU32::new(0);
+
+unsafe extern "C" fn cow_tick_worker(_arg: *mut u8) -> i32 {
+    while COW_WORKER_KEEP.load(Ordering::SeqCst) != 0 {
+        COW_WORKER_TICKS.fetch_add(1, Ordering::SeqCst);
+        let req = syscall::Timespec {
+            tv_sec: 0,
+            tv_nsec: 2_000_000,
+        };
+        let _ = syscall::nanosleep(&req);
+    }
+    0
+}
+
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "a live CLONE_THREAD worker keeps ticking after the parent fork+execs a helper"
+)]
+fn clone_worker_keeps_ticking_across_fork_exec() -> TestResult {
+    COW_WORKER_KEEP.store(1, Ordering::SeqCst);
+    COW_WORKER_TICKS.store(0, Ordering::SeqCst);
+    let worker = match runtime::spawn_thread(cow_tick_worker, core::ptr::null_mut()) {
+        Ok(t) => t,
+        Err(e) if runtime::thread_unavailable(e) => return Ok(()),
+        Err(e) => return Err(crate::harness::AssertFail::msg(e.name())),
+    };
+    let mut spins = 0u32;
+    while COW_WORKER_TICKS.load(Ordering::SeqCst) == 0 && spins < 200 {
+        let req = syscall::Timespec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000,
+        };
+        let _ = syscall::nanosleep(&req);
+        spins += 1;
+    }
+    let started = COW_WORKER_TICKS.load(Ordering::SeqCst) > 0;
+    let before = COW_WORKER_TICKS.load(Ordering::SeqCst);
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        exec_plugin_host_hold();
+    }
+    let wait = syscall::Timespec {
+        tv_sec: 0,
+        tv_nsec: 30_000_000,
+    };
+    let _ = syscall::nanosleep(&wait);
+    let after = COW_WORKER_TICKS.load(Ordering::SeqCst);
+    reap_or_kill(pid);
+    COW_WORKER_KEEP.store(0, Ordering::SeqCst);
+    match runtime::join_thread(worker) {
+        Ok(()) => {}
+        Err(e) if runtime::thread_unavailable(e) || e == syscall::Errno::ETIMEDOUT => {}
+        Err(e) => {
+            return Err(crate::harness::AssertFail::msg(e.name()));
+        }
+    }
+    check!(started, "worker never ran");
+    check!(
+        after > before,
+        "worker did not tick after fork+exec (left suspended?)"
     );
     Ok(())
 }
