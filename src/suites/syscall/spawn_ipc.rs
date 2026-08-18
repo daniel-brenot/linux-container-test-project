@@ -1322,6 +1322,70 @@ fn clone_worker_getpid_survives_fork_exec() -> TestResult {
     Ok(())
 }
 
+static COW_CLOCK_KEEP: AtomicU32 = AtomicU32::new(0);
+static COW_CLOCK_TICKS: AtomicU32 = AtomicU32::new(0);
+
+unsafe extern "C" fn cow_clock_worker(_arg: *mut u8) -> i32 {
+    while COW_CLOCK_KEEP.load(Ordering::SeqCst) != 0 {
+        let _ = syscall::clock_gettime(syscall::clock::CLOCK_MONOTONIC);
+        COW_CLOCK_TICKS.fetch_add(1, Ordering::SeqCst);
+    }
+    0
+}
+
+/// Watchdog used to `handle()` `clock_gettime` on its own thread for a worker
+/// stuck on `brk #0x100`, which SIGILL'd nested Node (plugin-host IPC 132).
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "a live worker spinning clock_gettime survives parent fork+exec without killing the process"
+)]
+fn clone_worker_clock_gettime_survives_fork_exec() -> TestResult {
+    COW_CLOCK_KEEP.store(1, Ordering::SeqCst);
+    COW_CLOCK_TICKS.store(0, Ordering::SeqCst);
+    let worker = match runtime::spawn_thread(cow_clock_worker, core::ptr::null_mut()) {
+        Ok(t) => t,
+        Err(e) if runtime::thread_unavailable(e) => return Ok(()),
+        Err(e) => return Err(crate::harness::AssertFail::msg(e.name())),
+    };
+    let mut spins = 0u32;
+    while COW_CLOCK_TICKS.load(Ordering::SeqCst) == 0 && spins < 200 {
+        let req = syscall::Timespec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000,
+        };
+        let _ = syscall::nanosleep(&req);
+        spins += 1;
+    }
+    let started = COW_CLOCK_TICKS.load(Ordering::SeqCst) > 0;
+    let before = COW_CLOCK_TICKS.load(Ordering::SeqCst);
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        exec_plugin_host_hold();
+    }
+    let wait = syscall::Timespec {
+        tv_sec: 0,
+        tv_nsec: 50_000_000,
+    };
+    let _ = syscall::nanosleep(&wait);
+    let after = COW_CLOCK_TICKS.load(Ordering::SeqCst);
+    reap_or_kill(pid);
+    COW_CLOCK_KEEP.store(0, Ordering::SeqCst);
+    match runtime::join_thread(worker) {
+        Ok(()) => {}
+        Err(e) if runtime::thread_unavailable(e) || e == syscall::Errno::ETIMEDOUT => {}
+        Err(e) => {
+            return Err(crate::harness::AssertFail::msg(e.name()));
+        }
+    }
+    check!(started, "clock_gettime worker never ran");
+    check!(
+        after > before,
+        "clock_gettime worker did not survive fork+exec"
+    );
+    Ok(())
+}
+
 static WORKER_KEEP: AtomicU32 = AtomicU32::new(0);
 static WORKER_TICKS: AtomicU32 = AtomicU32::new(0);
 
