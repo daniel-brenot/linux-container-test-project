@@ -1386,6 +1386,82 @@ fn clone_worker_clock_gettime_survives_fork_exec() -> TestResult {
     Ok(())
 }
 
+static COW_FUTEX_KEEP: AtomicU32 = AtomicU32::new(0);
+static COW_FUTEX_TICKS: AtomicU32 = AtomicU32::new(0);
+static COW_FUTEX_WORD: AtomicU32 = AtomicU32::new(0);
+
+unsafe extern "C" fn cow_futex_worker(_arg: *mut u8) -> i32 {
+    while COW_FUTEX_KEEP.load(Ordering::SeqCst) != 0 {
+        // libuv workers sit in FUTEX_WAIT. Watchdog trampoline on leftover
+        // `brk #0x100` with nr=98 SIGILL'd the Darwin process (Theia parent
+        // and nested plugin-host both exited 132).
+        let timeout = syscall::Timespec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000,
+        };
+        let _ = syscall::futex_wait(&COW_FUTEX_WORD, 0, Some(&timeout));
+        COW_FUTEX_TICKS.fetch_add(1, Ordering::SeqCst);
+    }
+    0
+}
+
+/// Watchdog trampoline used to `bl` without saving guest LR, so the libc
+/// syscall wrapper `ret`'d into host text and SIGILL'd Node (Theia parent
+/// EXIT 132 after `unblock-retry … nr=98`). A worker in `futex_wait` across
+/// fork+exec must keep ticking without killing the process.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "a live worker spinning futex_wait survives parent fork+exec without killing the process"
+)]
+fn clone_worker_futex_survives_fork_exec() -> TestResult {
+    COW_FUTEX_KEEP.store(1, Ordering::SeqCst);
+    COW_FUTEX_TICKS.store(0, Ordering::SeqCst);
+    COW_FUTEX_WORD.store(0, Ordering::SeqCst);
+    let worker = match runtime::spawn_thread(cow_futex_worker, core::ptr::null_mut()) {
+        Ok(t) => t,
+        Err(e) if runtime::thread_unavailable(e) => return Ok(()),
+        Err(e) => return Err(crate::harness::AssertFail::msg(e.name())),
+    };
+    let mut spins = 0u32;
+    while COW_FUTEX_TICKS.load(Ordering::SeqCst) == 0 && spins < 200 {
+        let req = syscall::Timespec {
+            tv_sec: 0,
+            tv_nsec: 1_000_000,
+        };
+        let _ = syscall::nanosleep(&req);
+        spins += 1;
+    }
+    let started = COW_FUTEX_TICKS.load(Ordering::SeqCst) > 0;
+    let before = COW_FUTEX_TICKS.load(Ordering::SeqCst);
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        exec_plugin_host_hold();
+    }
+    let wait = syscall::Timespec {
+        tv_sec: 0,
+        tv_nsec: 80_000_000,
+    };
+    let _ = syscall::nanosleep(&wait);
+    let after = COW_FUTEX_TICKS.load(Ordering::SeqCst);
+    reap_or_kill(pid);
+    COW_FUTEX_KEEP.store(0, Ordering::SeqCst);
+    let _ = syscall::futex_wake(&COW_FUTEX_WORD, 1);
+    match runtime::join_thread(worker) {
+        Ok(()) => {}
+        Err(e) if runtime::thread_unavailable(e) || e == syscall::Errno::ETIMEDOUT => {}
+        Err(e) => {
+            return Err(crate::harness::AssertFail::msg(e.name()));
+        }
+    }
+    check!(started, "futex worker never ran");
+    check!(
+        after > before,
+        "futex worker did not survive fork+exec"
+    );
+    Ok(())
+}
+
 static WORKER_KEEP: AtomicU32 = AtomicU32::new(0);
 static WORKER_TICKS: AtomicU32 = AtomicU32::new(0);
 
