@@ -978,9 +978,9 @@ fn mmap_anon_canary_survives_fork_exec() -> TestResult {
 /// retry the instruction, livelocking in `_sigtramp` so the parent never
 /// restored — Theia reload then stopped accepting HTTP.
 fn map_low_gva_anon(len: usize) -> Result<usize, crate::harness::AssertFail> {
-    // Below the V8 near-exec bump (~99MiB) and well above a typical ET_EXEC
-    // image / brk heap, so MAP_FIXED does not punch the test binary.
-    const CANDIDATES: [usize; 3] = [0x0200_0000, 0x0300_0000, 0x0a00_0000];
+    // Above the V8 near-exec bump (~99MiB) and below the 256MiB PAGEZERO
+    // mirror cap, so MAP_FIXED does not punch the ET_EXEC image.
+    const CANDIDATES: [usize; 3] = [0x0a00_0000, 0x0c00_0000, 0x0e00_0000];
     for &hint in &CANDIDATES {
         match syscall::mmap(
             hint,
@@ -1043,7 +1043,20 @@ fn low_gva_store_after_fork_exec_parent_http() -> TestResult {
         unsafe {
             *(addr as *mut u64) = 0x5A5A_5A5A_5A5A_5A5A;
         }
-        exec_plugin_host_hold();
+        // Avoid `execve(/proc/self/exe)` after COW: a MAP_FIXED hole in the
+        // ET_EXEC mirror used to smash `self_exe` and panic at copy_from_slice.
+        let arg0 = b"sh\0";
+        let arg1 = b"-c\0";
+        let arg2 = b"true\0";
+        let argv = [
+            arg0.as_ptr(),
+            arg1.as_ptr(),
+            arg2.as_ptr(),
+            core::ptr::null(),
+        ];
+        let envp = [core::ptr::null::<u8>()];
+        let _ = syscall::execve(b"/bin/sh\0", &argv, &envp);
+        syscall::exit(127);
     }
     let parent_ok = cow_slice(addr, 8).iter().all(|&b| b == 0xA5);
     let http_ok = http_roundtrip(srv, &bound);
