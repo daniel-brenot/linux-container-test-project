@@ -194,3 +194,63 @@ fn mlock_munlock_soft() -> TestResult {
     check_ok!(syscall::munmap(addr, len), "munmap");
     Ok(())
 }
+
+/// V8 `Assembler::Logical` (Theia plugin-host JIT) keeps `this` in x18 then
+/// does `ldr x6, [x18, #0x20]` after a call. Darwin may zero x18 on any kernel
+/// entry, so the nested Node dies with SIGSEGV 139 (`x18=0`, fault=0x20).
+///
+/// This thunk is the same shape: pointer in x18, `getpid`, then load `[x18,#0x20]`.
+#[cfg(target_arch = "aarch64")]
+mod x18_platform_reg {
+    use super::*;
+
+    #[crate::lctp_test(
+        suite = syscall,
+        expect = success,
+        case = "a live pointer in x18 still loads after getpid (V8 Assembler this / Darwin platform register)"
+    )]
+    fn x18_pointer_survives_getpid() -> TestResult {
+        const PAGE: usize = 0x4000;
+        const MAGIC: u64 = 0x1111_2222_3333_4444;
+        let map = check_ok!(
+            syscall::mmap(
+                0,
+                PAGE,
+                prot::PROT_READ | prot::PROT_WRITE,
+                map::MAP_PRIVATE | map::MAP_ANONYMOUS,
+                -1,
+                0,
+            ),
+            "mmap"
+        );
+        // mov x18, x0; mov x8, #172; svc #0; ldr x0, [x18, #0x20]; ret
+        let insns: [u32; 5] = [
+            0xaa00_03f2,
+            0xd280_1588,
+            0xd400_0001,
+            0xf940_1240,
+            0xd65f_03c0,
+        ];
+        unsafe {
+            let p = map as *mut u32;
+            for (i, w) in insns.iter().enumerate() {
+                core::ptr::write_unaligned(p.add(i), *w);
+            }
+        }
+        if syscall::mprotect(map, PAGE, prot::PROT_READ | prot::PROT_EXEC).is_err() {
+            let _ = syscall::munmap(map, PAGE);
+            return Err(crate::harness::AssertFail::msg("mprotect RX"));
+        }
+        let mut buf = [0u8; 64];
+        unsafe {
+            core::ptr::write_unaligned(buf.as_mut_ptr().add(0x20) as *mut u64, MAGIC);
+        }
+        let got = unsafe {
+            let f: extern "C" fn(*const u8) -> u64 = core::mem::transmute(map);
+            f(buf.as_ptr())
+        };
+        let _ = syscall::munmap(map, PAGE);
+        check_eq!(got, MAGIC, "x18 base after getpid");
+        Ok(())
+    }
+}
