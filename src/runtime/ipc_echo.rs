@@ -65,6 +65,9 @@ pub unsafe fn dispatch_helper(argc: usize, argv: *const usize) -> bool {
         Some(b"--plugin-host-fd4") => {
             run_theia_fd4_hello();
         }
+        Some(b"--plugin-host-hold") => {
+            run_ipc_channel_hold();
+        }
         _ => return false,
     }
 }

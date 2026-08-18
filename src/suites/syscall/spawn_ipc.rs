@@ -20,9 +20,9 @@ use crate::check_ok;
 use crate::harness::TestResult;
 use crate::runtime;
 use crate::syscall::{
-    self, clock, epoll, fcntl_cmd, oflag, poll, wait, SockAddrIn, AF_INET, AF_UNIX, EPOLLET,
-    EPOLLIN, EPOLLOUT, EPOLL_CTL_ADD, F_OK, POLLIN, POLLHUP, SIGKILL, SOCK_CLOEXEC, SOCK_STREAM,
-    SOL_SOCKET, SO_REUSEADDR,
+    self, clock, epoll, fcntl_cmd, map, oflag, poll, prot, wait, SockAddrIn, AF_INET, AF_UNIX,
+    EPOLLET, EPOLLIN, EPOLLOUT, EPOLL_CTL_ADD, F_OK, POLLIN, POLLHUP, SIGKILL, SOCK_CLOEXEC,
+    SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR,
 };
 
 fn self_exe(buf: &mut [u8; 256]) -> Result<usize, crate::harness::AssertFail> {
@@ -702,6 +702,326 @@ fn spawn_nested_epoll_goes_idle() -> TestResult {
     check!(leftover_ok, "leftover socketpair closed by nest");
     check!(idle?, "epoll idle wait did not block after nest");
     http?;
+    Ok(())
+}
+
+/// Parent-side libuv spawn-error socket: read end must stay open and return EOF
+/// after the child execs. Closing both ends (Darwin socketpair ends share
+/// `st_ino`) makes `read(status)` EBADF and Node/Theia's event loop livelocks.
+fn spawn_error_read_eof(fd: i32) -> Result<(), crate::harness::AssertFail> {
+    check_ok!(
+        syscall::fcntl(fd, fcntl_cmd::F_GETFD, 0),
+        "spawn-error read still open"
+    );
+    let mut buf = [0u8; 8];
+    for _ in 0..50 {
+        let mut fds = [poll::PollFd {
+            fd,
+            events: POLLIN | POLLHUP,
+            revents: 0,
+        }];
+        let pr = check_ok!(syscall::poll(&mut fds, 100), "poll spawn-error");
+        if pr == 0 {
+            continue;
+        }
+        match syscall::read(fd, &mut buf) {
+            Ok(0) => return Ok(()),
+            Ok(_) => return Err(crate::harness::AssertFail::msg("spawn-error had data")),
+            Err(syscall::Errno::EAGAIN) => {}
+            Err(syscall::Errno::EBADF) => {
+                return Err(crate::harness::AssertFail::msg("spawn-error read EBADF"));
+            }
+            Err(_) => return Err(crate::harness::AssertFail::msg("spawn-error read")),
+        }
+    }
+    Err(crate::harness::AssertFail::msg("spawn-error eof timeout"))
+}
+
+fn wait_exited(pid: i32) -> Result<i32, crate::harness::AssertFail> {
+    let mut status = 0;
+    for _ in 0..50 {
+        match syscall::wait4(pid, &mut status, wait::WNOHANG) {
+            Ok(p) if p == pid => return Ok(status),
+            Ok(0) => {
+                let req = syscall::Timespec {
+                    tv_sec: 0,
+                    tv_nsec: 20_000_000,
+                };
+                let _ = syscall::nanosleep(&req);
+            }
+            Ok(_) => {}
+            Err(syscall::Errno::ECHILD) => {
+                return Err(crate::harness::AssertFail::msg("wait ECHILD"));
+            }
+            Err(_) => return Err(crate::harness::AssertFail::msg("wait4")),
+        }
+    }
+    Err(crate::harness::AssertFail::msg("child did not exit"))
+}
+
+/// libuv `uv_spawn` creates a CLOEXEC socketpair, `fork`s, and `read`s the
+/// parent end for a status byte or EOF. A runtime that drops the parent's
+/// *read* end (matching Darwin `st_ino` of both socketpair ends) fails this.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "after fork+exec of /bin/true, the parent spawn-error socketpair read end still returns EOF rather than EBADF"
+)]
+fn spawn_error_read_eof_after_true() -> TestResult {
+    check_ok!(syscall::access(b"/bin/true\0", F_OK), "/bin/true missing");
+    let (st_a, st_b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "spawn-error");
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        let _ = syscall::close(st_a);
+        let arg0 = b"/bin/true\0";
+        let argv = [arg0.as_ptr(), core::ptr::null()];
+        let envp = [core::ptr::null::<u8>()];
+        let _ = syscall::execve(b"/bin/true\0", &argv, &envp);
+        syscall::exit(127);
+    }
+    let _ = syscall::close(st_b);
+    let _ = wait_exited(pid);
+    let eof = spawn_error_read_eof(st_a);
+    let _ = syscall::close(st_a);
+    eof?;
+    Ok(())
+}
+
+/// Same spawn-error handshake with a parked plugin-host helper (no nested
+/// busybox). The parent read end must survive cooperative fork restore.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "after fork+exec of a parked plugin-host helper, the parent spawn-error socketpair read end still returns EOF rather than EBADF"
+)]
+fn spawn_error_read_eof_after_plugin_host_hold() -> TestResult {
+    let mut exe = [0u8; 256];
+    let exe_len = self_exe(&mut exe)?;
+    let (st_a, st_b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "spawn-error");
+    let (ipc_a, ipc_b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "ipc");
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        let _ = syscall::close(st_a);
+        let _ = syscall::close(ipc_a);
+        if syscall::dup2(ipc_b, 3).is_err() {
+            syscall::exit(125);
+        }
+        if ipc_b != 3 {
+            let _ = syscall::close(ipc_b);
+        }
+        if st_b != 3 {
+            let _ = syscall::close(st_b);
+        }
+        let env0 = b"NODE_CHANNEL_FD=3\0";
+        let envp = [env0.as_ptr(), core::ptr::null()];
+        let mut arg0 = [0u8; 256];
+        arg0[..exe_len].copy_from_slice(&exe[..exe_len]);
+        let flag = b"--plugin-host-hold\0";
+        let argv = [arg0.as_ptr(), flag.as_ptr(), core::ptr::null()];
+        let _ = syscall::execve(&exe[..exe_len], &argv, &envp);
+        syscall::exit(127);
+    }
+    let _ = syscall::close(st_b);
+    let _ = syscall::close(ipc_b);
+    let still = child_still_running(pid);
+    let eof = spawn_error_read_eof(st_a);
+    let _ = syscall::close(st_a);
+    let _ = syscall::close(ipc_a);
+    reap_or_kill(pid);
+    check!(still?, "helper already exited");
+    eof?;
+    Ok(())
+}
+
+/// Same handshake after a live plugin-host-shaped nest: the parent must keep
+/// the spawn-error read end, a leftover UV-style socketpair, and the HTTP
+/// listen. Inode-matching restore closes all three when they share Darwin
+/// identity, and the workbench freezes in epoll_wait after the page loads.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "after plugin-host nest, spawn-error read returns EOF, leftover socketpair still works, epoll goes idle, and HTTP still accepts"
+)]
+fn spawn_error_eof_after_plugin_host_nest() -> TestResult {
+    let (srv, bound) = listen_loopback()?;
+    let ep = check_ok!(syscall::epoll_create1(0), "epoll");
+    add_socket_to_epoll(ep, srv, EPOLLIN | EPOLLET)?;
+    let (left_a, left_b) = check_ok!(syscall::socketpair(AF_UNIX, SOCK_STREAM, 0), "leftover");
+    add_socket_to_epoll(ep, left_a, EPOLLIN | EPOLLOUT | EPOLLET)?;
+    add_socket_to_epoll(ep, left_b, EPOLLIN | EPOLLOUT | EPOLLET)?;
+
+    let (pid, ipc, extra) = spawn_nested_plugin_host_shape(srv)?;
+    let st_a = extra[3];
+    let still = child_still_running(pid)?;
+    let leftover_ok = syscall::send(left_a, b"x", 0).is_ok();
+    let eof = spawn_error_read_eof(st_a);
+    let idle = if leftover_ok {
+        let mut b = [0u8; 1];
+        let _ = syscall::recv(left_b, &mut b, 0);
+        let mut drain = [epoll::EpollEvent { events: 0, data: 0 }; 16];
+        let _ = syscall::epoll_wait(ep, &mut drain, 0);
+        epoll_goes_idle(ep)
+    } else {
+        Ok(false)
+    };
+    let http = match idle {
+        Ok(true) => http_roundtrip(srv, &bound),
+        _ => Ok(()),
+    };
+
+    let _ = syscall::close(left_a);
+    let _ = syscall::close(left_b);
+    let _ = syscall::close(ep);
+    let _ = syscall::close(ipc);
+    for fd in extra {
+        let _ = syscall::close(fd);
+    }
+    let _ = syscall::close(srv);
+    reap_or_kill(pid);
+    check!(still, "child already exited");
+    check!(leftover_ok, "leftover socketpair closed by nest");
+    eof?;
+    check!(idle?, "epoll idle wait did not block after nest");
+    http?;
+    Ok(())
+}
+
+fn exec_plugin_host_hold() -> ! {
+    let mut exe = [0u8; 256];
+    let Ok(exe_len) = self_exe(&mut exe) else {
+        syscall::exit(127);
+    };
+    let mut arg0 = [0u8; 256];
+    arg0[..exe_len].copy_from_slice(&exe[..exe_len]);
+    let flag = b"--plugin-host-hold\0";
+    let argv = [arg0.as_ptr(), flag.as_ptr(), core::ptr::null()];
+    let envp = [core::ptr::null::<u8>()];
+    let _ = syscall::execve(&exe[..exe_len], &argv, &envp);
+    syscall::exit(127);
+}
+
+fn cow_slice_mut(addr: usize, len: usize) -> &'static mut [u8] {
+    unsafe { core::slice::from_raw_parts_mut(addr as *mut u8, len) }
+}
+
+fn cow_slice(addr: usize, len: usize) -> &'static [u8] {
+    unsafe { core::slice::from_raw_parts(addr as *const u8, len) }
+}
+
+/// 1MiB private anon mapping: child fill must not be visible in the parent
+/// after `fork`+`exec`. Cooperative fork without heap restore lets Node/Theia
+/// `abort()` (guest 134) once the parent continues.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "a 1MiB MAP_PRIVATE anonymous mapping keeps the parent's canary after the child overwrites it and execs"
+)]
+fn mmap_anon_canary_survives_fork_exec() -> TestResult {
+    let len = 1024 * 1024usize;
+    let addr = check_ok!(
+        syscall::mmap(
+            0,
+            len,
+            prot::PROT_READ | prot::PROT_WRITE,
+            map::MAP_PRIVATE | map::MAP_ANONYMOUS,
+            -1,
+            0
+        ),
+        "mmap"
+    );
+    cow_slice_mut(addr, len).fill(0xA5);
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        cow_slice_mut(addr, len).fill(0x5A);
+        exec_plugin_host_hold();
+    }
+    let parent_ok = cow_slice(addr, len).iter().all(|&b| b == 0xA5);
+    reap_or_kill(pid);
+    let _ = syscall::munmap(addr, len);
+    check!(parent_ok, "parent mmap saw child's stores after fork+exec");
+    Ok(())
+}
+
+/// Fork COW must not leave the parent's pages PROT_READ.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "the parent can still write a private anonymous mapping after the child overwrites it and execs"
+)]
+fn mmap_anon_writable_after_fork_exec() -> TestResult {
+    let len = 64 * 1024usize;
+    let addr = check_ok!(
+        syscall::mmap(
+            0,
+            len,
+            prot::PROT_READ | prot::PROT_WRITE,
+            map::MAP_PRIVATE | map::MAP_ANONYMOUS,
+            -1,
+            0
+        ),
+        "mmap"
+    );
+    cow_slice_mut(addr, len).fill(0x11);
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        cow_slice_mut(addr, len).fill(0x22);
+        exec_plugin_host_hold();
+    }
+    cow_slice_mut(addr, len).fill(0x33);
+    let wrote = cow_slice(addr, len).iter().all(|&b| b == 0x33);
+    reap_or_kill(pid);
+    let _ = syscall::munmap(addr, len);
+    check!(wrote, "parent mmap not writable after fork+exec");
+    Ok(())
+}
+
+/// brk heap is not an anonymous mmap; glibc small malloc lives here and the
+/// child's execve path mutates it.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "bytes on the brk heap keep the parent's canary after the child overwrites them and execs"
+)]
+fn brk_canary_survives_fork_exec() -> TestResult {
+    let cur = check_ok!(syscall::brk(0), "brk query");
+    let need = cur + 4096;
+    let got = check_ok!(syscall::brk(need), "brk grow");
+    check!(got >= need, "brk did not grow");
+    cow_slice_mut(cur, 4096).fill(0xA5);
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        cow_slice_mut(cur, 4096).fill(0x5A);
+        exec_plugin_host_hold();
+    }
+    let parent_ok = cow_slice(cur, 4096).iter().all(|&b| b == 0xA5);
+    reap_or_kill(pid);
+    let _ = syscall::brk(cur);
+    check!(parent_ok, "parent brk heap saw child's stores after fork+exec");
+    Ok(())
+}
+
+/// Locals in the current frame must survive cooperative child exec (`uv_spawn`
+/// pipe fds live here). Too little restore livelocks; this is the small window.
+#[crate::lctp_test(
+    suite = syscall,
+    expect = success,
+    case = "a stack local in the parent fork frame keeps its value after the child overwrites its copy and execs"
+)]
+fn stack_local_survives_fork_exec() -> TestResult {
+    let mut local = [0xAAu8; 64];
+    let pid = check_ok!(syscall::fork(), "fork");
+    if pid == 0 {
+        local.fill(0xBB);
+        core::hint::black_box(&local);
+        exec_plugin_host_hold();
+    }
+    core::hint::black_box(&local);
+    let parent_ok = local.iter().all(|&b| b == 0xAA);
+    reap_or_kill(pid);
+    check!(
+        parent_ok,
+        "parent stack local saw child's stores after fork+exec"
+    );
     Ok(())
 }
 
